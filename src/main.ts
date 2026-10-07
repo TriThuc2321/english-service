@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { type NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 
@@ -12,11 +13,21 @@ async function bootstrap() {
   const httpsOptions = getHttpsOptions();
   const APP_PORT = Number(process.env.APP_PORT ?? 8080);
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     httpsOptions,
   });
 
   const configService = app.get(ConfigService);
+
+  const trustProxy = configService.get<string>('TRUST_PROXY');
+  if (trustProxy) {
+    // Lets the throttler key on the real client IP forwarded by the student
+    // BFF / load balancer instead of the proxy's own address.
+    app.set(
+      'trust proxy',
+      /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy,
+    );
+  }
 
   app.use(helmet());
   app.use(cookieParser());

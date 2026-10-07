@@ -6,12 +6,9 @@ import {
   CaslAbilityFactory,
   PossibleAbilities,
 } from '../../../shared/casl/casl-ability.factory.js';
-import {
-  IRequestWithUser,
-  PermissionAction,
-  PermissionSubject,
-} from '../../../types/auth.type.js';
+import { AuthClient, IRequestWithUser } from '../../../types/auth.type.js';
 import { CHECK_PERMISSION_KEY } from '../decorators/check-permissions.decorator.js';
+import { CLIENTS_KEY } from '../decorators/clients.decorator.js';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 
 @Injectable()
@@ -40,6 +37,14 @@ export class PermissionGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest<IRequestWithUser>();
+
+    const allowedClients = this.reflector.getAllAndOverride<
+      AuthClient[] | undefined
+    >(CLIENTS_KEY, [context.getHandler(), context.getClass()]);
+
+    if (allowedClients && !allowedClients.includes(user?.client)) {
+      return false;
+    }
 
     const ability = this.caslAbilityFactory.createForUser(user);
 

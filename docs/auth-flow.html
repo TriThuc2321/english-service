@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Luồng xác thực</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f7f7f5;
+        --surface: #ffffff;
+        --surface-2: #f1f1ee;
+        --text: #1c1c1a;
+        --muted: #62625d;
+        --border: #e2e2dc;
+        --accent: #2f5bd3;
+        --accent-soft: #e6ecfb;
+        --bo: #2f5bd3;
+        --bo-soft: #e6ecfb;
+        --web: #1f8a5b;
+        --web-soft: #e1f3ea;
+        --danger: #c2412d;
+        --code-bg: #f1f1ee;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #141413;
+          --surface: #1c1c1a;
+          --surface-2: #232321;
+          --text: #ecece8;
+          --muted: #a3a39c;
+          --border: #33332f;
+          --accent: #8aa8ff;
+          --accent-soft: #232c45;
+          --bo: #8aa8ff;
+          --bo-soft: #232c45;
+          --web: #5fcf9c;
+          --web-soft: #1b3329;
+          --danger: #f08a76;
+          --code-bg: #262624;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: #141413;
+        --surface: #1c1c1a;
+        --surface-2: #232321;
+        --text: #ecece8;
+        --muted: #a3a39c;
+        --border: #33332f;
+        --accent: #8aa8ff;
+        --accent-soft: #232c45;
+        --bo: #8aa8ff;
+        --bo-soft: #232c45;
+        --web: #5fcf9c;
+        --web-soft: #1b3329;
+        --danger: #f08a76;
+        --code-bg: #262624;
+        color-scheme: dark;
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.65 "Be Vietnam Pro", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      code {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 0.86em;
+        background: var(--code-bg);
+        padding: 0.1em 0.38em;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 48px;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 48px 32px 96px;
+      }
+      nav.toc {
+        position: sticky;
+        top: 32px;
+        align-self: start;
+        font-size: 13.5px;
+      }
+      nav.toc .label {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+      nav.toc ol { list-style: none; margin: 0; padding: 0; }
+      nav.toc li { margin: 2px 0; }
+      nav.toc ol ol { padding-left: 14px; }
+      nav.toc a {
+        display: block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        color: var(--muted);
+        text-decoration: none;
+        border-left: 2px solid transparent;
+      }
+      nav.toc a:hover { color: var(--text); background: var(--surface-2); }
+      nav.toc a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+
+      header.hero { margin-bottom: 36px; }
+      header.hero .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      h1 { font-size: 34px; line-height: 1.2; margin: 6px 0 12px; letter-spacing: -0.02em; }
+      header.hero p { color: var(--muted); max-width: 68ch; margin: 0; }
+      .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+      .pill {
+        font-size: 12.5px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--muted);
+      }
+      .pill b { color: var(--text); font-weight: 600; }
+
+      h2 {
+        font-size: 22px;
+        letter-spacing: -0.01em;
+        margin: 56px 0 14px;
+        padding-top: 8px;
+        scroll-margin-top: 24px;
+      }
+      h3 { font-size: 16.5px; margin: 32px 0 10px; scroll-margin-top: 24px; }
+      .num { color: var(--muted); font-weight: 500; margin-right: 6px; }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+      th, td { text-align: left; vertical-align: top; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+      tr:last-child td { border-bottom: 0; }
+      thead th { font-size: 13px; font-weight: 600; background: var(--surface-2); }
+      thead th:first-child { border-top-left-radius: 12px; }
+      thead th:last-child { border-top-right-radius: 12px; }
+      tbody th { font-weight: 600; white-space: nowrap; color: var(--muted); font-size: 13px; }
+      .tag {
+        display: inline-block;
+        font-size: 11.5px;
+        font-weight: 600;
+        padding: 1px 8px;
+        border-radius: 999px;
+        margin-left: 6px;
+        vertical-align: 1px;
+      }
+      .tag.bo { background: var(--bo-soft); color: var(--bo); }
+      .tag.web { background: var(--web-soft); color: var(--web); }
+      .deny { color: var(--danger); font-weight: 600; }
+
+      .guard {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 16px;
+        margin-top: 16px;
+        font-size: 14px;
+      }
+      .guard .step {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 10px;
+      }
+      .guard .step small { display: block; color: var(--muted); font-size: 12px; }
+      .guard .arrow { color: var(--muted); }
+
+      figure.diagram { margin: 12px 0 0; padding: 20px; overflow-x: auto; }
+      figure.diagram .render { min-height: 80px; display: flex; justify-content: center; }
+      figure.diagram svg { max-width: 100%; height: auto; }
+      figure.diagram figcaption {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 12px;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+      }
+      .loading { color: var(--muted); font-size: 13px; align-self: center; }
+
+      .lede { color: var(--muted); max-width: 72ch; }
+
+      @media (max-width: 900px) {
+        .layout { grid-template-columns: 1fr; gap: 0; padding: 28px 16px 64px; }
+        nav.toc { position: static; margin-bottom: 24px; }
+        nav.toc ol ol { display: none; }
+        nav.toc > ol { display: flex; flex-wrap: wrap; gap: 6px; }
+        nav.toc a { border: 1px solid var(--border); border-radius: 999px; padding: 3px 12px; }
+        nav.toc a.active { border-color: var(--accent); }
+        h1 { font-size: 27px; }
+        figure.diagram { padding: 12px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav class="toc" aria-label="Mục lục">
+        <div class="label">Mục lục</div>
+        <ol>
+          <li><a href="#so-sanh">So sánh nhanh</a></li>
+          <li><a href="#tong-quan">1. Tổng quan</a></li>
+          <li>
+            <a href="#backoffice">2. Backoffice</a>
+            <ol>
+              <li><a href="#bo-login">2.1 Đăng nhập Google</a></li>
+              <li><a href="#bo-refresh">2.2 Gọi API &amp; refresh</a></li>
+              <li><a href="#bo-logout">2.3 Đăng xuất</a></li>
+            </ol>
+          </li>
+          <li>
+            <a href="#student">3. Student (BFF)</a>
+            <ol>
+              <li><a href="#st-login">3.1 Đăng nhập Google</a></li>
+              <li><a href="#st-bff">3.2 Gọi API qua BFF</a></li>
+              <li><a href="#st-logout">3.3 Đăng xuất</a></li>
+            </ol>
+          </li>
+          <li><a href="#rotation">4. Xoay vòng refresh token</a></li>
+        </ol>
+      </nav>
+
+      <main>
+        <header class="hero">
+          <div class="eyebrow">english-service · docs</div>
+          <h1>Luồng xác thực (Auth flow)</h1>
+          <p>
+            Tài liệu mô tả luồng xác thực giữa <b>english-service</b> (BE), <b>english-backoffice</b>
+            (BO, React SPA) và <b>english-student</b> (Next.js, server đóng vai trò BFF).
+          </p>
+          <div class="pills">
+            <span class="pill"><b>BE</b> english-service</span>
+            <span class="pill"><b>BO</b> client = <code>bo</code></span>
+            <span class="pill"><b>Student</b> client = <code>web</code></span>
+          </div>
+        </header>
+
+        <section>
+          <h2 id="so-sanh">So sánh nhanh</h2>
+          <div class="card table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Backoffice <span class="tag bo">bo</span></th>
+                  <th>Student <span class="tag web">web</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th>Access token</th>
+                  <td>Trong <b>memory</b> của SPA, gửi qua header <code>Authorization: Bearer</code></td>
+                  <td>Cookie httpOnly <code>st_access_token</code> trên domain student. BFF gắn Bearer khi gọi BE</td>
+                </tr>
+                <tr>
+                  <th>Refresh token</th>
+                  <td>
+                    Cookie httpOnly <code>refresh_token_bo</code> do <b>BE</b> set (path <code>/api/auth</code>,
+                    <code>SameSite=Lax</code>, <code>Secure</code>)
+                  </td>
+                  <td>Cookie httpOnly <code>st_refresh_token</code> trên domain student. BFF gửi lại trong <b>body</b></td>
+                </tr>
+                <tr>
+                  <th>Google login trả về</th>
+                  <td>BE set cookie refresh rồi redirect về <code>/login</code></td>
+                  <td>
+                    BE redirect kèm <code>?code=</code> (refresh token sống 60s, dùng 1 lần) và
+                    <code>state=clientNonce</code>
+                  </td>
+                </tr>
+                <tr>
+                  <th>Chống login CSRF</th>
+                  <td>Cookie <code>oauth_state</code> trên domain API</td>
+                  <td><code>oauth_state</code> (API) + <code>oauth_nonce</code> (domain student)</td>
+                </tr>
+                <tr>
+                  <th>Endpoint CMS</th>
+                  <td>Được gọi (<code>@Clients(AuthClient.BO)</code>)</td>
+                  <td><span class="deny">Bị 403</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section>
+          <h2 id="tong-quan"><span class="num">1.</span>Tổng quan</h2>
+          <figure class="card diagram">
+            <div class="render" data-src="d-overview"><span class="loading">Đang vẽ sơ đồ…</span></div>
+            <figcaption>Các thành phần và kênh truyền token giữa browser, Next.js server và BE.</figcaption>
+          </figure>
+          <div class="card guard" aria-label="Guard chain">
+            <span style="color: var(--muted); margin-right: 4px">Guard chain của BE cho mọi request:</span>
+            <span class="step"><code>ThrottlerGuard</code></span>
+            <span class="arrow">→</span>
+            <span class="step"><code>JwtAuthGuard</code><small>bỏ qua nếu <code>@Public</code></small></span>
+            <span class="arrow">→</span>
+            <span class="step"
+              ><code>PermissionGuard</code><small><code>@Clients</code> + <code>@CheckPermissions</code>, mặc định deny</small></span
+            >
+          </div>
+        </section>
+
+        <section>
+          <h2 id="backoffice"><span class="num">2.</span>Backoffice <span class="tag bo">bo</span></h2>
+
+          <h3 id="bo-login">2.1 Đăng nhập Google</h3>
+          <figure class="card diagram">
+            <div class="render" data-src="d-bo-login"><span class="loading">Đang vẽ sơ đồ…</span></div>
+            <figcaption>
+              BE set cookie <code>refresh_token_bo</code> rồi redirect về <code>/login</code>; SPA tự lấy access token
+              qua <code>POST /auth/refresh</code>.
+            </figcaption>
+          </figure>
+
+          <h3 id="bo-refresh">2.2 Gọi API, access token hết hạn, reload trang</h3>
+          <figure class="card diagram">
+            <div class="render" data-src="d-bo-refresh"><span class="loading">Đang vẽ sơ đồ…</span></div>
+            <figcaption>Mọi request 401 đồng thời được gộp vào một lần refresh duy nhất.</figcaption>
+          </figure>
+
+          <h3 id="bo-logout">2.3 Đăng xuất</h3>
+          <figure class="card diagram">
+            <div class="render" data-src="d-bo-logout"><span class="loading">Đang vẽ sơ đồ…</span></div>
+          </figure>
+        </section>
+
+        <section>
+          <h2 id="student"><span class="num">3.</span>Student (Next.js BFF) <span class="tag web">web</span></h2>
+
+          <h3 id="st-login">3.1 Đăng nhập Google</h3>
+          <figure class="card diagram">
+            <div class="render" data-src="d-st-login"><span class="loading">Đang vẽ sơ đồ…</span></div>
+            <figcaption>
+              <code>code</code> thực chất là refresh token sống 60s, chỉ dùng một lần; Next server đổi nó lấy cặp token
+              và lưu vào cookie <code>st_*</code>.
+            </figcaption>
+          </figure>
+
+          <h3 id="st-bff">3.2 Gọi API qua BFF và refresh tự động</h3>
+          <figure class="card diagram">
+            <div class="render" data-src="d-st-bff"><span class="loading">Đang vẽ sơ đồ…</span></div>
+            <figcaption>Cookie <code>st_access_token</code> hết hạn sớm hơn JWT 30s để proxy refresh trước.</figcaption>
+          </figure>
+
+          <h3 id="st-logout">3.3 Đăng xuất</h3>
+          <figure class="card diagram">
+            <div class="render" data-src="d-st-logout"><span class="loading">Đang vẽ sơ đồ…</span></div>
+          </figure>
+        </section>
+
+        <section>
+          <h2 id="rotation"><span class="num">4.</span>Xoay vòng refresh token (<code>POST /auth/refresh</code>)</h2>
+          <p class="lede">
+            Mỗi lần refresh đều revoke token cũ và cấp token mới. Token đã revoke bị dùng lại ngoài cửa sổ 30s bị coi là
+            bị đánh cắp và toàn bộ phiên của user bị thu hồi.
+          </p>
+          <figure class="card diagram">
+            <div class="render" data-src="d-rotation"><span class="loading">Đang vẽ sơ đồ…</span></div>
+          </figure>
+        </section>
+      </main>
+    </div>
+
+    <!-- Mermaid sources (kept verbatim from auth-flow.md) -->
+    <script type="text/x-mermaid" id="d-overview">
+flowchart LR
+  subgraph Browser
+    BO["Backoffice SPA<br/>access token in memory"]
+    STB["Student browser<br/>chỉ có cookie httpOnly"]
+  end
+
+  subgraph StudentServer["english-student (Next.js)"]
+    PROXY["proxy.ts<br/>/api/bff/* rewrite + auto refresh"]
+    SESS["/api/session/google<br/>/api/session/google/callback"]
+  end
+
+  BE["english-service<br/>/api/auth/*  +  CMS APIs"]
+  G["Google OAuth"]
+
+  BO -- "Bearer + cookie refresh_token_bo<br/>(withCredentials)" --> BE
+  STB -- "cookie st_access_token / st_refresh_token" --> PROXY
+  STB --> SESS
+  PROXY -- "Bearer + X-Forwarded-For" --> BE
+  SESS -- "refreshToken trong body" --> BE
+  BE <--> G
+    </script>
+
+    <script type="text/x-mermaid" id="d-bo-login">
+sequenceDiagram
+  autonumber
+  actor U as Admin
+  participant BO as Backoffice SPA
+  participant BE as english-service
+  participant G as Google
+
+  U->>BO: Bấm "Continue with Google"
+  BO->>BE: GET /api/auth/google?client=bo (full-page redirect)
+  BE->>BE: Sinh nonce, Set-Cookie oauth_state (path /api/auth/google)
+  BE-->>U: 302 tới Google, state = "bo.nonce"
+  U->>G: Đăng nhập, đồng ý
+  G-->>BE: GET /api/auth/google/callback?code&state
+  BE->>BE: parseOAuthState + so nonce với cookie oauth_state, xoá cookie
+  BE->>G: Đổi code lấy profile (passport)
+  BE->>BE: thirdPartyLogin: user phải tồn tại và role.canAccessCms
+  alt Thành công
+    BE->>BE: issueTokens: lưu refresh_tokens (jti, sha256 hash)
+    BE-->>U: Set-Cookie refresh_token_bo, 302 tới BO /login
+    U->>BO: GET /login
+    BO->>BE: _auth clientLoader: GET /auth/profile (chưa có token nên 401)
+    BO->>BE: POST /auth/refresh {client:"bo"} kèm cookie
+    BE-->>BO: {access_token} + Set-Cookie refresh mới (rotate)
+    BO->>BO: setAccessToken (memory), retry /auth/profile
+    BO-->>U: redirect "/"
+  else Lỗi (nonce sai, không có quyền CMS...)
+    BE-->>U: 302 tới /login?error=cms_access_denied | google_login_failed
+    BO-->>U: Hiển thị Alert, không gọi refresh
+  end
+    </script>
+
+    <script type="text/x-mermaid" id="d-bo-refresh">
+sequenceDiagram
+  autonumber
+  participant BO as Backoffice SPA (axios)
+  participant BE as english-service
+
+  BO->>BE: GET /api/users, Authorization: Bearer access
+  alt access còn hạn
+    BE-->>BO: 200
+  else access hết hạn, hoặc memory trống sau reload
+    BE-->>BO: 401
+    Note over BO: Gộp mọi request 401 vào 1 lần refresh duy nhất
+    BO->>BE: POST /auth/refresh {client:"bo"} + cookie refresh_token_bo
+    alt refresh hợp lệ
+      BE-->>BO: {access_token} + Set-Cookie refresh mới
+      BO->>BE: Retry request gốc với Bearer mới
+      BE-->>BO: 200
+    else refresh hỏng / bị revoke
+      BE-->>BO: 401 + xoá cookie
+      BO->>BO: clearAccessToken, queryClient.clear, chuyển về /login
+    end
+  end
+    </script>
+
+    <script type="text/x-mermaid" id="d-bo-logout">
+sequenceDiagram
+  autonumber
+  participant BO as Backoffice SPA
+  participant BE as english-service
+
+  BO->>BE: POST /auth/logout {client:"bo"} + cookie refresh_token_bo (không cần Bearer)
+  BE->>BE: verify refresh (bỏ qua hết hạn), revoke theo jti + hash
+  BE-->>BO: Xoá cookie refresh_token_bo
+  BO->>BO: clearAccessToken, queryClient.clear, chuyển về /login
+    </script>
+
+    <script type="text/x-mermaid" id="d-st-login">
+sequenceDiagram
+  autonumber
+  actor S as Học sinh
+  participant N as english-student server
+  participant BE as english-service
+  participant G as Google
+
+  S->>N: GET /api/session/google
+  N->>N: Sinh clientNonce, Set-Cookie oauth_nonce (domain student)
+  N-->>S: 302 tới BE /api/auth/google?client=web&nonce=clientNonce
+  S->>BE: GET /api/auth/google?client=web&nonce=...
+  BE-->>S: Set-Cookie oauth_state, 302 tới Google (state = "web.nonce.clientNonce")
+  S->>G: Đăng nhập
+  G-->>BE: GET /api/auth/google/callback?code&state
+  BE->>BE: Kiểm tra nonce với cookie oauth_state
+  BE->>BE: thirdPartyLogin (tự tạo user role USER nếu chưa có)
+  BE->>BE: issueLoginCode: refresh token sống 60s
+  BE-->>S: 302 tới /api/session/google/callback?code=...&state=clientNonce
+  S->>N: GET callback
+  N->>N: So state với cookie oauth_nonce, xoá cookie
+  N->>BE: POST /auth/refresh {client:"web", refreshToken: code}
+  BE-->>N: {access_token, refresh_token, refresh_token_expires_at}
+  N-->>S: Set-Cookie st_access_token + st_refresh_token (httpOnly, Lax), 302 tới "/"
+    </script>
+
+    <script type="text/x-mermaid" id="d-st-bff">
+sequenceDiagram
+  autonumber
+  participant S as Browser
+  participant P as proxy.ts (Next server)
+  participant BE as english-service
+
+  S->>P: Request trang hoặc /api/bff/* kèm cookie st_*
+  alt Có st_access_token (cookie hết hạn sớm hơn JWT 30s)
+    P->>P: Dùng access token hiện có
+  else Chỉ còn st_refresh_token
+    P->>BE: POST /auth/refresh {client:"web", refreshToken} + X-Forwarded-For
+    alt ok
+      BE-->>P: Cặp token mới (rotate)
+      P->>P: Ghi token mới vào request và response cookies
+    else REFRESH_TOKEN_ROTATED (request song song đã rotate)
+      P-->>S: Trang: redirect lại cùng URL để lấy cookie mới
+    else invalid
+      P->>P: clearSession, coi như chưa đăng nhập
+    end
+  end
+  alt /api/bff/*
+    P->>BE: Rewrite /api/*, xoá header cookie, gắn Bearer + X-Forwarded-For
+    BE-->>S: Response (401 thì axios client chuyển về /login)
+  else Trang
+    P-->>S: Chưa đăng nhập thì /login, đã đăng nhập mà vào /login thì về "/"
+  end
+    </script>
+
+    <script type="text/x-mermaid" id="d-st-logout">
+sequenceDiagram
+  autonumber
+  participant S as Browser
+  participant N as Server Action logout()
+  participant BE as english-service
+
+  S->>N: Submit form logout
+  N->>BE: POST /auth/logout {client:"web", refreshToken} (không cần Bearer)
+  BE->>BE: Revoke refresh token
+  N->>N: clearSession (xoá st_*)
+  N-->>S: redirect /login
+    </script>
+
+    <script type="text/x-mermaid" id="d-rotation">
+flowchart TD
+  A["POST /auth/refresh {client, refreshToken?}"] --> B{"Lấy token:<br/>bo từ cookie, web từ body"}
+  B -->|không có| X401["401 + xoá cookie (bo)"]
+  B --> C{"verify bằng JWT_SECRET_REFRESH<br/>và payload.client == client"}
+  C -->|sai| X401
+  C --> D["UPDATE refresh_tokens SET revokedAt=now<br/>WHERE id=jti, userId, client, tokenHash, revokedAt IS NULL"]
+  D -->|affected = 1| E{"User ACTIVE?<br/>bo thì cần canAccessCms"}
+  E -->|không| X401
+  E -->|có| F["issueTokens: access mới (có claim client)<br/>+ refresh mới (jti mới)"]
+  D -->|affected = 0| G{"Token vừa bị revoke<br/>trong 30s?"}
+  G -->|có| R["401 REFRESH_TOKEN_ROTATED<br/>(request song song, không phạt)"]
+  G -->|không| H["Nghi bị đánh cắp:<br/>revoke TẤT CẢ phiên của user"] --> X401
+    </script>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+      const token = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      const isDark = () => {
+        const forced = document.documentElement.dataset.theme;
+        if (forced) return forced === "dark";
+        return matchMedia("(prefers-color-scheme: dark)").matches;
+      };
+
+      let renderCount = 0;
+      async function renderAll() {
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: "base",
+          fontFamily: '"Be Vietnam Pro", system-ui, sans-serif',
+          themeVariables: {
+            darkMode: isDark(),
+            background: token("--surface"),
+            primaryColor: token("--accent-soft"),
+            primaryBorderColor: token("--accent"),
+            primaryTextColor: token("--text"),
+            lineColor: token("--muted"),
+            textColor: token("--text"),
+            secondaryColor: token("--surface-2"),
+            tertiaryColor: token("--surface-2"),
+            clusterBkg: token("--surface-2"),
+            clusterBorder: token("--border"),
+            actorBkg: token("--accent-soft"),
+            actorBorder: token("--accent"),
+            actorTextColor: token("--text"),
+            signalColor: token("--text"),
+            signalTextColor: token("--text"),
+            labelBoxBkgColor: token("--surface-2"),
+            labelBoxBorderColor: token("--border"),
+            labelTextColor: token("--text"),
+            loopTextColor: token("--muted"),
+            noteBkgColor: token("--web-soft"),
+            noteBorderColor: token("--web"),
+            noteTextColor: token("--text"),
+            sequenceNumberColor: token("--surface"),
+            edgeLabelBackground: token("--surface"),
+            fontSize: "14px",
+          },
+          sequence: { useMaxWidth: true, mirrorActors: false, wrap: false },
+          flowchart: { useMaxWidth: true, curve: "basis" },
+        });
+
+        renderCount++;
+        for (const target of document.querySelectorAll(".render[data-src]")) {
+          const src = document.getElementById(target.dataset.src).textContent.trim();
+          try {
+            const { svg } = await mermaid.render(`m-${target.dataset.src}-${renderCount}`, src);
+            target.innerHTML = svg;
+          } catch (err) {
+            target.innerHTML = "";
+            const pre = document.createElement("pre");
+            pre.textContent = src;
+            target.appendChild(pre);
+            console.error(err);
+          }
+        }
+      }
+
+      renderAll();
+      matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+
+      // Highlight current section in the TOC
+      const links = [...document.querySelectorAll("nav.toc a")];
+      const byId = new Map(links.map((a) => [a.getAttribute("href").slice(1), a]));
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            links.forEach((a) => a.classList.remove("active"));
+            byId.get(e.target.id)?.classList.add("active");
+          }
+        },
+        { rootMargin: "0px 0px -70% 0px" },
+      );
+      document.querySelectorAll("h2[id], h3[id]").forEach((h) => observer.observe(h));
+    </script>
+  </body>
+</html>

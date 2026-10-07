@@ -11,8 +11,13 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { PermissionAction, PermissionSubject } from '../../types/auth.type.js';
+import {
+  AuthClient,
+  PermissionAction,
+  PermissionSubject,
+} from '../../types/auth.type.js';
 import { CheckPermissions } from '../auth/decorators/check-permissions.decorator.js';
+import { Clients } from '../auth/decorators/clients.decorator.js';
 import {
   CreateParagraphDto,
   DeleteParagraphsDto,
@@ -22,6 +27,7 @@ import {
 } from './dto/paragraphs.dto.js';
 import { ParagraphsService } from './paragraphs.service.js';
 
+@Clients(AuthClient.BO)
 @ApiBearerAuth()
 @Controller('paragraphs')
 @ApiTags('Paragraphs')

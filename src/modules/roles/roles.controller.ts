@@ -13,11 +13,13 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import {
+  AuthClient,
   type IRequestWithUser,
   PermissionAction,
   PermissionSubject,
 } from '../../types/auth.type.js';
 import { CheckPermissions } from '../auth/decorators/check-permissions.decorator.js';
+import { Clients } from '../auth/decorators/clients.decorator.js';
 import {
   CreateRoleDto,
   DeleteRolesDto,
@@ -26,6 +28,7 @@ import {
 } from './dto/roles.dto.js';
 import { RolesService } from './roles.service.js';
 
+@Clients(AuthClient.BO)
 @ApiBearerAuth()
 @Controller('roles')
 @ApiTags('Roles')

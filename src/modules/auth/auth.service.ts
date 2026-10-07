@@ -128,17 +128,18 @@ export class AuthService {
     return user;
   }
 
-  private toTokenPayload(user: User): ITokenPayload {
+  private toTokenPayload(user: User, client: AuthClient): ITokenPayload {
     return {
       email: user.email ?? '',
       roleId: user.role?.id,
       id: user.id,
-      permissions: (user.role?.permissions ?? []).map(
-        ({ action, subject }) => ({
+      client,
+      permissions: (user.role?.permissions ?? [])
+        .filter(({ status }) => status === Status.ACTIVE)
+        .map(({ action, subject }) => ({
           action: action as PermissionAction,
           subject: subject as PermissionSubject,
-        }),
-      ),
+        })),
     };
   }
 
@@ -186,7 +187,7 @@ export class AuthService {
       .catch(() => {});
 
     return {
-      accessToken: this.jwtService.sign(this.toTokenPayload(user)),
+      accessToken: this.jwtService.sign(this.toTokenPayload(user, client)),
       refreshToken,
       refreshTokenExpiresAt,
     };
@@ -344,20 +345,36 @@ export class AuthService {
   }
 
   async logout(
-    userId: string,
-    client: AuthClient,
     refreshToken: string | undefined,
+    client: AuthClient,
     allDevices = false,
   ) {
+    if (!refreshToken) {
+      return;
+    }
+
+    let payload: IRefreshTokenPayload;
+    try {
+      payload = this.jwtService.verify<IRefreshTokenPayload>(refreshToken, {
+        secret: this.jwt.secretRefresh,
+        ignoreExpiration: true,
+      });
+    } catch {
+      return;
+    }
+    if (payload.client !== client) {
+      return;
+    }
+
     if (allDevices) {
-      await this.revokeAllForUser(userId);
+      await this.revokeAllForUser(payload.sub);
       return;
     }
     await this.refreshTokenRepository.update(
       {
-        userId,
-        client,
-        ...(refreshToken && { tokenHash: RefreshToken.hash(refreshToken) }),
+        id: payload.jti,
+        userId: payload.sub,
+        tokenHash: RefreshToken.hash(refreshToken),
         revokedAt: IsNull(),
       },
       { revokedAt: new Date() },

@@ -16,5 +16,5 @@
     ]
   },
   "endOfLine": "crlf",
-  "ignorePatterns": []
+  "ignorePatterns": ["docs/**/*.html"]
 }
