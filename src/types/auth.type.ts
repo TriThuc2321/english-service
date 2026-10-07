@@ -24,12 +24,21 @@ export enum PermissionSubject {
   USER = 'user',
   PASSAGE = 'passage',
   PARAGRAPH = 'paragraph',
+  DASHBOARD = 'dashboard',
+  STUDENT = 'student',
+  TEACHER = 'teacher',
+  TEST = 'test',
+  QUESTION = 'question',
+  CAMPUS = 'campus',
+  PROGRAM = 'program',
+  LEVEL = 'level',
 }
 
 export interface ITokenPayload {
   email: string;
   roleId: number;
   id: string;
+  client: AuthClient;
   permissions: Array<{
     action: PermissionAction;
     subject: PermissionSubject;
@@ -74,4 +83,4 @@ export enum AuthClient {
 export const isAuthClient = (value: unknown): value is AuthClient =>
   Object.values<unknown>(AuthClient).includes(value);
 
-export const isServerClient = (client: AuthClient) => client === AuthClient.BO;
+export const isServerClient = (client: AuthClient) => client === AuthClient.WEB;

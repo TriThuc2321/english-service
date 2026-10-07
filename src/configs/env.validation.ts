@@ -68,6 +68,10 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   GOOGLE_LOGIN_REDIRECT_URL_BO: string;
+
+  @IsOptional()
+  @IsString()
+  TRUST_PROXY?: string;
 }
 
 export const validateEnv = (config: Record<string, unknown>) => {

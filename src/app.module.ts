@@ -28,7 +28,7 @@ import { CaslModule } from './shared/casl/casl.module.js';
       throttlers: [
         {
           ttl: 60000,
-          limit: 10,
+          limit: 300,
         },
       ],
     }),

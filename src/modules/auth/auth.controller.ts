@@ -27,13 +27,14 @@ import {
 } from '../../configs/google.config.js';
 import {
   AuthClient,
-  isAuthClient,
   isServerClient,
   type IRequestWithGoogleUser,
   type IRequestWithUser,
 } from '../../types/auth.type.js';
 import {
+  clearOAuthStateCookie,
   clearRefreshTokenCookie,
+  OAUTH_STATE_COOKIE,
   refreshCookieName,
   setRefreshTokenCookie,
 } from './auth.cookie.js';
@@ -42,6 +43,7 @@ import { CheckPermissions } from './decorators/check-permissions.decorator.js';
 import { Public } from './decorators/public.decorator.js';
 import { LoginDto, LogoutDto, RefreshDto } from './dto/auth.dto.js';
 import { GoogleAuthGuard } from './guards/google.guard.js';
+import { nonceMatches, parseOAuthState } from './oauth-state.js';
 
 const AUTH_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 
@@ -120,13 +122,19 @@ export class AuthController {
     @Req() req: IRequestWithGoogleUser,
     @Res() res: Response,
   ) {
-    const client = req.query.state;
-    if (!isAuthClient(client)) {
-      throw new BadRequestException('Invalid client');
+    const state = parseOAuthState(req.query.state);
+    if (!state) {
+      throw new BadRequestException('Invalid state');
     }
+    const { client, nonce, clientNonce } = state;
+    const expectedNonce: unknown = req.cookies?.[OAUTH_STATE_COOKIE];
+    clearOAuthStateCookie(res);
 
     const redirectUrl = new URL(this.google.loginRedirectUrls[client]);
     try {
+      if (!nonceMatches(expectedNonce, nonce)) {
+        throw new UnauthorizedException('OAuth state mismatch');
+      }
       if (!req.user) {
         throw new UnauthorizedException();
       }
@@ -136,6 +144,9 @@ export class AuthController {
           'code',
           await this.authService.issueLoginCode(user, client),
         );
+        if (clientNonce) {
+          redirectUrl.searchParams.set('state', clientNonce);
+        }
       } else {
         this.respondWithTokens(
           res,
@@ -190,23 +201,25 @@ export class AuthController {
   }
 
   @Post('logout')
-  @ApiBearerAuth()
-  @CheckPermissions()
+  @Public()
+  @Throttle(AUTH_THROTTLE)
   @ApiOperation({
     summary:
       'Log out the current session, or all devices when allDevices is true',
   })
   async logout(
-    @Req() req: IRequestWithUser,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @Body() dto: LogoutDto,
   ) {
-    await this.authService.logout(
-      req.user.id,
-      dto.client,
-      this.readRefreshToken(req, dto.client, dto.refreshToken),
-      dto.allDevices,
-    );
-    this.clearCookie(res, dto.client);
+    try {
+      await this.authService.logout(
+        this.readRefreshToken(req, dto.client, dto.refreshToken),
+        dto.client,
+        dto.allDevices,
+      );
+    } finally {
+      this.clearCookie(res, dto.client);
+    }
   }
 }

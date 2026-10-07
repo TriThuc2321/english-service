@@ -48,22 +48,28 @@ NestJS (v12) API using ESM (`"type": "module"`, `nodenext` module resolution —
 
 ### Auth & permissions (read before touching any endpoint)
 
+Sequence diagrams for the backoffice (`bo`) and student BFF (`web`) flows live in `docs/auth-flow.md` — keep them in sync when changing auth.
+
 Global guard chain, applied in `app.module.ts` via `APP_GUARD` in this order: `ThrottlerGuard` → `JwtAuthGuard` → `PermissionGuard`.
 
 - **`JwtAuthGuard`** (`modules/auth/guards/jwt.guard.ts`): passport `jwt` strategy (Bearer header, `JWT_SECRET`); bypassed only by `@Public()`.
 - **`PermissionGuard`** (`modules/auth/guards/permission.guard.ts`): reads `@CheckPermissions(...)` metadata and checks it against a CASL `AppAbility` built from the JWT's embedded `permissions` array (`CaslAbilityFactory.createForUser`). **Default-deny**: if a handler has neither `@Public()` nor `@CheckPermissions()`, `canActivate` returns `false` — every new endpoint must be explicitly annotated with one or the other, or it is unreachable.
 - Permissions are `(PermissionAction, PermissionSubject)` pairs (see `types/auth.type.ts`) baked into the JWT payload at token-issue time (`AuthService.toTokenPayload`), sourced from the user's `role.permissions` — they are not re-queried from the DB per-request, so a role/permission change only takes effect on the next refresh/login (access tokens default to 5m).
-- `@CheckPermissions()` called with **no arguments** still requires the decorator to be present (it sets metadata to `[]`), and `[].every(...)` is vacuously true — this is how routes like `GET /auth/profile` and `POST /auth/logout` are made "authenticated but unrestricted" without being `@Public()`.
+- `@CheckPermissions()` called with **no arguments** still requires the decorator to be present (it sets metadata to `[]`), and `[].every(...)` is vacuously true — this is how routes like `GET /auth/profile` are made "authenticated but unrestricted" without being `@Public()`.
 - Login (`auth.service.ts`) always runs `bcrypt.compare` against a precomputed `DUMMY_PASSWORD_HASH` when no user/password is found, to keep timing constant and avoid user enumeration — preserve this pattern in any similar auth flow.
 
 #### Refresh tokens
 
-- Access token is returned in the JSON body (`access_token`); the refresh token is **only** ever set as an `httpOnly` cookie (`refresh_token`, helpers in `modules/auth/auth.cookie.ts`) scoped to path `/api/auth`, `sameSite: 'none'`, `secure` only in production. `cookie-parser` is registered in `main.ts` and CORS uses `credentials: true` — clients must send requests with credentials.
-- Refresh JWTs are signed with a separate `JWT_SECRET_REFRESH` and carry `{ sub, jti }`. Each issued token is persisted in `refresh_tokens` (`refresh-token.entity.ts`) keyed by `jti` with a sha256 `tokenHash`, `expiresAt`, `revokedAt`.
+- Two clients (`AuthClient`): `bo` (backoffice SPA) and `web` (student Next.js BFF). Every auth request carries `client`.
+  - `bo`: access token in the JSON body (kept in memory by the SPA, sent as Bearer); refresh token **only** as an `httpOnly` cookie `refresh_token_bo` (helpers in `modules/auth/auth.cookie.ts`), path `/api/auth`, `sameSite: 'lax'`, `secure` — works because api/backoffice/student share the registrable domain. CORS uses `credentials: true`.
+  - `web` (`isServerClient`): both tokens in the JSON body; the BFF stores them in its own cookies and sends the refresh token back in the body. Google login redirects with a 60s single-use `code` (a short-lived refresh token) that the BFF exchanges via `/auth/refresh`.
+- Access tokens embed `client`. `@Clients(AuthClient.BO)` (class-level on CMS controllers) makes `PermissionGuard` reject tokens issued to other clients — add it to any new CMS controller.
+- Google OAuth `state` is `client.nonce[.clientNonce]` (`modules/auth/oauth-state.ts`); `nonce` is bound to the `oauth_state` cookie and checked in the callback. `clientNonce` (optional `?nonce=` on `/auth/google`) is echoed back as `state` on the `web` redirect so the BFF can bind the `code` to its own cookie.
+- Refresh JWTs are signed with a separate `JWT_SECRET_REFRESH` and carry `{ sub, jti, client }`. Each issued token is persisted in `refresh_tokens` (`refresh-token.entity.ts`) keyed by `jti` with a sha256 `tokenHash`, `expiresAt`, `revokedAt`.
 - `POST /auth/refresh` **rotates**: it atomically revokes the presented token (single `UPDATE ... WHERE revokedAt IS NULL`) and issues a new pair. If the signature is valid but no live row matched (already rotated/revoked), it is treated as replay-after-theft and **all** sessions for that user are revoked. Any failure clears the cookie.
-- `POST /auth/logout` revokes the current cookie's token, or every token for the user when `allDevices: true`.
+- `POST /auth/logout` is `@Public()` and identified by the refresh token (cookie for `bo`, body for `web`), so it works after the access token expired; it revokes that token, or every token for the user when `allDevices: true`. Invalid tokens are a no-op.
 - Expired rows are deleted opportunistically on each issue (fire-and-forget) — there is no scheduler.
-- `/auth/login` and `/auth/refresh` have a tighter `@Throttle` (10/min) than the global throttler.
+- `/auth/login`, `/auth/refresh` and `/auth/logout` have a tighter `@Throttle` (10/min) than the global throttler (300/min). The student BFF calls the API from one server, so set `TRUST_PROXY` to cover it (and any LB) — the throttler then keys on the forwarded client IP.
 
 ### Conventions
 
