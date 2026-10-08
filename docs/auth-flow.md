@@ -59,7 +59,7 @@ sequenceDiagram
   BE->>G: Đổi code lấy profile (passport)
   BE->>BE: thirdPartyLogin: user phải tồn tại và role.canAccessCms
   alt Thành công
-    BE->>BE: issueTokens: lưu refresh_tokens (jti, sha256 hash)
+    BE->>BE: issueTokens: tạo 1 row auth_sessions (sid, currentJti, sha256 hash)
     BE-->>U: Set-Cookie refresh_token_bo, 302 tới BO /login
     U->>BO: GET /login
     BO->>BE: _auth clientLoader: GET /auth/profile (chưa có token nên 401)
@@ -108,7 +108,7 @@ sequenceDiagram
   participant BE as english-service
 
   BO->>BE: POST /auth/logout {client:"bo"} + cookie refresh_token_bo (không cần Bearer)
-  BE->>BE: verify refresh (bỏ qua hết hạn), revoke theo jti + hash
+  BE->>BE: verify refresh (bỏ qua hết hạn), revoke phiên theo sid
   BE-->>BO: Xoá cookie refresh_token_bo
   BO->>BO: clearAccessToken, queryClient.clear, chuyển về /login
 ```
@@ -185,7 +185,7 @@ sequenceDiagram
 
   S->>N: Submit form logout
   N->>BE: POST /auth/logout {client:"web", refreshToken} (không cần Bearer)
-  BE->>BE: Revoke refresh token
+  BE->>BE: Revoke phiên (sid)
   N->>N: clearSession (xoá st_*)
   N-->>S: redirect /login
 ```
@@ -198,11 +198,13 @@ flowchart TD
   B -->|không có| X401["401 + xoá cookie (bo)"]
   B --> C{"verify bằng JWT_SECRET_REFRESH<br/>và payload.client == client"}
   C -->|sai| X401
-  C --> D["UPDATE refresh_tokens SET revokedAt=now<br/>WHERE id=jti, userId, client, tokenHash, revokedAt IS NULL"]
-  D -->|affected = 1| E{"User ACTIVE?<br/>bo thì cần canAccessCms"}
+  C --> E{"User ACTIVE?<br/>bo thì cần canAccessCms"}
   E -->|không| X401
-  E -->|có| F["issueTokens: access mới (có claim client)<br/>+ refresh mới (jti mới)"]
-  D -->|affected = 0| G{"Token vừa bị revoke<br/>trong 30s?"}
+  E -->|có| D["UPDATE auth_sessions SET currentJti=jti mới, tokenHash, previousJti=jti, rotatedAt, expiresAt<br/>WHERE id=sid, userId, client, currentJti=jti, tokenHash, revokedAt IS NULL, chưa hết hạn"]
+  D -->|affected = 1| F["Access mới (có claim client)<br/>+ refresh mới (cùng sid, jti mới)"]
+  D -->|affected = 0| S{"Phiên sid còn sống?"}
+  S -->|không| X401
+  S -->|có| G{"jti == previousJti<br/>và rotate trong 30s?"}
   G -->|có| R["401 REFRESH_TOKEN_ROTATED<br/>(request song song, không phạt)"]
-  G -->|không| H["Nghi bị đánh cắp:<br/>revoke TẤT CẢ phiên của user"] --> X401
+  G -->|không| H["Token cũ của phiên bị dùng lại, nghi bị đánh cắp:<br/>revoke TẤT CẢ phiên của user"] --> X401
 ```

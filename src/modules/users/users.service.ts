@@ -173,7 +173,7 @@ export class UsersService {
         );
         // A soft-deleted user must not be able to refresh into a new session.
         await manager.query(
-          `UPDATE refresh_tokens SET revoked_at = NOW()
+          `UPDATE auth_sessions SET revoked_at = NOW()
            WHERE user_id = ANY($1::uuid[]) AND revoked_at IS NULL`,
           [ids],
         );

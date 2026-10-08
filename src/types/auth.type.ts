@@ -72,7 +72,8 @@ export type UserErrorEnum = (typeof UserErrorEnum)[keyof typeof UserErrorEnum];
 
 export interface IRefreshTokenPayload {
   sub: string; // user id
-  jti: string; // session id
+  sid: string; // auth session id
+  jti: string; // token id, rotated on every refresh
   client: AuthClient;
 }
 

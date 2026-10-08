@@ -10,10 +10,10 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { compare, hashSync } from 'bcrypt';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { IsNull, LessThan, Repository } from 'typeorm';
+import { IsNull, MoreThan, Repository } from 'typeorm';
 
 import { type JWTConfig, jwtConfig } from '../../configs/jwt.config.js';
-import { RefreshToken } from '../../entities/refresh-token.entity.js';
+import { AuthSession } from '../../entities/auth-session.entity.js';
 import { Role } from '../../entities/role.entity.js';
 import { User } from '../../entities/user.entity.js';
 import {
@@ -33,6 +33,8 @@ import { LoginDto } from './dto/auth.dto.js';
 
 const LOGIN_CODE_EXPIRES_IN = '60s';
 const REFRESH_REUSE_GRACE_MS = 30_000;
+// Revoked sessions are no longer needed for replay detection; keep briefly for debugging.
+const REVOKED_SESSION_RETENTION = '1 day';
 
 const DUMMY_PASSWORD_HASH = hashSync(randomBytes(32).toString('hex'), 10);
 
@@ -81,8 +83,8 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Role) private roleRepository: Repository<Role>,
-    @InjectRepository(RefreshToken)
-    private refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(AuthSession)
+    private authSessionRepository: Repository<AuthSession>,
     @Inject(jwtConfig.KEY) private readonly jwt: JWTConfig,
   ) {}
 
@@ -153,56 +155,84 @@ export class AuthService {
     }
   }
 
-  private async signRefreshToken(
-    user: User,
+  private signRefreshToken(
+    userId: string,
+    sid: string,
     client: AuthClient,
     expiresIn: JWTConfig['refreshExpiresIn'],
   ) {
     const jti = randomUUID();
     const token = this.jwtService.sign(
-      { sub: user.id, jti, client } satisfies IRefreshTokenPayload,
+      { sub: userId, sid, jti, client } satisfies IRefreshTokenPayload,
       { secret: this.jwt.secretRefresh, expiresIn },
     );
     const { exp } = this.jwtService.decode<{ exp: number }>(token);
-    const expiresAt = new Date(exp * 1000);
+    return { jti, token, expiresAt: new Date(exp * 1000) };
+  }
 
-    await this.refreshTokenRepository.save({
-      id: jti,
+  private async createSession(
+    user: User,
+    client: AuthClient,
+    expiresIn: JWTConfig['refreshExpiresIn'],
+  ) {
+    const sid = randomUUID();
+    const { jti, token, expiresAt } = this.signRefreshToken(
+      user.id,
+      sid,
+      client,
+      expiresIn,
+    );
+
+    await this.authSessionRepository.insert({
+      id: sid,
       userId: user.id,
       client,
-      tokenHash: RefreshToken.hash(token),
+      currentJti: jti,
+      tokenHash: AuthSession.hash(token),
       expiresAt,
     });
+
+    this.authSessionRepository
+      .createQueryBuilder()
+      .delete()
+      .where('expires_at < NOW()')
+      .orWhere(`revoked_at < NOW() - INTERVAL '${REVOKED_SESSION_RETENTION}'`)
+      .execute()
+      .catch(() => {});
 
     return { token, expiresAt };
   }
 
-  async issueTokens(user: User, client: AuthClient): Promise<IssuedTokens> {
-    const { token: refreshToken, expiresAt: refreshTokenExpiresAt } =
-      await this.signRefreshToken(user, client, this.jwt.refreshExpiresIn);
-
-    this.refreshTokenRepository
-      .delete({
-        expiresAt: LessThan(new Date()),
-      })
-      .catch(() => {});
-
+  private toIssuedTokens(
+    user: User,
+    client: AuthClient,
+    refresh: { token: string; expiresAt: Date },
+  ): IssuedTokens {
     return {
       accessToken: this.jwtService.sign(this.toTokenPayload(user, client)),
-      refreshToken,
-      refreshTokenExpiresAt,
+      refreshToken: refresh.token,
+      refreshTokenExpiresAt: refresh.expiresAt,
     };
   }
 
+  async issueTokens(user: User, client: AuthClient): Promise<IssuedTokens> {
+    const refresh = await this.createSession(
+      user,
+      client,
+      this.jwt.refreshExpiresIn,
+    );
+    return this.toIssuedTokens(user, client, refresh);
+  }
+
   private revokeAllForUser(userId: string) {
-    return this.refreshTokenRepository.update(
+    return this.authSessionRepository.update(
       { userId, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
   }
 
   async issueLoginCode(user: User, client: AuthClient) {
-    const { token } = await this.signRefreshToken(
+    const { token } = await this.createSession(
       user,
       client,
       LOGIN_CODE_EXPIRES_IN,
@@ -311,39 +341,7 @@ export class AuthService {
       throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
     }
 
-    if (payload.client !== client) {
-      throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
-    }
-
-    const claim = await this.refreshTokenRepository.update(
-      {
-        id: payload.jti,
-        userId: payload.sub,
-        client,
-        tokenHash: RefreshToken.hash(refreshToken),
-        revokedAt: IsNull(),
-      },
-      { revokedAt: new Date() },
-    );
-
-    if (!claim.affected) {
-      const existing = await this.refreshTokenRepository.findOne({
-        where: { id: payload.jti },
-        select: { revokedAt: true },
-      });
-      if (
-        existing?.revokedAt &&
-        Date.now() - existing.revokedAt.getTime() < REFRESH_REUSE_GRACE_MS
-      ) {
-        throw new HttpException(
-          {
-            message: 'Refresh token already rotated',
-            code: UserErrorEnum.REFRESH_TOKEN_ROTATED,
-          },
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-      await this.revokeAllForUser(payload.sub);
+    if (payload.client !== client || !payload.sid) {
       throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
     }
 
@@ -357,7 +355,66 @@ export class AuthService {
     }
     this.assertClientAccess(user, client);
 
-    return this.issueTokens(user, client);
+    const next = this.signRefreshToken(
+      user.id,
+      payload.sid,
+      client,
+      this.jwt.refreshExpiresIn,
+    );
+    const claim = await this.authSessionRepository.update(
+      {
+        id: payload.sid,
+        userId: payload.sub,
+        client,
+        currentJti: payload.jti,
+        tokenHash: AuthSession.hash(refreshToken),
+        revokedAt: IsNull(),
+        expiresAt: MoreThan(new Date()),
+      },
+      {
+        currentJti: next.jti,
+        tokenHash: AuthSession.hash(next.token),
+        previousJti: payload.jti,
+        rotatedAt: new Date(),
+        expiresAt: next.expiresAt,
+      },
+    );
+
+    if (!claim.affected) {
+      const session = await this.authSessionRepository.findOne({
+        where: { id: payload.sid, userId: payload.sub },
+        select: {
+          id: true,
+          previousJti: true,
+          rotatedAt: true,
+          expiresAt: true,
+          revokedAt: true,
+        },
+      });
+      if (!session || session.revokedAt || session.expiresAt <= new Date()) {
+        throw new HttpException(
+          'Invalid refresh token',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      if (
+        session.previousJti === payload.jti &&
+        session.rotatedAt &&
+        Date.now() - session.rotatedAt.getTime() < REFRESH_REUSE_GRACE_MS
+      ) {
+        throw new HttpException(
+          {
+            message: 'Refresh token already rotated',
+            code: UserErrorEnum.REFRESH_TOKEN_ROTATED,
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      await this.revokeAllForUser(payload.sub);
+      throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
+    }
+
+    return this.toIssuedTokens(user, client, next);
   }
 
   async logout(
@@ -378,7 +435,7 @@ export class AuthService {
     } catch {
       return;
     }
-    if (payload.client !== client) {
+    if (payload.client !== client || !payload.sid) {
       return;
     }
 
@@ -386,13 +443,8 @@ export class AuthService {
       await this.revokeAllForUser(payload.sub);
       return;
     }
-    await this.refreshTokenRepository.update(
-      {
-        id: payload.jti,
-        userId: payload.sub,
-        tokenHash: RefreshToken.hash(refreshToken),
-        revokedAt: IsNull(),
-      },
+    await this.authSessionRepository.update(
+      { id: payload.sid, userId: payload.sub, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
   }
