@@ -31,6 +31,7 @@ const LIST_COLUMNS = [
   'u.emailVerified',
   'u.provider',
   'u.status',
+  'u.systemUser',
   'u.roleId',
   'u.auditMetadata.createdAt',
   'u.auditMetadata.createdById',

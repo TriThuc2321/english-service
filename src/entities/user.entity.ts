@@ -64,6 +64,9 @@ export class User {
   @Column({ name: 'date_of_birth', type: 'date', nullable: true })
   dateOfBirth?: Date | string | null;
 
+  @Column({ name: 'system_user', type: 'boolean', default: false })
+  systemUser: boolean;
+
   @Column({
     name: 'status',
     type: 'enum',
