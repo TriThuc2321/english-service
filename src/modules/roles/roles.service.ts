@@ -55,7 +55,6 @@ export class RolesService implements OnModuleInit {
     @InjectRepository(User) private userRepository: Repository<User>,
   ) {}
 
-  // There are no migrations/seeders, so system roles are created on boot.
   async onModuleInit() {
     const existing = await this.roleRepository.find({
       where: { code: In(Object.values(SystemRoleCode)) },
