@@ -3,9 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, DataSource, In, Not, Repository } from 'typeorm';
 
 import { Paragraph } from '../../entities/paragraph.entity.js';
-import { Passage } from '../../entities/passage.entity.js';
+import { Passage, PassageStatus } from '../../entities/passage.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
-import { Status } from '../../types/common.type.js';
 import {
   CreatePassageDto,
   DeletePassagesDto,
@@ -57,7 +56,7 @@ export class PassagesService {
       .leftJoin('p.auditMetadata.createdBy', 'creator')
       .leftJoin('p.auditMetadata.updatedBy', 'updater')
       .select(columns)
-      .where('p.status != :deleted', { deleted: Status.DELETED });
+      .where('p.status != :deleted', { deleted: PassageStatus.DELETED });
   }
 
   async findAll({ page, take, search, status, markedBy }: ListPassagesDto) {
@@ -116,7 +115,7 @@ export class PassagesService {
 
   async update(id: number, dto: UpdatePassageDto, actorId: string) {
     const passage = await this.passageRepository.findOne({
-      where: { id, status: Not(Status.DELETED) },
+      where: { id, status: Not(PassageStatus.DELETED) },
     });
     if (!passage) {
       throw new NotFoundException(`Passage with ID ${id} not found`);
@@ -147,9 +146,9 @@ export class PassagesService {
 
   async deleteByIds({ ids }: DeletePassagesDto, actorId: string) {
     const result = await this.passageRepository.update(
-      { id: In(ids), status: Not(Status.DELETED) },
+      { id: In(ids), status: Not(PassageStatus.DELETED) },
       {
-        status: Status.DELETED,
+        status: PassageStatus.DELETED,
         auditMetadata: { updatedAt: new Date(), updatedById: actorId },
       },
     );

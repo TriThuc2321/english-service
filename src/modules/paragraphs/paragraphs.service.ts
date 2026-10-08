@@ -7,9 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Not, Repository } from 'typeorm';
 
 import { Paragraph } from '../../entities/paragraph.entity.js';
-import { Passage } from '../../entities/passage.entity.js';
+import { Passage, PassageStatus } from '../../entities/passage.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
-import { Status } from '../../types/common.type.js';
 import {
   CreateParagraphDto,
   DeleteParagraphsDto,
@@ -105,7 +104,7 @@ export class ParagraphsService {
 
   private async assertPassageExists(passageId: number) {
     const exists = await this.passageRepository.exists({
-      where: { id: passageId, status: Not(Status.DELETED) },
+      where: { id: passageId, status: Not(PassageStatus.DELETED) },
     });
     if (!exists) {
       throw new NotFoundException(`Passage with ID ${passageId} not found`);

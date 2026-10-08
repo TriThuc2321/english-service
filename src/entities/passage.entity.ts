@@ -7,7 +7,6 @@ import {
   type Relation,
 } from 'typeorm';
 
-import { Status } from '../types/common.type.js';
 import { AuditMetadata } from './audit-metadata.entity.js';
 import { Paragraph } from './paragraph.entity.js';
 
@@ -15,6 +14,12 @@ export enum MarkedBy {
   ALPHABET = 'ALPHABET',
   NUMBER = 'NUMBER',
   NONE = 'NONE',
+}
+
+export enum PassageStatus {
+  PUBLISHED = 'PUBLISHED',
+  DRAFT = 'DRAFT',
+  DELETED = 'DELETED',
 }
 
 @Entity('passages', { schema: 'public' })
@@ -41,11 +46,11 @@ export class Passage {
   @Column({
     name: 'status',
     type: 'enum',
-    enum: Status,
-    enumName: 'status_enum',
-    default: Status.ACTIVE,
+    enum: PassageStatus,
+    enumName: 'status_passage_enum',
+    default: PassageStatus.DRAFT,
   })
-  status: Status;
+  status: PassageStatus;
 
   @Column(() => AuditMetadata, { prefix: false })
   auditMetadata: AuditMetadata;

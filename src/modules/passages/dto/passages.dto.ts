@@ -15,11 +15,13 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import { MarkedBy } from '../../../entities/passage.entity.js';
+import { MarkedBy, PassageStatus } from '../../../entities/passage.entity.js';
 import { PageOptionsDto } from '../../../shared/dto/index.js';
-import { Status } from '../../../types/common.type.js';
 
-const EDITABLE_STATUSES = [Status.ACTIVE, Status.INACTIVE] as const;
+const EDITABLE_STATUSES = [
+  PassageStatus.PUBLISHED,
+  PassageStatus.DRAFT,
+] as const;
 
 export class ParagraphInputDto {
   @ApiProperty()
@@ -65,7 +67,7 @@ export class UpdatePassageDto extends PartialType(CreatePassageDto) {
   @ApiPropertyOptional({ enum: EDITABLE_STATUSES })
   @IsOptional()
   @IsIn(EDITABLE_STATUSES)
-  status?: Status.ACTIVE | Status.INACTIVE;
+  status?: PassageStatus.PUBLISHED | PassageStatus.DRAFT;
 }
 
 export class ListPassagesDto extends PageOptionsDto {
@@ -78,7 +80,7 @@ export class ListPassagesDto extends PageOptionsDto {
   @ApiPropertyOptional({ enum: EDITABLE_STATUSES })
   @IsOptional()
   @IsIn(EDITABLE_STATUSES)
-  readonly status?: Status.ACTIVE | Status.INACTIVE;
+  readonly status?: PassageStatus.PUBLISHED | PassageStatus.DRAFT;
 
   @ApiPropertyOptional({ enum: MarkedBy })
   @IsOptional()
