@@ -5,7 +5,7 @@ export interface IGoogleAuth {
     givenName: string;
     familyName: string;
   };
-  emails: [{ value: string }];
+  emails: [{ value: string; verified?: boolean }];
   photos: { value: string }[];
 }
 
@@ -55,6 +55,7 @@ export interface IRequestWithGoogleUser extends Request {
 
 export interface IGoogleProfile {
   email?: string;
+  emailVerified: boolean;
   firstName?: string;
   lastName?: string;
   picture?: string;

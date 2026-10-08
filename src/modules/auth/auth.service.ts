@@ -26,6 +26,7 @@ import {
   UserErrorEnum,
 } from '../../types/auth.type.js';
 import { Status } from '../../types/common.type.js';
+import { Provider } from '../../types/user.type.js';
 import { SystemRoleCode } from '../roles/roles.constant.js';
 import { UsersService } from '../users/users.service.js';
 import { LoginDto } from './dto/auth.dto.js';
@@ -233,11 +234,21 @@ export class AuthService {
   }
 
   async thirdPartyLogin(profile: IGoogleProfile, client: AuthClient) {
-    const { email, firstName, lastName, picture } = profile;
+    const { email, emailVerified, firstName, lastName, picture } = profile;
     if (!email) {
       throw new HttpException(
         'Google account has no email',
         HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    if (!emailVerified) {
+      throw new HttpException(
+        {
+          message: 'Google email not verified',
+          code: UserErrorEnum.EMAIL_NOT_VERIFIED,
+        },
+        HttpStatus.FORBIDDEN,
       );
     }
 
@@ -274,7 +285,12 @@ export class AuthService {
         lastName,
         roleId: userRole.id,
         avatar: picture,
+        emailVerified: true,
+        provider: Provider.GOOGLE,
       });
+    } else if (!newUser.emailVerified) {
+      await this.userRepository.update(newUser.id, { emailVerified: true });
+      newUser.emailVerified = true;
     }
 
     this.assertClientAccess(newUser, client);
