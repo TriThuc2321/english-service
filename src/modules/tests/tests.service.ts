@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, In, Not, Repository } from 'typeorm';
 
+import { Passage } from '../../entities/passage.entity.js';
 import { TestSection } from '../../entities/test-section.entity.js';
 import { Test } from '../../entities/test.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
@@ -22,6 +23,7 @@ import {
   TestSectionInputDto,
   UpdateTestDto,
 } from './dto/tests.dto.js';
+import { collectPublishIssues } from './test-publish.validator.js';
 
 const LIST_COLUMNS = [
   't.id',
@@ -63,6 +65,7 @@ export class TestsService {
     @InjectRepository(Test) private testRepository: Repository<Test>,
     @InjectRepository(TestSection)
     private sectionRepository: Repository<TestSection>,
+    @InjectRepository(Passage) private passageRepository: Repository<Passage>,
   ) {}
 
   private baseQuery(columns: string[]) {
@@ -116,6 +119,59 @@ export class TestsService {
     return test;
   }
 
+  // Whole test for the backoffice editor/preview, answers included. Passages
+  // are listed once at the top level since several groups share one.
+  async findTree(id: number) {
+    const test = await this.testRepository
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.testSections', 's')
+      .leftJoinAndSelect('s.testParts', 'p')
+      .leftJoinAndSelect('p.questionGroups', 'g')
+      .leftJoinAndSelect('g.groupPassages', 'gp')
+      .leftJoinAndSelect('g.questions', 'q')
+      .addSelect(['q.answer', 'q.explanation', 'q.evidence'])
+      .where('t.id = :id', { id })
+      .andWhere('t.status != :deleted', { deleted: TestStatus.DELETED })
+      .orderBy('s.order', 'ASC')
+      .addOrderBy('s.id', 'ASC')
+      .addOrderBy('p.order', 'ASC')
+      .addOrderBy('p.id', 'ASC')
+      .addOrderBy('g.order', 'ASC')
+      .addOrderBy('g.id', 'ASC')
+      .addOrderBy('gp.order', 'ASC')
+      .addOrderBy('q.order', 'ASC')
+      .addOrderBy('q.id', 'ASC')
+      .getOne();
+
+    if (!test) {
+      throw new NotFoundException(`Test with ID ${id} not found`);
+    }
+
+    const passageIds = [
+      ...new Set(
+        test.testSections.flatMap((s) =>
+          s.testParts.flatMap((p) =>
+            p.questionGroups.flatMap((g) =>
+              g.groupPassages.map((gp) => gp.passageId),
+            ),
+          ),
+        ),
+      ),
+    ];
+    const passages = passageIds.length
+      ? await this.passageRepository
+          .createQueryBuilder('passage')
+          .leftJoinAndSelect('passage.paragraphs', 'para')
+          .where('passage.id IN (:...passageIds)', { passageIds })
+          .orderBy('passage.id', 'ASC')
+          .addOrderBy('para.order', 'ASC')
+          .addOrderBy('para.id', 'ASC')
+          .getMany()
+      : [];
+
+    return { ...test, passages };
+  }
+
   async create(dto: CreateTestDto, actorId: string) {
     const { sections, ...rest } = dto;
     const normalized = this.normalizeSections(sections);
@@ -150,6 +206,24 @@ export class TestsService {
         dto.examType,
         sections.map((s) => s.skill),
       );
+    }
+
+    if (dto.status === TestStatus.PUBLISHED) {
+      const { passages, ...tree } = await this.findTree(id);
+      const issues = collectPublishIssues(
+        {
+          ...tree,
+          examType: dto.examType ?? tree.examType,
+          durationMinutes:
+            dto.durationMinutes === undefined
+              ? tree.durationMinutes
+              : dto.durationMinutes,
+        },
+        passages,
+      );
+      if (issues.length) {
+        throw new BadRequestException(issues);
+      }
     }
 
     const publishedAt =

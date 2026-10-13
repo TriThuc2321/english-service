@@ -108,12 +108,31 @@ const matching = (requireText: boolean): IContentRule => ({
   },
 });
 
-const template = (required: boolean): IContentRule => ({
-  required,
+const template: IContentRule = {
+  required: true,
   example: '{"template":"Name: Sarah {{1}}"}',
   validate: (c, fail) => {
     assertOnlyFields(c, ['template'], fail);
     assertTemplate(c.template, fail);
+  },
+};
+
+// Completion with an optional word bank ("Choose from the box")
+const completion = (requireTemplate: boolean): IContentRule => ({
+  required: requireTemplate,
+  example: requireTemplate
+    ? '{"template":"... {{14}} ...","options":[{"key":"A","text":"..."}]}'
+    : '{"template":"... {{14}} ..."} or {"options":[{"key":"A","text":"..."}]}',
+  validate: (c, fail) => {
+    assertOnlyFields(c, ['template', 'options'], fail);
+    if (requireTemplate || c.template !== undefined) {
+      assertTemplate(c.template, fail);
+    }
+    if (c.options !== undefined) {
+      assertOptions(c.options, true, fail);
+    } else if (c.template === undefined) {
+      fail('needs a template and/or options');
+    }
   },
 });
 
@@ -168,20 +187,11 @@ const GROUP_CONTENT_RULES: Record<QuestionType, IContentRule | null> = {
   [QuestionType.MATCHING_FEATURES]: matching(true),
   [QuestionType.MATCHING_SENTENCE_ENDINGS]: matching(true),
   [QuestionType.CLASSIFICATION]: matching(true),
-  [QuestionType.FORM_COMPLETION]: template(true),
-  // Usually one sentence per question in `prompt`; a shared template is optional
-  [QuestionType.SENTENCE_COMPLETION]: template(false),
-  [QuestionType.SUMMARY_COMPLETION]: {
-    required: true,
-    example:
-      '{"template":"... {{14}} ...","options":[{"key":"A","text":"..."}]}',
-    validate: (c, fail) => {
-      assertOnlyFields(c, ['template', 'options'], fail);
-      assertTemplate(c.template, fail);
-      if (c.options !== undefined) assertOptions(c.options, true, fail);
-    },
-  },
-  [QuestionType.NOTE_COMPLETION]: template(true),
+  [QuestionType.FORM_COMPLETION]: template,
+  // Usually one sentence per question in `prompt`, so the template is optional
+  [QuestionType.SENTENCE_COMPLETION]: completion(false),
+  [QuestionType.SUMMARY_COMPLETION]: completion(true),
+  [QuestionType.NOTE_COMPLETION]: completion(true),
   [QuestionType.TABLE_COMPLETION]: {
     required: true,
     example:
@@ -199,7 +209,7 @@ const GROUP_CONTENT_RULES: Record<QuestionType, IContentRule | null> = {
       );
     },
   },
-  [QuestionType.FLOW_CHART_COMPLETION]: template(true),
+  [QuestionType.FLOW_CHART_COMPLETION]: template,
   [QuestionType.DIAGRAM_LABELLING]: null,
   [QuestionType.MAP_LABELLING]: labels,
   [QuestionType.PLAN_LABELLING]: labels,
@@ -284,6 +294,23 @@ function assertContent(
     fail('this question type takes no content');
   }
   rule.validate(content, fail);
+}
+
+// Placeholder numbers of a group's template/table, or null when it has none.
+// Assumes the content already passed assertValidGroupContent.
+export function groupPlaceholders(type: QuestionType, content: Content) {
+  const fail: Fail = (reason) => {
+    throw new BadRequestException(reason);
+  };
+  if (type === QuestionType.TABLE_COMPLETION) {
+    const rows = (content?.table as { rows?: string[][] } | undefined)?.rows;
+    return rows
+      ? rows.flat().flatMap((cell) => collectPlaceholders(cell, fail))
+      : null;
+  }
+  return typeof content?.template === 'string'
+    ? collectPlaceholders(content.template, fail)
+    : null;
 }
 
 export function assertValidGroupContent(type: QuestionType, content: Content) {

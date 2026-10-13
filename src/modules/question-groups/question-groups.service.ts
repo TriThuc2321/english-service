@@ -12,7 +12,10 @@ import { QuestionGroup } from '../../entities/question-group.entity.js';
 import { Question } from '../../entities/question.entity.js';
 import { MediaValidator } from '../../shared/media/media.validator.js';
 import { TestStatus } from '../../types/test.type.js';
-import { assertValidAnswer } from '../questions/question-answer.js';
+import {
+  assertAnswerInOptions,
+  assertValidAnswer,
+} from '../questions/question-answer.js';
 import {
   assertValidEvidence,
   assertValidGroupContent,
@@ -84,6 +87,7 @@ export class QuestionGroupsService {
       assertValidAnswer(dto.questionType, q);
       assertValidQuestionContent(dto.questionType, q.content, q.numberFrom);
       assertValidEvidence(q.evidence, q.numberFrom);
+      assertAnswerInOptions(dto.questionType, q, rest.content);
     }
 
     await this.mediaValidator.assertKinds(rest);
@@ -123,14 +127,13 @@ export class QuestionGroupsService {
       rest.questionType !== group.questionType;
     const questionType = rest.questionType ?? group.questionType;
 
-    if (typeChanged || rest.content !== undefined) {
-      assertValidGroupContent(
-        questionType,
-        rest.content !== undefined ? rest.content : group.content,
-      );
-    }
+    const contentChanged = rest.content !== undefined;
+    const groupContent = contentChanged ? rest.content : group.content;
 
-    if (typeChanged) {
+    if (typeChanged || contentChanged) {
+      assertValidGroupContent(questionType, groupContent);
+
+      // Existing answers must still fit the new type and options
       const questions = await this.questionRepository.find({
         select: {
           id: true,
@@ -142,8 +145,11 @@ export class QuestionGroupsService {
         where: { groupId: id },
       });
       for (const q of questions) {
-        assertValidAnswer(questionType, q);
-        assertValidQuestionContent(questionType, q.content, q.numberFrom);
+        if (typeChanged) {
+          assertValidAnswer(questionType, q);
+          assertValidQuestionContent(questionType, q.content, q.numberFrom);
+        }
+        assertAnswerInOptions(questionType, q, groupContent);
       }
     }
 

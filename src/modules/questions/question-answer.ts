@@ -8,6 +8,7 @@ type AnswerKind = 'key' | 'keys' | 'accepted' | 'sample';
 const KEY = ['key'] as const;
 const ACCEPTED = ['accepted'] as const;
 const SAMPLE = ['sample'] as const;
+const WORD_BANK = ['accepted', 'key'] as const;
 
 const QUESTION_ANSWER_KINDS: Record<QuestionType, readonly AnswerKind[]> = {
   [QuestionType.MULTIPLE_CHOICE]: KEY,
@@ -20,10 +21,10 @@ const QUESTION_ANSWER_KINDS: Record<QuestionType, readonly AnswerKind[]> = {
   [QuestionType.MATCHING_SENTENCE_ENDINGS]: KEY,
   [QuestionType.CLASSIFICATION]: KEY,
   [QuestionType.FORM_COMPLETION]: ACCEPTED,
-  [QuestionType.SENTENCE_COMPLETION]: ACCEPTED,
-  // Either free text or a letter from a word bank
-  [QuestionType.SUMMARY_COMPLETION]: ['accepted', 'key'],
-  [QuestionType.NOTE_COMPLETION]: ACCEPTED,
+  // Completion types with an optional word bank: free text or an option key
+  [QuestionType.SENTENCE_COMPLETION]: WORD_BANK,
+  [QuestionType.SUMMARY_COMPLETION]: WORD_BANK,
+  [QuestionType.NOTE_COMPLETION]: WORD_BANK,
   [QuestionType.TABLE_COMPLETION]: ACCEPTED,
   [QuestionType.FLOW_CHART_COMPLETION]: ACCEPTED,
   [QuestionType.DIAGRAM_LABELLING]: ACCEPTED,
@@ -126,5 +127,83 @@ export function assertValidAnswer(
         fail('accepted must be a non-empty array of non-empty strings');
       }
       break;
+  }
+}
+
+type OptionSource = 'group' | 'question' | readonly string[];
+
+// Where the keys an answer may pick from live; types not listed have no fixed set
+const OPTION_SOURCES: Partial<Record<QuestionType, OptionSource>> = {
+  [QuestionType.MULTIPLE_CHOICE]: 'question',
+  [QuestionType.MULTIPLE_CHOICE_MULTI]: 'question',
+  [QuestionType.TRUE_FALSE_NOT_GIVEN]: ['TRUE', 'FALSE', 'NOT GIVEN'],
+  [QuestionType.YES_NO_NOT_GIVEN]: ['YES', 'NO', 'NOT GIVEN'],
+  [QuestionType.MATCHING_HEADINGS]: 'group',
+  [QuestionType.MATCHING_INFORMATION]: 'group',
+  [QuestionType.MATCHING_FEATURES]: 'group',
+  [QuestionType.MATCHING_SENTENCE_ENDINGS]: 'group',
+  [QuestionType.CLASSIFICATION]: 'group',
+  [QuestionType.SENTENCE_COMPLETION]: 'group',
+  [QuestionType.SUMMARY_COMPLETION]: 'group',
+  [QuestionType.NOTE_COMPLETION]: 'group',
+  [QuestionType.MAP_LABELLING]: 'group',
+  [QuestionType.PLAN_LABELLING]: 'group',
+  [QuestionType.PHOTO_DESCRIPTION]: 'question',
+  [QuestionType.QUESTION_RESPONSE]: 'question',
+  [QuestionType.TEXT_COMPLETION]: 'question',
+};
+
+type Content = Record<string, unknown> | null | undefined;
+
+function optionKeys(content: Content) {
+  const options = content?.options;
+  if (!Array.isArray(options)) return undefined;
+
+  return options.flatMap((o) =>
+    isPlainObject(o) && typeof o.key === 'string' ? [o.key] : [],
+  );
+}
+
+// Runs after the answer and both contents passed their shape checks
+export function assertAnswerInOptions(
+  type: QuestionType,
+  {
+    answer,
+    numberFrom,
+    content,
+  }: Pick<IAnswerTarget, 'answer' | 'numberFrom'> & { content?: Content },
+  groupContent: Content,
+) {
+  const source = OPTION_SOURCES[type];
+  const picked =
+    typeof answer.key === 'string'
+      ? [answer.key]
+      : Array.isArray(answer.keys)
+        ? (answer.keys as string[])
+        : [];
+  if (!source || !picked.length) return;
+
+  const keys =
+    source === 'group'
+      ? optionKeys(groupContent)
+      : source === 'question'
+        ? optionKeys(content)
+        : source;
+  const fail: Fail = (reason) => {
+    throw new BadRequestException(
+      `Invalid answer for question ${numberFrom} (${type}): ${reason}`,
+    );
+  };
+
+  if (!keys) {
+    fail(
+      source === 'group'
+        ? 'the group has no options to pick from; use {"accepted":[...]} or add options to the group content'
+        : 'the question has no options to pick from',
+    );
+  }
+  const unknown = picked.filter((key) => !keys.includes(key));
+  if (unknown.length) {
+    fail(`${unknown.join(', ')} not among the options (${keys.join(', ')})`);
   }
 }

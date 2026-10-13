@@ -17,7 +17,7 @@ import {
   ReorderQuestionsDto,
   UpdateQuestionDto,
 } from './dto/questions.dto.js';
-import { assertValidAnswer } from './question-answer.js';
+import { assertAnswerInOptions, assertValidAnswer } from './question-answer.js';
 import {
   assertValidEvidence,
   assertValidQuestionContent,
@@ -64,6 +64,7 @@ export class QuestionsService {
     assertValidAnswer(group.questionType, { ...dto, numberTo });
     assertValidQuestionContent(group.questionType, dto.content, dto.numberFrom);
     assertValidEvidence(dto.evidence, dto.numberFrom);
+    assertAnswerInOptions(group.questionType, dto, group.content);
     await this.mediaValidator.assertKinds(dto);
 
     let { order } = dto;
@@ -113,6 +114,17 @@ export class QuestionsService {
     }
     if (dto.evidence !== undefined) {
       assertValidEvidence(dto.evidence, numberFrom);
+    }
+    if (dto.answer !== undefined || dto.content !== undefined) {
+      assertAnswerInOptions(
+        group.questionType,
+        {
+          answer: dto.answer ?? question.answer,
+          numberFrom,
+          content: dto.content === undefined ? question.content : dto.content,
+        },
+        group.content,
+      );
     }
     await this.mediaValidator.assertKinds(dto);
 

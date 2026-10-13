@@ -49,6 +49,16 @@ export class TestsController {
     return this.testsService.findById(id);
   }
 
+  @Get(':id/tree')
+  @ApiOperation({
+    summary:
+      'Get a test with sections, parts, groups, questions (with answers) and linked passages',
+  })
+  @CheckPermissions([PermissionAction.READ, PermissionSubject.TEST])
+  findTree(@Param('id', ParseIntPipe) id: number) {
+    return this.testsService.findTree(id);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a test (optionally with sections)' })
   @CheckPermissions([PermissionAction.CREATE, PermissionSubject.TEST])
@@ -58,7 +68,8 @@ export class TestsController {
 
   @Patch(':id')
   @ApiOperation({
-    summary: 'Update a test; sections change via /test-sections',
+    summary:
+      'Update a test; sections change via /test-sections. Publishing validates the whole test and returns every issue found',
   })
   @CheckPermissions([PermissionAction.UPDATE, PermissionSubject.TEST])
   update(
