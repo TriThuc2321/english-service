@@ -1,0 +1,404 @@
+// IELTS/TOEIC test schema – phase 1: IELTS Listening & Reading, TOEIC LR
+// Bảng nào có created_at là bảng dùng AuditMetadata
+// (created_at, created_by_id, updated_at, updated_by_id), ở đây chỉ ghi created_at cho gọn.
+// AuditMetadata hiện là `timestamp without time zone`; các mốc thời gian nghiệp vụ (deadline, submit...) dùng timestamptz.
+
+Enum exam_type_enum {
+  IELTS_ACADEMIC
+  IELTS_GENERAL
+  TOEIC_LR
+}
+
+Enum skill_enum {
+  LISTENING
+  READING
+  WRITING  [note: 'phase 2']
+  SPEAKING [note: 'phase 2']
+}
+
+Enum marked_by_enum {
+  ALPHABET
+  NUMBER
+  NONE
+}
+
+Enum status_passage_enum {
+  DRAFT
+  PUBLISHED
+  DELETED
+}
+
+Enum test_status_enum {
+  DRAFT
+  PUBLISHED
+  DELETED
+}
+
+Enum question_type_enum {
+  MULTIPLE_CHOICE
+  MULTIPLE_CHOICE_MULTI
+  TRUE_FALSE_NOT_GIVEN
+  YES_NO_NOT_GIVEN
+  MATCHING_HEADINGS
+  MATCHING_INFORMATION
+  MATCHING_FEATURES
+  MATCHING_SENTENCE_ENDINGS
+  CLASSIFICATION
+  FORM_COMPLETION
+  SENTENCE_COMPLETION
+  SUMMARY_COMPLETION
+  NOTE_COMPLETION
+  TABLE_COMPLETION
+  FLOW_CHART_COMPLETION
+  DIAGRAM_LABELLING
+  MAP_LABELLING
+  PLAN_LABELLING
+  SHORT_ANSWER
+  PHOTO_DESCRIPTION   [note: 'TOEIC Part 1']
+  QUESTION_RESPONSE   [note: 'TOEIC Part 2']
+  TEXT_COMPLETION     [note: 'TOEIC Part 6']
+}
+
+Enum media_kind_enum {
+  AUDIO
+  IMAGE
+}
+
+Enum attempt_mode_enum {
+  FULL
+  SECTION
+}
+
+Enum attempt_status_enum {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+  EXPIRED
+}
+
+Enum attempt_section_status_enum {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+}
+
+Enum grader_type_enum {
+  AI
+  TEACHER
+}
+
+// ───────────── Existing ─────────────
+
+Table users {
+  user_id uuid [pk]
+  email varchar
+  first_name varchar
+  Note: 'Bảng có sẵn, chỉ ghi vài cột'
+}
+
+Table passages {
+  passage_id int [pk, increment]
+  title varchar(255) [not null]
+  subtitle varchar(255)
+  marked_by marked_by_enum [not null, default: 'NONE']
+  status status_passage_enum [not null, default: 'DRAFT']
+  created_at timestamp
+
+  indexes {
+    status
+  }
+  Note: '''
+  Bảng có sẵn.
+  Không cho sửa/xoá passage khi đang được group_passages của một test đã locked trỏ tới (check ở service).
+  '''
+}
+
+Table paragraphs {
+  paragraph_id int [pk, increment]
+  passage_id int [not null]
+  content text [not null]
+  "order" int [not null, default: 0]
+
+  indexes {
+    passage_id
+  }
+  Note: 'Bảng có sẵn'
+}
+
+// ───────────── Test structure ─────────────
+
+Table tests {
+  test_id int [pk, increment]
+  exam_type exam_type_enum [not null]
+  title varchar(255) [not null]
+  source varchar(255) [note: 'Cambridge 18 - Test 1']
+  duration_minutes int [note: 'Hạn tổng; TOEIC LR = 120. IELTS dùng duration của từng section']
+  status test_status_enum [not null, default: 'DRAFT']
+  published_at timestamptz
+  locked_at timestamptz [note: 'Ghi khi có attempt đầu tiên']
+  created_at timestamp
+
+  indexes {
+    exam_type
+    status
+  }
+  Note: '''
+  Sau khi locked: chặn sửa cấu trúc (section/part/group/question, số câu, passage, media).
+  Vẫn cho sửa questions.answer / explanation để fix đáp án sai -> re-grade các attempt liên quan.
+  Vì cây test không đổi sau khi lock, có thể cache JSON cả cây.
+  '''
+}
+
+Table test_sections {
+  section_id int [pk, increment]
+  test_id int [not null]
+  skill skill_enum [not null]
+  "order" int [not null]
+  duration_minutes int [note: 'IELTS: Listening 30 (+10 transfer), Reading 60. TOEIC: null']
+
+  indexes {
+    (test_id, skill) [unique]
+  }
+}
+
+Table test_parts {
+  part_id int [pk, increment]
+  section_id int [not null]
+  "order" int [not null]
+  title varchar(255) [note: 'Part 1 / Passage 2 / TOEIC Part 5']
+  instruction text
+  audio_media_id int [note: 'Audio của cả part (IELTS Listening)']
+  audio_start_ms int [note: 'Khi nhiều part dùng chung một file audio']
+  audio_end_ms int
+
+  indexes {
+    section_id
+  }
+}
+
+Table question_groups {
+  group_id int [pk, increment]
+  part_id int [not null]
+  "order" int [not null]
+  question_type question_type_enum [not null]
+  instruction text [note: 'Questions 1-6: Do the following statements agree...']
+  word_limit int [note: 'NO MORE THAN TWO WORDS -> 2']
+  content jsonb [note: '''
+  Shared options (headings, features, endings, {"allowReuse":true}) /
+  template có placeholder {{12}} theo số câu -> validate khớp number_from lúc publish /
+  table structure
+  ''']
+  audio_media_id int [note: 'Audio hội thoại TOEIC Part 3/4']
+  image_media_id int [note: 'Graphic TOEIC Part 3/4/7, map/plan/diagram IELTS']
+
+  indexes {
+    part_id
+  }
+}
+
+Table group_passages {
+  group_id int [not null]
+  passage_id int [not null]
+  "order" int [not null, default: 0]
+
+  indexes {
+    (group_id, passage_id) [pk]
+    passage_id
+  }
+  Note: 'TOEIC Part 7 có group gồm 2-3 passage'
+}
+
+Table questions {
+  question_id int [pk, increment]
+  group_id int [not null]
+  number_from int [not null, note: 'Số câu hiển thị, vd 21']
+  number_to int [not null, note: '22 nếu là Choose TWO; bằng number_from nếu câu thường']
+  "order" int [not null]
+  prompt text
+  content jsonb [note: 'Options riêng của câu (MCQ A-D)']
+  answer jsonb [not null, note: '''
+  Schema theo question_type (discriminated union, validate ở DTO):
+  {"key":"B"} | {"keys":["A","D"]} | {"accepted":["colour","color"]}
+  Completion: so khớp sau khi normalize (trim, lowercase, bỏ dấu câu cuối) + áp word_limit.
+  KHÔNG bao giờ trả answer/explanation/evidence trong API làm bài.
+  ''']
+  explanation text
+  evidence jsonb [note: 'Locate answer khi review: {"paragraph_id":12,"quote":"..."}']
+  audio_media_id int [note: 'Clip TOEIC Part 1/2']
+  image_media_id int [note: 'Ảnh TOEIC Part 1']
+  audio_start_ms int [note: 'Nhảy tới đoạn chứa đáp án khi review']
+
+  indexes {
+    group_id
+  }
+  Note: '''
+  Điểm tối đa của câu = number_to - number_from + 1 (max_score = SUM, không phải COUNT).
+  Không có test_id ở đây -> validate lúc publish: số câu liên tục 1..40 (IELTS) / 1..200 (TOEIC), không trùng.
+  '''
+}
+
+Table media {
+  media_id int [pk, increment]
+  kind media_kind_enum [not null]
+  storage_key varchar(500) [not null, note: 'Key trong storage; URL/signed URL build lúc trả về']
+  mime_type varchar(100)
+  size_bytes bigint
+  duration_ms int
+  transcript text
+  created_at timestamp
+  Note: 'Không cho sửa/xoá khi đang được test đã locked trỏ tới'
+}
+
+// ───────────── Attempts & scoring ─────────────
+
+Table attempts {
+  attempt_id uuid [pk]
+  user_id uuid [not null]
+  test_id int [not null]
+  mode attempt_mode_enum [not null]
+  status attempt_status_enum [not null, default: 'IN_PROGRESS']
+  started_at timestamptz [not null]
+  deadline_at timestamptz [note: 'Hạn tổng (TOEIC LR). IELTS dùng deadline của attempt_sections']
+  submitted_at timestamptz
+  overall_score numeric(5,1) [note: 'TOEIC = L + R. IELTS: null ở phase 1 (chỉ có L/R)']
+
+  indexes {
+    (user_id, started_at) [note: 'Lịch sử làm bài, sort DESC']
+    (user_id, test_id)
+    status
+  }
+  Note: '''
+  Partial unique: UNIQUE (user_id, test_id) WHERE status = 'IN_PROGRESS'.
+  Không có scheduler -> EXPIRED xử lý lazy: khi đọc/lưu mà now > deadline + grace thì auto-submit và chấm.
+  '''
+}
+
+Table attempt_sections {
+  attempt_section_id uuid [pk]
+  attempt_id uuid [not null]
+  section_id int [not null]
+  status attempt_section_status_enum [not null, default: 'NOT_STARTED']
+  started_at timestamptz
+  deadline_at timestamptz [note: 'started_at + section.duration_minutes, server tính']
+  submitted_at timestamptz
+  raw_score int
+  max_score int
+  scaled_score numeric(5,1)
+
+  indexes {
+    (attempt_id, section_id) [unique]
+  }
+  Note: '''
+  FULL: tạo đủ các section của test. SECTION: chỉ tạo section user chọn.
+  Autosave answer phải check deadline của section chứa câu hỏi.
+  '''
+}
+
+Table attempt_answers {
+  attempt_id uuid [not null]
+  question_id int [not null]
+  response jsonb [note: 'Đáp án user; phase 2 chứa essay / audio storage_key']
+  is_correct boolean [note: 'Chấm và ghi lúc nộp; null nếu bỏ trống']
+  score int [note: '0..(number_to - number_from + 1); Choose TWO chấm từng key, không xét thứ tự']
+  flagged boolean [not null, default: false]
+  answered_at timestamptz
+
+  indexes {
+    (attempt_id, question_id) [pk]
+    question_id [note: 'Thống kê độ khó câu hỏi']
+  }
+}
+
+Table score_scales {
+  score_scale_id int [pk, increment]
+  exam_type exam_type_enum [not null]
+  skill skill_enum [not null]
+  test_id int [note: 'null = thang mặc định; có giá trị = override cho đề cụ thể']
+  raw_score int [not null]
+  scaled_score numeric(5,1) [not null]
+
+  indexes {
+    (exam_type, skill, raw_score) [note: 'partial unique WHERE test_id IS NULL']
+    (test_id, skill, raw_score) [note: 'partial unique WHERE test_id IS NOT NULL']
+  }
+  Note: '''
+  Mỗi raw score một dòng (IELTS 0..40 -> band, TOEIC 0..100 -> 5..495), tra bằng một lookup, không chồng range.
+  Lookup: ưu tiên dòng có test_id, fallback thang mặc định.
+  IELTS overall (phase 2): trung bình 4 kỹ năng, .25 làm tròn lên .5, .75 làm tròn lên số nguyên.
+  '''
+}
+
+Table assessments {
+  assessment_id uuid [pk]
+  attempt_section_id uuid [not null]
+  part_id int [note: 'Writing Task 1/2, Speaking Part 1-3']
+  grader_type grader_type_enum [not null]
+  grader_id uuid [note: 'User id nếu là giáo viên']
+  model varchar(100) [note: 'AI model id']
+  criteria jsonb [note: '{"TA":7,"CC":6.5,"LR":7,"GRA":6}']
+  overall numeric(3,1)
+  feedback text
+  created_at timestamp
+
+  indexes {
+    attempt_section_id
+  }
+  Note: 'PHASE 2 – Writing/Speaking, AI + giáo viên chấm'
+}
+
+// ───────────── Relations ─────────────
+
+Ref: paragraphs.passage_id > passages.passage_id [delete: cascade]
+
+Ref: test_sections.test_id > tests.test_id [delete: cascade]
+Ref: test_parts.section_id > test_sections.section_id [delete: cascade]
+Ref: question_groups.part_id > test_parts.part_id [delete: cascade]
+Ref: questions.group_id > question_groups.group_id [delete: cascade]
+
+Ref: group_passages.group_id > question_groups.group_id [delete: cascade]
+Ref: group_passages.passage_id > passages.passage_id [delete: restrict]
+
+Ref: test_parts.audio_media_id > media.media_id [delete: restrict]
+Ref: question_groups.audio_media_id > media.media_id [delete: restrict]
+Ref: question_groups.image_media_id > media.media_id [delete: restrict]
+Ref: questions.audio_media_id > media.media_id [delete: restrict]
+Ref: questions.image_media_id > media.media_id [delete: restrict]
+
+Ref: attempts.user_id > users.user_id
+Ref: attempts.test_id > tests.test_id
+Ref: attempt_sections.attempt_id > attempts.attempt_id [delete: cascade]
+Ref: attempt_sections.section_id > test_sections.section_id
+Ref: attempt_answers.attempt_id > attempts.attempt_id [delete: cascade]
+Ref: attempt_answers.question_id > questions.question_id
+
+Ref: score_scales.test_id > tests.test_id [delete: cascade]
+
+Ref: assessments.attempt_section_id > attempt_sections.attempt_section_id [delete: cascade]
+Ref: assessments.part_id > test_parts.part_id
+
+// ───────────── Groups (tô màu trên dbdiagram) ─────────────
+
+TableGroup test_structure {
+  tests
+  test_sections
+  test_parts
+  question_groups
+  questions
+  group_passages
+  media
+}
+
+TableGroup content_existing {
+  passages
+  paragraphs
+  users
+}
+
+TableGroup attempts_scoring {
+  attempts
+  attempt_sections
+  attempt_answers
+  score_scales
+  assessments
+}
