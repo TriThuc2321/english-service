@@ -14,28 +14,30 @@ Quy tắc chung:
 - `options` cần ít nhất 2 phần tử, `key` không trùng nhau.
 - "—" nghĩa là dạng câu hỏi đó **không nhận** content: gửi lên sẽ bị 400, nên để `null` hoặc bỏ trống.
 - Placeholder `{{n}}` phải đúng cú pháp và không trùng số. Việc khớp `n` với `questions.number_from` chưa check lúc lưu mà để đến lúc publish.
-- Đổi `questionType` của một group thì validate lại `content` của group cùng `content`/`answer` của tất cả câu trong group.
+- `key`/`keys` phải nằm trong danh sách option tương ứng (cột "option lấy từ" bên dưới). Dạng có word bank mà group chưa có `options` thì chỉ nhận `accepted`.
+- Đổi `questionType` hoặc `content` của một group thì validate lại `content`/`answer` của tất cả câu trong group (vd bỏ một option đang là đáp án sẽ bị 400).
 
 ## Bảng tổng hợp
 
-| question_type                                                   | group.content                                         | question.content         | answer                                        |
-| --------------------------------------------------------------- | ----------------------------------------------------- | ------------------------ | --------------------------------------------- |
-| MULTIPLE_CHOICE                                                 | —                                                     | **options** (có text)    | `key`                                         |
-| MULTIPLE_CHOICE_MULTI                                           | —                                                     | **options** (có text)    | `keys` (số key = number_to − number_from + 1) |
-| TRUE_FALSE_NOT_GIVEN, YES_NO_NOT_GIVEN                          | —                                                     | —                        | `key`                                         |
-| MATCHING_HEADINGS / FEATURES / SENTENCE_ENDINGS, CLASSIFICATION | **matching** (option có text)                         | —                        | `key`                                         |
-| MATCHING_INFORMATION                                            | **matching** (text tuỳ chọn, key là chữ cái đoạn văn) | —                        | `key`                                         |
-| FORM / NOTE / FLOW_CHART_COMPLETION                             | **template**                                          | —                        | `accepted`                                    |
-| SENTENCE_COMPLETION                                             | template (tuỳ chọn, thường mỗi câu nằm ở `prompt`)    | —                        | `accepted`                                    |
-| SUMMARY_COMPLETION                                              | **template** + options tuỳ chọn (word bank)           | —                        | `accepted` hoặc `key`                         |
-| TABLE_COMPLETION                                                | **table**                                             | —                        | `accepted`                                    |
-| DIAGRAM_LABELLING                                               | — (ảnh ở `image_media_id`)                            | —                        | `accepted`                                    |
-| MAP_LABELLING, PLAN_LABELLING                                   | **labels**                                            | —                        | `key`                                         |
-| SHORT_ANSWER                                                    | —                                                     | —                        | `accepted`                                    |
-| PHOTO_DESCRIPTION, QUESTION_RESPONSE (TOEIC Part 1/2)           | —                                                     | **options** (không text) | `key`                                         |
-| TEXT_COMPLETION (TOEIC Part 6)                                  | — (passage gắn qua `group_passages`)                  | **options** (có text)    | `key`                                         |
-| RESPOND_USING_INFO                                              | **info**                                              | timing (tuỳ chọn)        | `sample`                                      |
-| 7 dạng Speaking/Writing còn lại                                 | —                                                     | timing (tuỳ chọn)        | `sample`                                      |
+| question_type                                                   | group.content                                                   | question.content         | answer                                        | option lấy từ                |
+| --------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------ | --------------------------------------------- | ---------------------------- |
+| MULTIPLE_CHOICE                                                 | —                                                               | **options** (có text)    | `key`                                         | question.content             |
+| MULTIPLE_CHOICE_MULTI                                           | —                                                               | **options** (có text)    | `keys` (số key = number_to − number_from + 1) | question.content             |
+| TRUE_FALSE_NOT_GIVEN                                            | —                                                               | —                        | `key`                                         | `TRUE`, `FALSE`, `NOT GIVEN` |
+| YES_NO_NOT_GIVEN                                                | —                                                               | —                        | `key`                                         | `YES`, `NO`, `NOT GIVEN`     |
+| MATCHING_HEADINGS / FEATURES / SENTENCE_ENDINGS, CLASSIFICATION | **matching** (option có text)                                   | —                        | `key`                                         | group.content                |
+| MATCHING_INFORMATION                                            | **matching** (text tuỳ chọn, key là chữ cái đoạn văn)           | —                        | `key`                                         | group.content                |
+| FORM / FLOW_CHART_COMPLETION                                    | **template**                                                    | —                        | `accepted`                                    |                              |
+| NOTE / SUMMARY_COMPLETION                                       | **template** + options tuỳ chọn (word bank)                     | —                        | `accepted`, hoặc `key` nếu có word bank       | group.content                |
+| SENTENCE_COMPLETION                                             | template và/hoặc options (word bank); mỗi câu thường ở `prompt` | —                        | `accepted`, hoặc `key` nếu có word bank       | group.content                |
+| TABLE_COMPLETION                                                | **table**                                                       | —                        | `accepted`                                    |                              |
+| DIAGRAM_LABELLING                                               | — (ảnh ở `image_media_id`)                                      | —                        | `accepted`                                    |                              |
+| MAP_LABELLING, PLAN_LABELLING                                   | **labels**                                                      | —                        | `key`                                         | group.content                |
+| SHORT_ANSWER                                                    | —                                                               | —                        | `accepted`                                    |                              |
+| PHOTO_DESCRIPTION, QUESTION_RESPONSE (TOEIC Part 1/2)           | —                                                               | **options** (không text) | `key`                                         | question.content             |
+| TEXT_COMPLETION (TOEIC Part 6)                                  | — (passage gắn qua `group_passages`)                            | **options** (có text)    | `key`                                         | question.content             |
+| RESPOND_USING_INFO                                              | **info**                                                        | timing (tuỳ chọn)        | `sample`                                      |                              |
+| 7 dạng Speaking/Writing còn lại                                 | —                                                               | timing (tuỳ chọn)        | `sample`                                      |                              |
 
 **In đậm** = bắt buộc.
 
@@ -50,7 +52,7 @@ Quy tắc chung:
 // template: cần ít nhất một {{n}}
 { "template": "Name: Sarah {{1}}\nPostcode: {{2}}" }
 
-// summary (có word bank)
+// note / summary / sentence có word bank ("Choose from the box"); sentence có thể chỉ có options
 { "template": "The study found {{14}} in ...",
   "options": [{ "key": "A", "text": "rapid growth" }, { "key": "B", "text": "decline" }] }
 
@@ -96,3 +98,15 @@ Chỉ `keys` được dùng một dải số (`number_to > number_from`). Các s
 ```
 
 Cần ít nhất một trong hai field.
+
+## Kiểm tra lúc publish
+
+`PATCH /tests/:id` với `status: PUBLISHED` chạy `src/modules/tests/test-publish.validator.ts` trên cả cây đề và trả 400 kèm **toàn bộ** lỗi tìm được (`message` là mảng). Các check:
+
+- Test có section, section có part, part có group, group có câu hỏi.
+- Đánh số mỗi section liên tục, không trùng (tính cả dải `number_from..number_to`). IELTS Listening/Reading phải đủ 1–40, TOEIC LR Listening 1–100 / Reading 101–200, TOEIC SW Speaking 1–11 / Writing 1–8.
+- Placeholder `{{n}}` trong template/table khớp đúng tập `number_from` của các câu trong group.
+- Group có word bank thì mọi câu phải là `key`.
+- IELTS: mỗi section cần `duration_minutes`; part Listening cần audio; group Reading cần passage và các group trong một part phải gắn cùng passage. TOEIC LR: test cần `duration_minutes`. TEXT_COMPLETION cần passage.
+- Passage được gắn chưa bị xoá; DIAGRAM/MAP/PLAN_LABELLING có `image_media_id`.
+- Chạy lại các check lúc lưu (shape + key thuộc options) để bắt dữ liệu cũ.
