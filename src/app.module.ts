@@ -16,6 +16,8 @@ import { ParagraphsModule } from './modules/paragraphs/paragraphs.module.js';
 import { PassagesModule } from './modules/passages/passages.module.js';
 import { PermissionsModule } from './modules/permissions/permissions.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
+import { TestSectionsModule } from './modules/test-sections/test-sections.module.js';
+import { TestsModule } from './modules/tests/tests.module.js';
 import { CaslModule } from './shared/casl/casl.module.js';
 
 @Module({
@@ -42,6 +44,8 @@ import { CaslModule } from './shared/casl/casl.module.js';
     PermissionsModule,
     PassagesModule,
     ParagraphsModule,
+    TestsModule,
+    TestSectionsModule,
     CaslModule,
   ],
   controllers: [],

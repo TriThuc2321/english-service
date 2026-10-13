@@ -7,6 +7,7 @@ Enum exam_type_enum {
   IELTS_ACADEMIC
   IELTS_GENERAL
   TOEIC_LR
+  TOEIC_SW [note: 'phase 2']
 }
 
 Enum skill_enum {
@@ -57,6 +58,14 @@ Enum question_type_enum {
   PHOTO_DESCRIPTION   [note: 'TOEIC Part 1']
   QUESTION_RESPONSE   [note: 'TOEIC Part 2']
   TEXT_COMPLETION     [note: 'TOEIC Part 6']
+  READ_ALOUD              [note: 'TOEIC Speaking Q1-2']
+  DESCRIBE_PICTURE        [note: 'TOEIC Speaking Q3-4']
+  RESPOND_TO_QUESTIONS    [note: 'TOEIC Speaking Q5-7']
+  RESPOND_USING_INFO      [note: 'TOEIC Speaking Q8-10']
+  EXPRESS_OPINION         [note: 'TOEIC Speaking Q11']
+  WRITE_SENTENCE_PICTURE  [note: 'TOEIC Writing Q1-5']
+  RESPOND_WRITTEN_REQUEST [note: 'TOEIC Writing Q6-7']
+  OPINION_ESSAY           [note: 'TOEIC Writing Q8']
 }
 
 Enum media_kind_enum {
@@ -220,6 +229,7 @@ Table questions {
   answer jsonb [not null, note: '''
   Schema theo question_type (discriminated union, validate ở DTO):
   {"key":"B"} | {"keys":["A","D"]} | {"accepted":["colour","color"]}
+  Speaking/Writing (không có đáp án cố định): {"sample":"...","rubric":{...}?} – bài mẫu + tiêu chí cho AI/giáo viên chấm.
   Completion: so khớp sau khi normalize (trim, lowercase, bỏ dấu câu cuối) + áp word_limit.
   KHÔNG bao giờ trả answer/explanation/evidence trong API làm bài.
   ''']
