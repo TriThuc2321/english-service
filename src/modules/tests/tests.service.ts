@@ -191,13 +191,17 @@ export class TestsService {
 
   async findEditableTest(id: number) {
     const test = await this.findExistingTest(id);
-    if (test.lockedAt) {
-      throw new BadRequestException(
-        `Test with ID ${id} is locked; its structure can no longer change`,
-      );
-    }
+    this.assertEditable(test);
 
     return test;
+  }
+
+  assertEditable(test: Pick<Test, 'id' | 'lockedAt'>) {
+    if (test.lockedAt) {
+      throw new BadRequestException(
+        `Test with ID ${test.id} is locked; its structure can no longer change`,
+      );
+    }
   }
 
   assertSkillsAllowed(examType: ExamType, skills: SkillType[]) {
