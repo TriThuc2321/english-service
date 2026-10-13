@@ -77,13 +77,19 @@ export class TestSectionsService {
   async reorder({ testId, ids }: ReorderTestSectionsDto) {
     await this.testsService.findEditableTest(testId);
 
-    const count = await this.sectionRepository.countBy({
-      id: In(ids),
-      testId,
-    });
-    if (count !== ids.length) {
+    const [matched, total] = await Promise.all([
+      this.sectionRepository.countBy({ id: In(ids), testId }),
+      this.sectionRepository.countBy({ testId }),
+    ]);
+    if (matched !== ids.length) {
       throw new BadRequestException(
         'One or more sections do not belong to this test',
+      );
+    }
+
+    if (total !== ids.length) {
+      throw new BadRequestException(
+        `ids must include all ${total} sections of this test`,
       );
     }
 
