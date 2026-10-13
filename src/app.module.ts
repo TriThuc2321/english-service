@@ -15,7 +15,10 @@ import { PermissionGuard } from './modules/auth/guards/permission.guard.js';
 import { ParagraphsModule } from './modules/paragraphs/paragraphs.module.js';
 import { PassagesModule } from './modules/passages/passages.module.js';
 import { PermissionsModule } from './modules/permissions/permissions.module.js';
+import { QuestionGroupsModule } from './modules/question-groups/question-groups.module.js';
+import { QuestionsModule } from './modules/questions/questions.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
+import { TestPartsModule } from './modules/test-parts/test-parts.module.js';
 import { TestSectionsModule } from './modules/test-sections/test-sections.module.js';
 import { TestsModule } from './modules/tests/tests.module.js';
 import { CaslModule } from './shared/casl/casl.module.js';
@@ -46,6 +49,9 @@ import { CaslModule } from './shared/casl/casl.module.js';
     ParagraphsModule,
     TestsModule,
     TestSectionsModule,
+    TestPartsModule,
+    QuestionGroupsModule,
+    QuestionsModule,
     CaslModule,
   ],
   controllers: [],

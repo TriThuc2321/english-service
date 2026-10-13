@@ -195,8 +195,9 @@ Table question_groups {
   word_limit int [note: 'NO MORE THAN TWO WORDS -> 2']
   content jsonb [note: '''
   Shared options (headings, features, endings, {"allowReuse":true}) /
-  template có placeholder {{12}} theo số câu -> validate khớp number_from lúc publish /
-  table structure
+  template có placeholder {{12}} theo số câu (khớp number_from validate lúc publish) /
+  table structure / info (TOEIC RESPOND_USING_INFO).
+  Shape theo question_type, validate ở service – xem docs/question-formats.md
   ''']
   audio_media_id int [note: 'Audio hội thoại TOEIC Part 3/4']
   image_media_id int [note: 'Graphic TOEIC Part 3/4/7, map/plan/diagram IELTS']
@@ -225,16 +226,16 @@ Table questions {
   number_to int [not null, note: '22 nếu là Choose TWO; bằng number_from nếu câu thường']
   "order" int [not null]
   prompt text
-  content jsonb [note: 'Options riêng của câu (MCQ A-D)']
+  content jsonb [note: 'Options riêng của câu (MCQ A-D) / thời gian chuẩn bị-trả lời SW – xem docs/question-formats.md']
   answer jsonb [not null, note: '''
-  Schema theo question_type (discriminated union, validate ở DTO):
+  Schema theo question_type (discriminated union, validate ở service – xem docs/question-formats.md):
   {"key":"B"} | {"keys":["A","D"]} | {"accepted":["colour","color"]}
   Speaking/Writing (không có đáp án cố định): {"sample":"...","rubric":{...}?} – bài mẫu + tiêu chí cho AI/giáo viên chấm.
   Completion: so khớp sau khi normalize (trim, lowercase, bỏ dấu câu cuối) + áp word_limit.
   KHÔNG bao giờ trả answer/explanation/evidence trong API làm bài.
   ''']
   explanation text
-  evidence jsonb [note: 'Locate answer khi review: {"paragraph_id":12,"quote":"..."}']
+  evidence jsonb [note: 'Locate answer khi review: {"paragraphId":12,"quote":"..."}']
   audio_media_id int [note: 'Clip TOEIC Part 1/2']
   image_media_id int [note: 'Ảnh TOEIC Part 1']
   audio_start_ms int [note: 'Nhảy tới đoạn chứa đáp án khi review']
