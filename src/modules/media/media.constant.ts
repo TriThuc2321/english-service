@@ -28,6 +28,9 @@ export const MEDIA_MAX_BYTES: Record<MediaKind, number> = {
   [MediaKind.IMAGE]: 10 * 1024 * 1024,
 };
 
-// <kind>/<yyyy>/<mm>/<uuid>.<ext>, as issued by MediaService.createUploadUrl
+export const mediaKeyPrefix = (testId: number, kind: MediaKind) =>
+  `tests/${testId}/${kind.toLowerCase()}/`;
+
+// tests/<testId>/<kind>/<uuid>.<ext>, as issued by MediaService.createUploadUrl
 export const MEDIA_KEY_PATTERN =
-  /^(audio|image)\/\d{4}\/\d{2}\/[0-9a-f-]{36}\.[a-z0-9]+$/;
+  /^tests\/\d+\/(audio|image)\/[0-9a-f-]{36}\.[a-z0-9]+$/;

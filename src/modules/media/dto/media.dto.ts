@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsIn,
@@ -14,6 +15,11 @@ import { MediaKind } from '../../../types/test.type.js';
 import { MEDIA_KEY_PATTERN, MEDIA_MIME_TYPES } from '../media.constant.js';
 
 export class CreateUploadUrlDto {
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  testId: number;
+
   @ApiProperty({ enum: MediaKind })
   @IsEnum(MediaKind)
   kind: MediaKind;
@@ -37,6 +43,11 @@ export class UpdateMediaDto {
 }
 
 export class CreateMediaDto extends UpdateMediaDto {
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  testId: number;
+
   @ApiProperty({ enum: MediaKind })
   @IsEnum(MediaKind)
   kind: MediaKind;
@@ -47,6 +58,13 @@ export class CreateMediaDto extends UpdateMediaDto {
 }
 
 export class ListMediaDto extends PageOptionsDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  readonly testId?: number;
+
   @ApiPropertyOptional({ enum: MediaKind })
   @IsOptional()
   @IsEnum(MediaKind)

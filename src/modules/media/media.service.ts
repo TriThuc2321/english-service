@@ -12,15 +12,21 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { Media } from '../../entities/media.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
 import { StorageService } from '../../shared/storage/storage.service.js';
+import { TestsService } from '../tests/tests.service.js';
 import {
   CreateMediaDto,
   CreateUploadUrlDto,
   ListMediaDto,
   UpdateMediaDto,
 } from './dto/media.dto.js';
-import { MEDIA_MAX_BYTES, MEDIA_MIME_EXTENSIONS } from './media.constant.js';
+import {
+  MEDIA_MAX_BYTES,
+  MEDIA_MIME_EXTENSIONS,
+  mediaKeyPrefix,
+} from './media.constant.js';
 
 const PG_FOREIGN_KEY_VIOLATION = '23503';
+const PG_UNIQUE_VIOLATION = '23505';
 
 @Injectable()
 export class MediaService {
@@ -29,9 +35,10 @@ export class MediaService {
   constructor(
     @InjectRepository(Media) private mediaRepository: Repository<Media>,
     private storage: StorageService,
+    private testsService: TestsService,
   ) {}
 
-  async createUploadUrl({ kind, contentType }: CreateUploadUrlDto) {
+  async createUploadUrl({ testId, kind, contentType }: CreateUploadUrlDto) {
     const ext = MEDIA_MIME_EXTENSIONS[kind][contentType];
     if (!ext) {
       throw new BadRequestException(
@@ -39,9 +46,9 @@ export class MediaService {
       );
     }
 
-    const now = new Date();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const storageKey = `${kind.toLowerCase()}/${now.getUTCFullYear()}/${month}/${randomUUID()}.${ext}`;
+    await this.testsService.findEditableTest(testId);
+
+    const storageKey = `${mediaKeyPrefix(testId, kind)}${randomUUID()}.${ext}`;
 
     return {
       storageKey,
@@ -54,9 +61,9 @@ export class MediaService {
     };
   }
 
-  async findAll({ page, take, kind }: ListMediaDto) {
+  async findAll({ page, take, testId, kind }: ListMediaDto) {
     const [data, totalCount] = await this.mediaRepository.findAndCount({
-      where: kind ? { kind } : {},
+      where: { testId, kind },
       order: { id: 'DESC' },
       skip: (page - 1) * take,
       take,
@@ -82,10 +89,19 @@ export class MediaService {
   }
 
   async create(dto: CreateMediaDto, actorId: string) {
-    const { kind, storageKey, ...rest } = dto;
+    const { testId, kind, storageKey, ...rest } = dto;
 
-    if (!storageKey.startsWith(`${kind.toLowerCase()}/`)) {
-      throw new BadRequestException(`Storage key does not belong to ${kind}`);
+    if (!storageKey.startsWith(mediaKeyPrefix(testId, kind))) {
+      throw new BadRequestException(
+        `Storage key does not belong to ${kind} of test ${testId}`,
+      );
+    }
+
+    await this.testsService.findEditableTest(testId);
+
+    // Must run before the validation below, which deletes the object on failure
+    if (await this.mediaRepository.existsBy({ storageKey })) {
+      throw new ConflictException('Storage key is already registered');
     }
 
     const object = await this.storage.head(storageKey);
@@ -105,14 +121,26 @@ export class MediaService {
       );
     }
 
-    const media = await this.mediaRepository.save({
-      ...rest,
-      kind,
-      storageKey,
-      mimeType: contentType,
-      sizeBytes: String(object.size),
-      auditMetadata: { createdById: actorId },
-    });
+    let media: Media;
+    try {
+      media = await this.mediaRepository.save({
+        ...rest,
+        testId,
+        kind,
+        storageKey,
+        mimeType: contentType,
+        sizeBytes: String(object.size),
+        auditMetadata: { createdById: actorId },
+      });
+    } catch (err) {
+      if (
+        err instanceof QueryFailedError &&
+        (err.driverError as { code?: string }).code === PG_UNIQUE_VIOLATION
+      ) {
+        throw new ConflictException('Storage key is already registered');
+      }
+      throw err;
+    }
 
     return this.findById(media.id);
   }
