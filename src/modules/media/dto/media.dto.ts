@@ -1,24 +1,30 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
+  MaxLength,
   Min,
 } from 'class-validator';
 
 import { PageOptionsDto } from '../../../shared/dto/index.js';
-import { MediaKind } from '../../../types/test.type.js';
+import { MediaKind, MediaScope } from '../../../types/media.type.js';
 import { MEDIA_KEY_PATTERN, MEDIA_MIME_TYPES } from '../media.constant.js';
 
 export class CreateUploadUrlDto {
-  @ApiProperty()
-  @IsInt()
-  @Min(1)
-  testId: number;
+  @ApiProperty({ enum: MediaScope })
+  @IsEnum(MediaScope)
+  scope: MediaScope;
+
+  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  ownerId: string;
 
   @ApiProperty({ enum: MediaKind })
   @IsEnum(MediaKind)
@@ -43,10 +49,15 @@ export class UpdateMediaDto {
 }
 
 export class CreateMediaDto extends UpdateMediaDto {
-  @ApiProperty()
-  @IsInt()
-  @Min(1)
-  testId: number;
+  @ApiProperty({ enum: MediaScope })
+  @IsEnum(MediaScope)
+  scope: MediaScope;
+
+  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  ownerId: string;
 
   @ApiProperty({ enum: MediaKind })
   @IsEnum(MediaKind)
@@ -58,12 +69,16 @@ export class CreateMediaDto extends UpdateMediaDto {
 }
 
 export class ListMediaDto extends PageOptionsDto {
+  @ApiPropertyOptional({ enum: MediaScope })
+  @IsOptional()
+  @IsEnum(MediaScope)
+  readonly scope?: MediaScope;
+
   @ApiPropertyOptional()
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  readonly testId?: number;
+  @IsString()
+  @MaxLength(64)
+  readonly ownerId?: string;
 
   @ApiPropertyOptional({ enum: MediaKind })
   @IsOptional()

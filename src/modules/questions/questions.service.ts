@@ -7,7 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 
 import { Question } from '../../entities/question.entity.js';
-import { MediaValidator } from '../../shared/media/media.validator.js';
+import { MediaScope } from '../../types/media.type.js';
+import { MediaValidator } from '../media/media.validator.js';
 import { QuestionGroupsService } from '../question-groups/question-groups.service.js';
 import { TestsService } from '../tests/tests.service.js';
 import {
@@ -64,7 +65,7 @@ export class QuestionsService {
     assertValidAnswer(group.questionType, { ...dto, numberTo });
     assertValidQuestionContent(group.questionType, dto.content, dto.numberFrom);
     assertValidEvidence(dto.evidence, dto.numberFrom);
-    await this.mediaValidator.assertKinds(dto);
+    await this.mediaValidator.assertRefs(dto, MediaScope.TEST);
 
     let { order } = dto;
     if (order === undefined) {
@@ -114,7 +115,7 @@ export class QuestionsService {
     if (dto.evidence !== undefined) {
       assertValidEvidence(dto.evidence, numberFrom);
     }
-    await this.mediaValidator.assertKinds(dto);
+    await this.mediaValidator.assertRefs(dto, MediaScope.TEST);
 
     await this.questionRepository.save({ id, ...dto });
 

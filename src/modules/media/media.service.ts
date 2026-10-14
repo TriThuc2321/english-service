@@ -12,18 +12,14 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { Media } from '../../entities/media.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
 import { StorageService } from '../../shared/storage/storage.service.js';
-import { TestsService } from '../tests/tests.service.js';
 import {
   CreateMediaDto,
   CreateUploadUrlDto,
   ListMediaDto,
   UpdateMediaDto,
 } from './dto/media.dto.js';
-import {
-  MEDIA_MAX_BYTES,
-  MEDIA_MIME_EXTENSIONS,
-  mediaKeyPrefix,
-} from './media.constant.js';
+import { MediaPolicyRegistry } from './media-policy.registry.js';
+import { MEDIA_MIME_EXTENSIONS, MB, mediaKeyPrefix } from './media.constant.js';
 
 const PG_FOREIGN_KEY_VIOLATION = '23503';
 const PG_UNIQUE_VIOLATION = '23505';
@@ -35,10 +31,16 @@ export class MediaService {
   constructor(
     @InjectRepository(Media) private mediaRepository: Repository<Media>,
     private storage: StorageService,
-    private testsService: TestsService,
+    private policies: MediaPolicyRegistry,
   ) {}
 
-  async createUploadUrl({ testId, kind, contentType }: CreateUploadUrlDto) {
+  async createUploadUrl({
+    scope,
+    ownerId,
+    kind,
+    contentType,
+  }: CreateUploadUrlDto) {
+    const { policy } = this.policies.getForKind(scope, kind);
     const ext = MEDIA_MIME_EXTENSIONS[kind][contentType];
     if (!ext) {
       throw new BadRequestException(
@@ -46,9 +48,9 @@ export class MediaService {
       );
     }
 
-    await this.testsService.findEditableTest(testId);
+    await policy.assertOwnerWritable(ownerId);
 
-    const storageKey = `${mediaKeyPrefix(testId, kind)}${randomUUID()}.${ext}`;
+    const storageKey = `${mediaKeyPrefix(policy.prefix, ownerId, kind)}${randomUUID()}.${ext}`;
 
     return {
       storageKey,
@@ -61,9 +63,9 @@ export class MediaService {
     };
   }
 
-  async findAll({ page, take, testId, kind }: ListMediaDto) {
+  async findAll({ page, take, scope, ownerId, kind }: ListMediaDto) {
     const [data, totalCount] = await this.mediaRepository.findAndCount({
-      where: { testId, kind },
+      where: { scope, ownerId, kind },
       order: { id: 'DESC' },
       skip: (page - 1) * take,
       take,
@@ -84,20 +86,45 @@ export class MediaService {
     return this.withUrl(media);
   }
 
+  async findOwned(
+    id: number,
+    {
+      scope,
+      ownerId,
+      kind,
+    }: Pick<Media, 'scope'> & Partial<Pick<Media, 'ownerId' | 'kind'>>,
+  ) {
+    const media = await this.mediaRepository.findOneBy({
+      id,
+      scope,
+      ownerId,
+      kind,
+    });
+    if (!media) {
+      const of = ownerId ? ` of ${ownerId}` : '';
+      throw new BadRequestException(
+        `Media with ID ${id} is not ${[scope, kind].filter(Boolean).join(' ')} media${of}`,
+      );
+    }
+
+    return this.withUrl(media);
+  }
+
   private withUrl(media: Media) {
     return { ...media, url: this.storage.getPublicUrl(media.storageKey) };
   }
 
   async create(dto: CreateMediaDto, actorId: string) {
-    const { testId, kind, storageKey, ...rest } = dto;
+    const { scope, ownerId, kind, storageKey, ...rest } = dto;
 
-    if (!storageKey.startsWith(mediaKeyPrefix(testId, kind))) {
+    const { policy, maxBytes } = this.policies.getForKind(scope, kind);
+    if (!storageKey.startsWith(mediaKeyPrefix(policy.prefix, ownerId, kind))) {
       throw new BadRequestException(
-        `Storage key does not belong to ${kind} of test ${testId}`,
+        `Storage key does not belong to ${kind} of ${scope} ${ownerId}`,
       );
     }
 
-    await this.testsService.findEditableTest(testId);
+    await policy.assertOwnerWritable(ownerId);
 
     // Must run before the validation below, which deletes the object on failure
     if (await this.mediaRepository.existsBy({ storageKey })) {
@@ -111,13 +138,10 @@ export class MediaService {
 
     // A presigned PUT can't cap the body size, so oversized uploads are rejected here
     const contentType = object.contentType ?? '';
-    if (
-      object.size > MEDIA_MAX_BYTES[kind] ||
-      !MEDIA_MIME_EXTENSIONS[kind][contentType]
-    ) {
+    if (object.size > maxBytes || !MEDIA_MIME_EXTENSIONS[kind][contentType]) {
       await this.storage.delete(storageKey);
       throw new BadRequestException(
-        `File must be ${Object.keys(MEDIA_MIME_EXTENSIONS[kind]).join(', ')} and at most ${MEDIA_MAX_BYTES[kind] / 1024 / 1024}MB`,
+        `File must be ${Object.keys(MEDIA_MIME_EXTENSIONS[kind]).join(', ')} and at most ${maxBytes / MB}MB`,
       );
     }
 
@@ -125,7 +149,8 @@ export class MediaService {
     try {
       media = await this.mediaRepository.save({
         ...rest,
-        testId,
+        scope,
+        ownerId,
         kind,
         storageKey,
         mimeType: contentType,
@@ -185,5 +210,11 @@ export class MediaService {
     });
 
     return { deleted: 1 };
+  }
+
+  async deleteQuietly(id: number) {
+    await this.delete(id).catch((err: unknown) => {
+      this.logger.warn(`Failed to delete media ${id}: ${String(err)}`);
+    });
   }
 }

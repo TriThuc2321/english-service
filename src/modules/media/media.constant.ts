@@ -1,4 +1,4 @@
-import { MediaKind } from '../../types/test.type.js';
+import { MediaKind } from '../../types/media.type.js';
 
 export const MEDIA_MIME_EXTENSIONS: Record<
   MediaKind,
@@ -23,14 +23,16 @@ export const MEDIA_MIME_TYPES = Object.values(MEDIA_MIME_EXTENSIONS).flatMap(
   (m) => Object.keys(m),
 );
 
-export const MEDIA_MAX_BYTES: Record<MediaKind, number> = {
-  [MediaKind.AUDIO]: 100 * 1024 * 1024,
-  [MediaKind.IMAGE]: 10 * 1024 * 1024,
-};
+export const MB = 1024 * 1024;
 
-export const mediaKeyPrefix = (testId: number, kind: MediaKind) =>
-  `tests/${testId}/${kind.toLowerCase()}/`;
+export const mediaKeyPrefix = (
+  prefix: string,
+  ownerId: string,
+  kind: MediaKind,
+) => `${prefix}/${ownerId}/${kind.toLowerCase()}/`;
 
-// tests/<testId>/<kind>/<uuid>.<ext>, as issued by MediaService.createUploadUrl
-export const MEDIA_KEY_PATTERN =
-  /^tests\/\d+\/(audio|image)\/[0-9a-f-]{36}\.[a-z0-9]+$/;
+export const MEDIA_KEY_PATTERN = new RegExp(
+  `^[a-z0-9-]+/[0-9a-z-]+/(${Object.values(MediaKind)
+    .map((k) => k.toLowerCase())
+    .join('|')})/[0-9a-f-]{36}\\.[a-z0-9]+$`,
+);

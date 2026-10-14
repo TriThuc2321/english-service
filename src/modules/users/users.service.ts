@@ -12,6 +12,8 @@ import { Role } from '../../entities/role.entity.js';
 import { User } from '../../entities/user.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
 import { Status } from '../../types/common.type.js';
+import { MediaKind, MediaScope } from '../../types/media.type.js';
+import { MediaService } from '../media/media.service.js';
 import {
   CreateUserDto,
   DeleteUsersDto,
@@ -53,13 +55,19 @@ const LIST_COLUMNS = [
   'updater.avatar',
 ];
 
-const DETAIL_COLUMNS = [...LIST_COLUMNS, 'u.address', 'u.dateOfBirth'];
+const DETAIL_COLUMNS = [
+  ...LIST_COLUMNS,
+  'u.address',
+  'u.dateOfBirth',
+  'u.avatarMediaId',
+];
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Role) private roleRepository: Repository<Role>,
+    private mediaService: MediaService,
   ) {}
 
   private baseQuery(columns: string[]) {
@@ -115,7 +123,7 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto, actorId?: string) {
+  async create(dto: CreateUserDto & { avatar?: string }, actorId?: string) {
     const [emailTaken] = await Promise.all([
       this.userRepository.exists({
         where: { email: dto.email, status: Not(Status.DELETED) },
@@ -137,23 +145,77 @@ export class UsersService {
   }
 
   async update(id: string, dto: UpdateUserDto, actorId: string) {
+    const { avatarMediaId, ...rest } = dto;
+    const user = await this.findExistingUser(id);
+    if (rest.roleId !== undefined && rest.roleId !== user.roleId) {
+      await this.assertRoleActive(rest.roleId);
+    }
+
+    const avatar =
+      avatarMediaId === undefined
+        ? {}
+        : await this.resolveAvatar(id, avatarMediaId);
+
+    await this.userRepository.update(id, {
+      ...rest,
+      ...avatar,
+      auditMetadata: { updatedAt: new Date(), updatedById: actorId },
+    });
+    await this.cleanupReplacedAvatar(user, avatarMediaId);
+
+    return this.findById(id);
+  }
+
+  async setAvatar(id: string, avatarMediaId: number | null, actorId: string) {
+    const user = await this.findExistingUser(id);
+    const avatar = await this.resolveAvatar(id, avatarMediaId);
+
+    await this.userRepository.update(id, {
+      ...avatar,
+      auditMetadata: { updatedAt: new Date(), updatedById: actorId },
+    });
+    await this.cleanupReplacedAvatar(user, avatarMediaId);
+
+    return { avatar: avatar.avatar };
+  }
+
+  private async findExistingUser(id: string) {
     const user = await this.userRepository.findOne({
       where: { id, status: Not(Status.DELETED) },
-      select: { id: true, roleId: true },
+      select: { id: true, roleId: true, avatarMediaId: true },
     });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    if (dto.roleId !== undefined && dto.roleId !== user.roleId) {
-      await this.assertRoleActive(dto.roleId);
+
+    return user;
+  }
+
+  private async resolveAvatar(userId: string, avatarMediaId: number | null) {
+    if (avatarMediaId === null) {
+      return { avatarMediaId: null, avatar: null };
     }
 
-    await this.userRepository.update(id, {
-      ...dto,
-      auditMetadata: { updatedAt: new Date(), updatedById: actorId },
+    const media = await this.mediaService.findOwned(avatarMediaId, {
+      scope: MediaScope.AVATAR,
+      ownerId: userId,
+      kind: MediaKind.IMAGE,
     });
 
-    return this.findById(id);
+    return { avatarMediaId: media.id, avatar: media.url };
+  }
+
+  private async cleanupReplacedAvatar(
+    user: Pick<User, 'avatarMediaId'>,
+    nextMediaId: number | null | undefined,
+  ) {
+    if (
+      nextMediaId !== undefined &&
+      user.avatarMediaId &&
+      user.avatarMediaId !== nextMediaId
+    ) {
+      await this.mediaService.deleteQuietly(user.avatarMediaId);
+    }
   }
 
   async deleteByIds({ ids }: DeleteUsersDto, actorId: string) {

@@ -9,8 +9,9 @@ import { DataSource, In, Repository } from 'typeorm';
 import { TestPart } from '../../entities/test-part.entity.js';
 import { TestSection } from '../../entities/test-section.entity.js';
 import { Test } from '../../entities/test.entity.js';
-import { MediaValidator } from '../../shared/media/media.validator.js';
+import { MediaScope } from '../../types/media.type.js';
 import { TestStatus } from '../../types/test.type.js';
+import { MediaValidator } from '../media/media.validator.js';
 import { TestsService } from '../tests/tests.service.js';
 import {
   CreateTestPartDto,
@@ -49,7 +50,7 @@ export class TestPartsService {
     const test = await this.findSectionTest(dto.sectionId);
     this.testsService.assertEditable(test);
     this.assertAudioRange(dto);
-    await this.mediaValidator.assertKinds(dto);
+    await this.mediaValidator.assertRefs(dto, MediaScope.TEST);
 
     let { order } = dto;
     if (order === undefined) {
@@ -69,7 +70,7 @@ export class TestPartsService {
     const test = await this.findSectionTest(part.sectionId);
     this.testsService.assertEditable(test);
     this.assertAudioRange({ ...part, ...dto });
-    await this.mediaValidator.assertKinds(dto);
+    await this.mediaValidator.assertRefs(dto, MediaScope.TEST);
 
     await this.partRepository.update(id, dto);
 

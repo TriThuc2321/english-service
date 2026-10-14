@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
 import { Media } from '../../entities/media.entity.js';
-import { MediaKind } from '../../types/test.type.js';
+import { MediaKind, MediaScope } from '../../types/media.type.js';
 
 export interface IMediaRefs {
   audioMediaId?: number | null;
@@ -16,27 +16,29 @@ export class MediaValidator {
     @InjectRepository(Media) private mediaRepository: Repository<Media>,
   ) {}
 
-  // Turns FK violations into 400s and catches an image id passed as audio
-  async assertKinds({ audioMediaId, imageMediaId }: IMediaRefs) {
+  async assertRefs(
+    { audioMediaId, imageMediaId }: IMediaRefs,
+    scope: MediaScope,
+  ) {
     const expected: Array<[number, MediaKind]> = [];
     if (audioMediaId != null) expected.push([audioMediaId, MediaKind.AUDIO]);
     if (imageMediaId != null) expected.push([imageMediaId, MediaKind.IMAGE]);
     if (!expected.length) return;
 
     const found = await this.mediaRepository.find({
-      select: { id: true, kind: true },
+      select: { id: true, kind: true, scope: true },
       where: { id: In(expected.map(([id]) => id)) },
     });
-    const kinds = new Map(found.map((m) => [m.id, m.kind]));
+    const byId = new Map(found.map((m) => [m.id, m]));
 
     for (const [id, kind] of expected) {
-      const actual = kinds.get(id);
-      if (!actual) {
+      const media = byId.get(id);
+      if (!media || media.scope !== scope) {
         throw new BadRequestException(`Media with ID ${id} not found`);
       }
-      if (actual !== kind) {
+      if (media.kind !== kind) {
         throw new BadRequestException(
-          `Media with ID ${id} is ${actual}, expected ${kind}`,
+          `Media with ID ${id} is ${media.kind}, expected ${kind}`,
         );
       }
     }

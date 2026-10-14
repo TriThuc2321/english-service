@@ -20,6 +20,7 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -53,12 +54,6 @@ export class CreateUserDto {
   @IsString()
   @MaxLength(255)
   lastName?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  avatar?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -100,6 +95,17 @@ export class UpdateUserDto extends PartialType(
   @IsOptional()
   @IsIn(EDITABLE_STATUSES)
   status?: Status.ACTIVE | Status.INACTIVE;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description:
+      'AVATAR media uploaded for this user via POST /media; null removes it',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  avatarMediaId?: number | null;
 }
 
 export class ListUsersDto extends PageOptionsDto {

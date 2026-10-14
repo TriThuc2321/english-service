@@ -10,8 +10,9 @@ import { GroupPassage } from '../../entities/group-passage.entity.js';
 import { Passage, PassageStatus } from '../../entities/passage.entity.js';
 import { QuestionGroup } from '../../entities/question-group.entity.js';
 import { Question } from '../../entities/question.entity.js';
-import { MediaValidator } from '../../shared/media/media.validator.js';
+import { MediaScope } from '../../types/media.type.js';
 import { TestStatus } from '../../types/test.type.js';
+import { MediaValidator } from '../media/media.validator.js';
 import { assertValidAnswer } from '../questions/question-answer.js';
 import {
   assertValidEvidence,
@@ -86,9 +87,9 @@ export class QuestionGroupsService {
       assertValidEvidence(q.evidence, q.numberFrom);
     }
 
-    await this.mediaValidator.assertKinds(rest);
+    await this.mediaValidator.assertRefs(rest, MediaScope.TEST);
     for (const q of normalized) {
-      await this.mediaValidator.assertKinds(q);
+      await this.mediaValidator.assertRefs(q, MediaScope.TEST);
     }
     await this.assertPassagesExist(passageIds);
 
@@ -147,7 +148,7 @@ export class QuestionGroupsService {
       }
     }
 
-    await this.mediaValidator.assertKinds(rest);
+    await this.mediaValidator.assertRefs(rest, MediaScope.TEST);
     if (passageIds) {
       await this.assertPassagesExist(passageIds);
     }
