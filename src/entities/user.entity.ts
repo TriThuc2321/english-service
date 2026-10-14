@@ -12,6 +12,7 @@ import {
 import { Status } from '../types/common.type.js';
 import { Provider } from '../types/user.type.js';
 import { AuditMetadata } from './audit-metadata.entity.js';
+import { Media } from './media.entity.js';
 import { Role } from './role.entity.js';
 
 @Entity('users', { schema: 'public' })
@@ -52,6 +53,9 @@ export class User {
   @Column({ name: 'avatar', type: 'varchar', length: 255, nullable: true })
   avatar?: string | null;
 
+  @Column({ name: 'avatar_media_id', type: 'int', nullable: true })
+  avatarMediaId?: number | null;
+
   @Column({ name: 'phone', type: 'varchar', length: 20, nullable: true })
   phone?: string | null;
 
@@ -88,4 +92,8 @@ export class User {
     referencedColumnName: 'id',
   })
   role: Relation<Role>;
+
+  @ManyToOne(() => Media, { onDelete: 'RESTRICT', nullable: true })
+  @JoinColumn({ name: 'avatar_media_id', referencedColumnName: 'id' })
+  avatarMedia?: Relation<Media> | null;
 }

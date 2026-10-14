@@ -3,13 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Media } from '../../entities/media.entity.js';
 import { StorageModule } from '../../shared/storage/storage.module.js';
-import { TestsModule } from '../tests/tests.module.js';
+import { MediaPolicyRegistry } from './media-policy.registry.js';
 import { MediaController } from './media.controller.js';
 import { MediaService } from './media.service.js';
+import { MediaValidator } from './media.validator.js';
 
 @Module({
   controllers: [MediaController],
-  providers: [MediaService],
-  imports: [TypeOrmModule.forFeature([Media]), StorageModule, TestsModule],
+  providers: [MediaService, MediaPolicyRegistry, MediaValidator],
+  exports: [MediaService, MediaPolicyRegistry, MediaValidator],
+  imports: [TypeOrmModule.forFeature([Media]), StorageModule],
 })
 export class MediaModule {}

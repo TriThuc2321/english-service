@@ -1,25 +1,26 @@
-import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  type Relation,
-} from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
-import { MediaKind } from '../types/test.type.js';
+import { MediaKind, MediaScope } from '../types/media.type.js';
 import { AuditMetadata } from './audit-metadata.entity.js';
-import { Test } from './test.entity.js';
 
+// Owner is polymorphic (test id, user uuid, ...), so there is no FK to it;
+// MediaService checks the owner per scope before issuing or registering a key
 @Entity('media', { schema: 'public' })
-@Index('idx_media_test_id', ['testId'])
+@Index('idx_media_scope_owner', ['scope', 'ownerId'])
 export class Media {
   @PrimaryGeneratedColumn('increment', { name: 'media_id' })
   id: number;
 
-  @Column({ name: 'test_id', type: 'int' })
-  testId: number;
+  @Column({
+    name: 'scope',
+    type: 'enum',
+    enum: MediaScope,
+    enumName: 'media_scope_enum',
+  })
+  scope: MediaScope;
+
+  @Column({ name: 'owner_id', type: 'varchar', length: 64 })
+  ownerId: string;
 
   @Column({
     name: 'kind',
@@ -48,9 +49,4 @@ export class Media {
 
   @Column(() => AuditMetadata, { prefix: false })
   auditMetadata: AuditMetadata;
-
-  // Tests are soft-deleted, so this only guards against dangling ids
-  @ManyToOne(() => Test, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'test_id', referencedColumnName: 'id' })
-  test: Relation<Test>;
 }

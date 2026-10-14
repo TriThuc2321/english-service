@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Passage } from '../../entities/passage.entity.js';
 import { QuestionGroup } from '../../entities/question-group.entity.js';
 import { Question } from '../../entities/question.entity.js';
-import { MediaValidatorModule } from '../../shared/media/media-validator.module.js';
+import { MediaModule } from '../media/media.module.js';
 import { TestPartsModule } from '../test-parts/test-parts.module.js';
 import { TestsModule } from '../tests/tests.module.js';
 import { QuestionGroupsController } from './question-groups.controller.js';
@@ -18,7 +18,7 @@ import { QuestionGroupsService } from './question-groups.service.js';
     TypeOrmModule.forFeature([QuestionGroup, Question, Passage]),
     TestsModule,
     TestPartsModule,
-    MediaValidatorModule,
+    MediaModule,
   ],
 })
 export class QuestionGroupsModule {}

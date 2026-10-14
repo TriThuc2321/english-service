@@ -51,11 +51,6 @@ export enum QuestionType {
   OPINION_ESSAY = 'OPINION_ESSAY',
 }
 
-export enum MediaKind {
-  AUDIO = 'AUDIO',
-  IMAGE = 'IMAGE',
-}
-
 export const EXAM_SKILLS: Record<ExamType, readonly SkillType[]> = {
   [ExamType.IELTS_ACADEMIC]: Object.values(SkillType),
   [ExamType.IELTS_GENERAL]: Object.values(SkillType),
