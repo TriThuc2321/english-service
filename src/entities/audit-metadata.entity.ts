@@ -4,7 +4,7 @@ import type { User } from './user.entity.js';
 
 export abstract class AuditMetadata {
   @CreateDateColumn({
-    type: 'timestamp without time zone',
+    type: 'timestamptz',
     name: 'created_at',
     default: () => 'CURRENT_TIMESTAMP',
   })
@@ -19,7 +19,7 @@ export abstract class AuditMetadata {
   createdBy?: User | null;
 
   @Column({
-    type: 'timestamp without time zone',
+    type: 'timestamptz',
     name: 'updated_at',
     nullable: true,
   })
