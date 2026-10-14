@@ -16,7 +16,7 @@ export class Media {
   })
   kind: MediaKind;
 
-  // URL / signed URL is built from the key at response time
+  // Public URL is built from the key at response time (STORAGE_PUBLIC_URL)
   @Column({ name: 'storage_key', type: 'varchar', length: 500 })
   storageKey: string;
 

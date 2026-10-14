@@ -2,8 +2,10 @@ import { plainToInstance } from 'class-transformer';
 import {
   IsBooleanString,
   IsNotEmpty,
+  IsNumberString,
   IsOptional,
   IsString,
+  IsUrl,
   MinLength,
   validateSync,
 } from 'class-validator';
@@ -72,6 +74,28 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   TRUST_PROXY?: string;
+
+  @IsUrl({ require_tld: false })
+  STORAGE_ENDPOINT: string;
+
+  @IsString()
+  @IsNotEmpty()
+  STORAGE_BUCKET: string;
+
+  @IsString()
+  @IsNotEmpty()
+  STORAGE_ACCESS_KEY_ID: string;
+
+  @IsString()
+  @IsNotEmpty()
+  STORAGE_SECRET_ACCESS_KEY: string;
+
+  @IsOptional()
+  @IsNumberString()
+  STORAGE_UPLOAD_URL_TTL?: string;
+
+  @IsUrl({ require_tld: false, require_protocol: true })
+  STORAGE_PUBLIC_URL: string;
 }
 
 export const validateEnv = (config: Record<string, unknown>) => {

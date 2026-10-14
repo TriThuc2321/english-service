@@ -9,9 +9,11 @@ import { getDbOption, databaseConfig } from './configs/database.config.js';
 import { validateEnv } from './configs/env.validation.js';
 import { googleConfig } from './configs/google.config.js';
 import { jwtConfig } from './configs/jwt.config.js';
+import { storageConfig } from './configs/storage.config.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { JwtAuthGuard } from './modules/auth/guards/jwt.guard.js';
 import { PermissionGuard } from './modules/auth/guards/permission.guard.js';
+import { MediaModule } from './modules/media/media.module.js';
 import { ParagraphsModule } from './modules/paragraphs/paragraphs.module.js';
 import { PassagesModule } from './modules/passages/passages.module.js';
 import { PermissionsModule } from './modules/permissions/permissions.module.js';
@@ -27,7 +29,13 @@ import { CaslModule } from './shared/casl/casl.module.js';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, googleConfig, corsConfig, jwtConfig],
+      load: [
+        databaseConfig,
+        googleConfig,
+        corsConfig,
+        jwtConfig,
+        storageConfig,
+      ],
       validate: validateEnv,
     }),
     ThrottlerModule.forRoot({
@@ -52,6 +60,7 @@ import { CaslModule } from './shared/casl/casl.module.js';
     TestPartsModule,
     QuestionGroupsModule,
     QuestionsModule,
+    MediaModule,
     CaslModule,
   ],
   controllers: [],
