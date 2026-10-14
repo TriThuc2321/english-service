@@ -93,7 +93,7 @@ export class User {
   })
   role: Relation<Role>;
 
-  @ManyToOne(() => Media, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => Media, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'avatar_media_id', referencedColumnName: 'id' })
   avatarMedia?: Relation<Media> | null;
 }
