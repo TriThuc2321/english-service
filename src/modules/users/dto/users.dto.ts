@@ -82,7 +82,11 @@ export class CreateUserDto {
   @IsBoolean()
   emailVerified?: boolean;
 
-  @ApiPropertyOptional({ enum: Provider, default: Provider.LOCAL })
+  @ApiPropertyOptional({
+    enum: Provider,
+    enumName: 'Provider',
+    default: Provider.LOCAL,
+  })
   @IsOptional()
   @IsEnum(Provider)
   provider?: Provider;

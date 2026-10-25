@@ -1,0 +1,75 @@
+name: API changelog
+
+on:
+  pull_request:
+    branches: [dev, main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: api-changelog-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  OASDIFF_IMAGE: tufin/oasdiff:v1.33.0
+  BREAKING_LABEL: api-breaking
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load base contract
+        id: base
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if git show "origin/$BASE_REF:openapi.json" > "$RUNNER_TEMP/base.json" 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No openapi.json on $BASE_REF yet, nothing to compare against"
+          fi
+
+      - name: Build changelog
+        id: changelog
+        if: steps.base.outputs.exists == 'true'
+        run: |
+          docker run --rm -v "$RUNNER_TEMP:/base" -v "$PWD:/head" "$OASDIFF_IMAGE" \
+            changelog /base/base.json /head/openapi.json --format markdown \
+            > "$RUNNER_TEMP/changelog.md"
+          if grep -q 'No changes detected' "$RUNNER_TEMP/changelog.md"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment changelog on PR
+        if: steps.changelog.outputs.changed == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: api-changelog
+          path: ${{ runner.temp }}/changelog.md
+
+      - name: Remove stale changelog comment
+        if: steps.changelog.outputs.changed == 'false'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: api-changelog
+          delete: true
+
+      # Breaking contract changes must be acknowledged with a label so the FE
+      # knows this merge needs code changes on their side.
+      - name: Block unlabeled breaking changes
+        if: steps.changelog.outputs.changed == 'true' && !contains(github.event.pull_request.labels.*.name, env.BREAKING_LABEL)
+        run: |
+          if ! docker run --rm -v "$RUNNER_TEMP:/base" -v "$PWD:/head" "$OASDIFF_IMAGE" \
+            breaking /base/base.json /head/openapi.json --fail-on ERR; then
+            echo "::error::Breaking API changes found. Coordinate with FE, then add the '$BREAKING_LABEL' label to this PR."
+            exit 1
+          fi

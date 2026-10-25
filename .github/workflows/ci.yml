@@ -46,3 +46,9 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # openapi.json is the FE contract; fail if a code change isn't committed with it
+      - name: OpenAPI contract up to date
+        run: |
+          pnpm openapi:export
+          git diff --exit-code -- openapi.json

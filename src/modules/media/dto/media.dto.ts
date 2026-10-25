@@ -85,3 +85,25 @@ export class ListMediaDto extends PageOptionsDto {
   @IsEnum(MediaKind)
   readonly kind?: MediaKind;
 }
+
+export class UploadUrlResponseDto {
+  @ApiProperty({ description: 'Pass back when confirming the upload' })
+  storageKey: string;
+
+  @ApiProperty({ description: 'Presigned PUT URL' })
+  uploadUrl: string;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'string' },
+    description: 'Headers the PUT request must send unchanged',
+    example: {
+      'Content-Type': 'image/webp',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+  })
+  headers: Record<string, string>;
+
+  @ApiProperty({ description: 'Seconds until uploadUrl expires' })
+  expiresIn: number;
+}

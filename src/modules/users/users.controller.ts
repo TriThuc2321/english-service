@@ -10,8 +10,20 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
+import { ApiPaginatedResponse } from '../../shared/decorators/api-paginated-response.decorator.js';
+import { DeleteResultDto, ErrorResponseDto } from '../../shared/dto/index.js';
 import {
   AuthClient,
   type IRequestWithUser,
@@ -20,6 +32,7 @@ import {
 } from '../../types/auth.type.js';
 import { CheckPermissions } from '../auth/decorators/check-permissions.decorator.js';
 import { Clients } from '../auth/decorators/clients.decorator.js';
+import { UserDetailDto, UserListItemDto } from './dto/user-response.dto.js';
 import {
   CreateUserDto,
   DeleteUsersDto,
@@ -32,11 +45,14 @@ import { UsersService } from './users.service.js';
 @ApiBearerAuth()
 @Controller('users')
 @ApiTags('Users')
+@ApiUnauthorizedResponse({ type: ErrorResponseDto })
+@ApiForbiddenResponse({ type: ErrorResponseDto })
 export class UsersController {
   constructor(private readonly userService: UsersService) {}
 
   @Get()
   @ApiOperation({ summary: 'List users (paginated)' })
+  @ApiPaginatedResponse(UserListItemDto)
   @CheckPermissions([PermissionAction.READ, PermissionSubject.USER])
   findAll(@Query() query: ListUsersDto) {
     return this.userService.findAll(query);
@@ -44,6 +60,8 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a user by id' })
+  @ApiOkResponse({ type: UserDetailDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.READ, PermissionSubject.USER])
   findById(@Param('id', ParseUUIDPipe) id: string) {
     return this.userService.findById(id);
@@ -51,6 +69,8 @@ export class UsersController {
 
   @Post()
   @ApiOperation({ summary: 'Create a user' })
+  @ApiCreatedResponse({ type: UserDetailDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.CREATE, PermissionSubject.USER])
   create(@Body() dto: CreateUserDto, @Req() req: IRequestWithUser) {
     return this.userService.create(dto, req.user.id);
@@ -58,6 +78,8 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a user' })
+  @ApiOkResponse({ type: UserDetailDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.UPDATE, PermissionSubject.USER])
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -69,6 +91,7 @@ export class UsersController {
 
   @Delete()
   @ApiOperation({ summary: 'Soft-delete users by ids' })
+  @ApiOkResponse({ type: DeleteResultDto })
   @CheckPermissions([PermissionAction.DELETE, PermissionSubject.USER])
   deleteByIds(@Body() dto: DeleteUsersDto, @Req() req: IRequestWithUser) {
     return this.userService.deleteByIds(dto, req.user.id);

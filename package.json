@@ -13,6 +13,8 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint src/ test/",
     "lint:fix": "oxlint --fix src/ test/",
+    "openapi:export": "node dist/openapi.js && oxfmt openapi.json",
+    "openapi:generate": "nest build && pnpm openapi:export",
     "typecheck": "tsc --noEmit",
     "start": "nest start",
     "start:dev": "nest start --watch",
