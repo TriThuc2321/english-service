@@ -22,6 +22,7 @@ import { MediaPolicyRegistry } from './media-policy.registry.js';
 import { MEDIA_MIME_EXTENSIONS, MB, mediaKeyPrefix } from './media.constant.js';
 
 const PG_FOREIGN_KEY_VIOLATION = '23503';
+const PG_RESTRICT_VIOLATION = '23001';
 const PG_UNIQUE_VIOLATION = '23505';
 
 @Injectable()
@@ -199,7 +200,9 @@ export class MediaService {
     } catch (err) {
       if (
         err instanceof QueryFailedError &&
-        (err.driverError as { code?: string }).code === PG_FOREIGN_KEY_VIOLATION
+        [PG_FOREIGN_KEY_VIOLATION, PG_RESTRICT_VIOLATION].includes(
+          (err.driverError as { code?: string }).code ?? '',
+        )
       ) {
         throw new ConflictException(`Media with ID ${id} is in use`);
       }

@@ -1,5 +1,9 @@
+import { randomUUID } from 'node:crypto';
+
+import { Media } from '../src/entities/media.entity.js';
+import { User } from '../src/entities/user.entity.js';
 import { PermissionAction, PermissionSubject } from '../src/types/auth.type.js';
-import { MediaScope } from '../src/types/media.type.js';
+import { MediaKind, MediaScope } from '../src/types/media.type.js';
 import { createTestApp, type TestApp } from './utils/app.js';
 import { createUser, loginBo } from './utils/fixtures.js';
 
@@ -34,5 +38,42 @@ describe('GET /media', () => {
 
   it('lists with only some filters', async () => {
     await listMedia(`?scope=${MediaScope.TEST}`).expect(200);
+  });
+});
+
+describe('DELETE /media/:id', () => {
+  let testApp: TestApp;
+  let accessToken: string;
+
+  beforeAll(async () => {
+    testApp = await createTestApp();
+    const user = await createUser(testApp, {
+      permissions: [[PermissionAction.DELETE, PermissionSubject.MEDIA]],
+    });
+    ({ accessToken } = await loginBo(testApp, user));
+  });
+
+  afterAll(async () => {
+    await testApp?.app.close();
+  });
+
+  it('returns 409 when the media is a user avatar', async () => {
+    const owner = await createUser(testApp);
+    const media = await testApp.dataSource.getRepository(Media).save({
+      scope: MediaScope.AVATAR,
+      ownerId: owner.id,
+      kind: MediaKind.IMAGE,
+      storageKey: `avatars/${owner.id}/IMAGE/${randomUUID()}.png`,
+      auditMetadata: {},
+    });
+    await testApp.dataSource
+      .getRepository(User)
+      .update(owner.id, { avatarMediaId: media.id });
+
+    await testApp
+      .http()
+      .delete(`/api/media/${media.id}`)
+      .auth(accessToken, { type: 'bearer' })
+      .expect(409);
   });
 });
