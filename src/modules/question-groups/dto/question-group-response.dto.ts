@@ -63,6 +63,20 @@ export class QuestionGroupListItemDto {
 
   @ApiProperty({ type: [GroupPassageDto] })
   groupPassages: GroupPassageDto[];
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Lowest numberFrom of the questions; null when it has none',
+  })
+  numberFrom: number | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Highest numberTo of the questions; null when it has none',
+  })
+  numberTo: number | null;
 }
 
 export class QuestionGroupDetailDto extends QuestionGroupListItemDto {
