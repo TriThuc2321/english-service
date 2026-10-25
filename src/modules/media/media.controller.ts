@@ -10,8 +10,20 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
+import { ApiPaginatedResponse } from '../../shared/decorators/api-paginated-response.decorator.js';
+import { DeleteResultDto, ErrorResponseDto } from '../../shared/dto/index.js';
 import {
   AuthClient,
   type IRequestWithUser,
@@ -24,7 +36,9 @@ import {
   CreateMediaDto,
   CreateUploadUrlDto,
   ListMediaDto,
+  MediaDto,
   UpdateMediaDto,
+  UploadUrlResponseDto,
 } from './dto/media.dto.js';
 import { MediaService } from './media.service.js';
 
@@ -32,6 +46,8 @@ import { MediaService } from './media.service.js';
 @ApiBearerAuth()
 @Controller('media')
 @ApiTags('Media')
+@ApiUnauthorizedResponse({ type: ErrorResponseDto })
+@ApiForbiddenResponse({ type: ErrorResponseDto })
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
@@ -40,6 +56,7 @@ export class MediaController {
     summary:
       'Get a presigned PUT URL; upload the file with the returned headers, then call POST /media',
   })
+  @ApiCreatedResponse({ type: UploadUrlResponseDto })
   @CheckPermissions([PermissionAction.CREATE, PermissionSubject.MEDIA])
   createUploadUrl(@Body() dto: CreateUploadUrlDto) {
     return this.mediaService.createUploadUrl(dto);
@@ -47,6 +64,7 @@ export class MediaController {
 
   @Get()
   @ApiOperation({ summary: 'List media (paginated, with public URLs)' })
+  @ApiPaginatedResponse(MediaDto)
   @CheckPermissions([PermissionAction.READ, PermissionSubject.MEDIA])
   findAll(@Query() query: ListMediaDto) {
     return this.mediaService.findAll(query);
@@ -54,6 +72,8 @@ export class MediaController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a media with its public URL' })
+  @ApiOkResponse({ type: MediaDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.READ, PermissionSubject.MEDIA])
   findById(@Param('id', ParseIntPipe) id: number) {
     return this.mediaService.findById(id);
@@ -61,6 +81,8 @@ export class MediaController {
 
   @Post()
   @ApiOperation({ summary: 'Register an uploaded file as media' })
+  @ApiCreatedResponse({ type: MediaDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.CREATE, PermissionSubject.MEDIA])
   create(@Body() dto: CreateMediaDto, @Req() req: IRequestWithUser) {
     return this.mediaService.create(dto, req.user.id);
@@ -68,6 +90,8 @@ export class MediaController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update media metadata (duration, transcript)' })
+  @ApiOkResponse({ type: MediaDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.UPDATE, PermissionSubject.MEDIA])
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -79,6 +103,9 @@ export class MediaController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete media and its file (409 if in use)' })
+  @ApiOkResponse({ type: DeleteResultDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.DELETE, PermissionSubject.MEDIA])
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.mediaService.delete(id);

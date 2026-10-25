@@ -11,12 +11,12 @@ import {
   Min,
 } from 'class-validator';
 
-import { PageOptionsDto } from '../../../shared/dto/index.js';
+import { AuditMetadataDto, PageOptionsDto } from '../../../shared/dto/index.js';
 import { MediaKind, MediaScope } from '../../../types/media.type.js';
 import { MEDIA_KEY_PATTERN, MEDIA_MIME_TYPES } from '../media.constant.js';
 
 export class CreateUploadUrlDto {
-  @ApiProperty({ enum: MediaScope })
+  @ApiProperty({ enum: MediaScope, enumName: 'MediaScope' })
   @IsEnum(MediaScope)
   scope: MediaScope;
 
@@ -26,7 +26,7 @@ export class CreateUploadUrlDto {
   @MaxLength(64)
   ownerId: string;
 
-  @ApiProperty({ enum: MediaKind })
+  @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
   @IsEnum(MediaKind)
   kind: MediaKind;
 
@@ -49,7 +49,7 @@ export class UpdateMediaDto {
 }
 
 export class CreateMediaDto extends UpdateMediaDto {
-  @ApiProperty({ enum: MediaScope })
+  @ApiProperty({ enum: MediaScope, enumName: 'MediaScope' })
   @IsEnum(MediaScope)
   scope: MediaScope;
 
@@ -59,7 +59,7 @@ export class CreateMediaDto extends UpdateMediaDto {
   @MaxLength(64)
   ownerId: string;
 
-  @ApiProperty({ enum: MediaKind })
+  @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
   @IsEnum(MediaKind)
   kind: MediaKind;
 
@@ -69,7 +69,7 @@ export class CreateMediaDto extends UpdateMediaDto {
 }
 
 export class ListMediaDto extends PageOptionsDto {
-  @ApiPropertyOptional({ enum: MediaScope })
+  @ApiPropertyOptional({ enum: MediaScope, enumName: 'MediaScope' })
   @IsOptional()
   @IsEnum(MediaScope)
   readonly scope?: MediaScope;
@@ -80,7 +80,7 @@ export class ListMediaDto extends PageOptionsDto {
   @MaxLength(64)
   readonly ownerId?: string;
 
-  @ApiPropertyOptional({ enum: MediaKind })
+  @ApiPropertyOptional({ enum: MediaKind, enumName: 'MediaKind' })
   @IsOptional()
   @IsEnum(MediaKind)
   readonly kind?: MediaKind;
@@ -106,4 +106,44 @@ export class UploadUrlResponseDto {
 
   @ApiProperty({ description: 'Seconds until uploadUrl expires' })
   expiresIn: number;
+}
+
+export class MediaDto {
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty({ enum: MediaScope, enumName: 'MediaScope' })
+  scope: MediaScope;
+
+  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
+  ownerId: string;
+
+  @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
+  kind: MediaKind;
+
+  @ApiProperty()
+  storageKey: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  mimeType: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'bigint, serialised as a string',
+    example: '1048576',
+  })
+  sizeBytes: string | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  durationMs: number | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  transcript: string | null;
+
+  @ApiProperty({ type: AuditMetadataDto })
+  auditMetadata: AuditMetadataDto;
+
+  @ApiProperty({ description: 'Public CDN URL built from storageKey' })
+  url: string;
 }

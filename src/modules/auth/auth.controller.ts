@@ -15,9 +15,13 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -25,6 +29,7 @@ import {
   type GoogleConfig,
   googleConfig,
 } from '../../configs/google.config.js';
+import { ErrorResponseDto } from '../../shared/dto/index.js';
 import {
   AuthClient,
   isServerClient,
@@ -41,6 +46,7 @@ import {
 import { AuthService, type IssuedTokens } from './auth.service.js';
 import { CheckPermissions } from './decorators/check-permissions.decorator.js';
 import { Public } from './decorators/public.decorator.js';
+import { ProfileDto, TokenResponseDto } from './dto/auth-response.dto.js';
 import { LoginDto, LogoutDto, RefreshDto } from './dto/auth.dto.js';
 import { GoogleAuthGuard } from './guards/google.guard.js';
 import { nonceMatches, parseOAuthState } from './oauth-state.js';
@@ -96,6 +102,8 @@ export class AuthController {
   @Public()
   @Throttle(AUTH_THROTTLE)
   @ApiOperation({ summary: 'Log in with email and password' })
+  @ApiCreatedResponse({ type: TokenResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
   async login(
     @Body() signInDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -110,14 +118,19 @@ export class AuthController {
   @Get('google')
   @Public()
   @UseGuards(GoogleAuthGuard)
-  @ApiQuery({ name: 'client', enum: AuthClient })
+  @ApiQuery({ name: 'client', enum: AuthClient, enumName: 'AuthClient' })
   @ApiOperation({ summary: 'Redirect to Google OAuth consent screen' })
+  @ApiFoundResponse({ description: 'Redirects to Google' })
   async googleAuth() {}
 
   @Get('google/callback')
   @Public()
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Handle Google OAuth callback and issue tokens' })
+  @ApiFoundResponse({
+    description:
+      'Redirects to the client; web gets ?code (and ?state), errors come as ?error',
+  })
   async googleAuthCallback(
     @Req() req: IRequestWithGoogleUser,
     @Res() res: Response,
@@ -172,6 +185,8 @@ export class AuthController {
   @ApiOperation({
     summary: 'Rotate the refresh token cookie and issue a new access token',
   })
+  @ApiCreatedResponse({ type: TokenResponseDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -196,6 +211,8 @@ export class AuthController {
   @ApiBearerAuth()
   @CheckPermissions()
   @ApiOperation({ summary: 'Get the current user profile' })
+  @ApiOkResponse({ type: ProfileDto })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto })
   getProfile(@Req() req: IRequestWithUser) {
     return this.authService.getProfile(req.user.id);
   }
@@ -207,6 +224,7 @@ export class AuthController {
     summary:
       'Log out the current session, or all devices when allDevices is true',
   })
+  @ApiCreatedResponse({ description: 'No body' })
   async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,

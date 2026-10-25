@@ -23,7 +23,7 @@ export class CreateTestSectionDto {
   @IsInt()
   testId: number;
 
-  @ApiProperty({ enum: SkillType })
+  @ApiProperty({ enum: SkillType, enumName: 'SkillType' })
   @IsEnum(SkillType)
   skill: SkillType;
 

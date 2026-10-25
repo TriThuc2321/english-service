@@ -65,7 +65,11 @@ export class MediaService {
 
   async findAll({ page, take, scope, ownerId, kind }: ListMediaDto) {
     const [data, totalCount] = await this.mediaRepository.findAndCount({
-      where: { scope, ownerId, kind },
+      where: {
+        ...(scope && { scope }),
+        ...(ownerId && { ownerId }),
+        ...(kind && { kind }),
+      },
       order: { id: 'DESC' },
       skip: (page - 1) * take,
       take,

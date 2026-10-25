@@ -17,10 +17,27 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -53,14 +70,13 @@
             "required": true,
             "in": "query",
             "schema": {
-              "enum": ["web", "bo"],
-              "type": "string"
+              "$ref": "#/components/schemas/AuthClient"
             }
           }
         ],
         "responses": {
-          "200": {
-            "description": ""
+          "302": {
+            "description": "Redirects to Google"
           },
           "400": {
             "description": "Bad Request",
@@ -92,8 +108,8 @@
         "operationId": "Auth_googleAuthCallback",
         "parameters": [],
         "responses": {
-          "200": {
-            "description": ""
+          "302": {
+            "description": "Redirects to the client; web gets ?code (and ?state), errors come as ?error"
           },
           "400": {
             "description": "Bad Request",
@@ -136,10 +152,27 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -169,10 +202,27 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -217,7 +267,7 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "No body"
           },
           "400": {
             "description": "Bad Request",
@@ -900,10 +950,37 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponseDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -962,8 +1039,7 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": ["TEST", "AVATAR"]
+              "$ref": "#/components/schemas/MediaScope"
             }
           },
           {
@@ -979,17 +1055,55 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": ["AUDIO", "IMAGE"]
+              "$ref": "#/components/schemas/MediaKind"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MediaDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1032,10 +1146,47 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1079,10 +1230,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1134,10 +1322,47 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1179,10 +1404,57 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1265,10 +1537,49 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RoleListItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1311,10 +1622,47 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1357,10 +1705,47 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1404,10 +1789,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1459,10 +1881,57 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1497,13 +1966,13 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Returns all permissions",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Permission"
+                    "$ref": "#/components/schemas/PermissionListItemDto"
                   }
                 }
               }
@@ -1511,6 +1980,26 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1587,17 +2076,55 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": ["ALPHABET", "NUMBER", "NONE"]
+              "$ref": "#/components/schemas/MarkedBy"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PassageListItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1640,10 +2167,37 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassageDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1686,10 +2240,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1733,10 +2314,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassageDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1788,10 +2406,47 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassageDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1856,10 +2511,59 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ParagraphDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1902,10 +2606,47 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParagraphDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1948,10 +2689,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -1995,10 +2763,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParagraphDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2050,10 +2855,47 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParagraphDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2098,10 +2940,50 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParagraphDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2178,22 +3060,55 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "IELTS_ACADEMIC",
-                "IELTS_GENERAL",
-                "TOEIC_LR",
-                "TOEIC_SW"
-              ]
+              "$ref": "#/components/schemas/ExamType"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TestListItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2236,10 +3151,37 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2282,10 +3224,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2329,10 +3298,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2384,10 +3390,47 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2431,10 +3474,50 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestSectionDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2477,10 +3560,57 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSectionDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2523,10 +3653,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2570,10 +3727,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSectionDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2625,10 +3819,57 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSectionDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2673,10 +3914,50 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestSectionDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2720,10 +4001,50 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestPartDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2766,10 +4087,47 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestPartDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2812,10 +4170,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2859,10 +4244,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestPartDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2914,10 +4336,47 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestPartDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -2962,10 +4421,50 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TestPartDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3009,10 +4508,50 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionGroupListItemDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3055,10 +4594,47 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionGroupDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3101,10 +4677,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3148,10 +4751,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionGroupDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3203,10 +4843,47 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionGroupDetailDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3251,10 +4928,50 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionGroupListItemDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3298,10 +5015,50 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3344,10 +5101,47 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3390,10 +5184,37 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3437,10 +5258,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3492,10 +5350,47 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3540,10 +5435,50 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3590,13 +5525,21 @@
       }
     },
     "schemas": {
+      "AuthClient": {
+        "type": "string",
+        "enum": ["web", "bo"],
+        "description": "Frontend making the request"
+      },
       "LoginDto": {
         "type": "object",
         "properties": {
           "client": {
-            "type": "string",
-            "enum": ["web", "bo"],
-            "description": "Frontend making the request"
+            "description": "Frontend making the request",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthClient"
+              }
+            ]
           },
           "email": {
             "type": "string",
@@ -3608,39 +5551,23 @@
         },
         "required": ["client", "email", "password"]
       },
-      "RefreshDto": {
+      "TokenResponseDto": {
         "type": "object",
         "properties": {
-          "client": {
-            "type": "string",
-            "enum": ["web", "bo"],
-            "description": "Frontend making the request"
+          "access_token": {
+            "type": "string"
           },
-          "refreshToken": {
+          "refresh_token": {
             "type": "string",
-            "description": "Required for server clients, which receive the refresh token in the body instead of a cookie"
+            "description": "web client only; bo gets it as the httpOnly refresh_token_bo cookie"
+          },
+          "refresh_token_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "web client only"
           }
         },
-        "required": ["client"]
-      },
-      "LogoutDto": {
-        "type": "object",
-        "properties": {
-          "client": {
-            "type": "string",
-            "enum": ["web", "bo"],
-            "description": "Frontend making the request"
-          },
-          "allDevices": {
-            "type": "boolean",
-            "description": "Revoke every session for the user across all clients, not just the current one"
-          },
-          "refreshToken": {
-            "type": "string",
-            "description": "Server clients only; web clients use the cookie"
-          }
-        },
-        "required": ["client"]
+        "required": ["access_token"]
       },
       "ErrorResponseDto": {
         "type": "object",
@@ -3674,6 +5601,190 @@
         },
         "required": ["message"]
       },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "description": "Frontend making the request",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthClient"
+              }
+            ]
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Required for server clients, which receive the refresh token in the body instead of a cookie"
+          }
+        },
+        "required": ["client"]
+      },
+      "Provider": {
+        "type": "string",
+        "enum": ["local", "google"]
+      },
+      "Status": {
+        "type": "string",
+        "enum": ["ACTIVE", "INACTIVE", "DELETED"]
+      },
+      "PermissionAction": {
+        "type": "string",
+        "enum": ["manage", "read", "create", "update", "delete"]
+      },
+      "PermissionSubject": {
+        "type": "string",
+        "enum": [
+          "all",
+          "role",
+          "permission",
+          "user",
+          "passage",
+          "paragraph",
+          "dashboard",
+          "student",
+          "teacher",
+          "test",
+          "question",
+          "campus",
+          "program",
+          "level",
+          "media"
+        ]
+      },
+      "PermissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "action": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PermissionAction"
+              }
+            ]
+          },
+          "subject": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PermissionSubject"
+              }
+            ]
+          }
+        },
+        "required": ["id", "action", "subject"]
+      },
+      "ProfileRoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "canAccessCms": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PermissionDto"
+            }
+          }
+        },
+        "required": ["id", "name", "code", "canAccessCms", "permissions"]
+      },
+      "ProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true,
+            "description": "Display URL: Google picture or the avatar media public URL"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "provider": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Provider"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              }
+            ]
+          },
+          "roleId": {
+            "type": "number"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ProfileRoleDto"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "avatar",
+          "phone",
+          "emailVerified",
+          "provider",
+          "status",
+          "roleId",
+          "role"
+        ]
+      },
+      "LogoutDto": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "description": "Frontend making the request",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthClient"
+              }
+            ]
+          },
+          "allDevices": {
+            "type": "boolean",
+            "description": "Revoke every session for the user across all clients, not just the current one"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Server clients only; web clients use the cookie"
+          }
+        },
+        "required": ["client"]
+      },
       "PageMetaDto": {
         "type": "object",
         "properties": {
@@ -3688,14 +5799,6 @@
           }
         },
         "required": ["page", "take", "totalCount"]
-      },
-      "Provider": {
-        "type": "string",
-        "enum": ["local", "google"]
-      },
-      "Status": {
-        "type": "string",
-        "enum": ["ACTIVE", "INACTIVE", "DELETED"]
       },
       "UserRoleDto": {
         "type": "object",
@@ -3740,7 +5843,7 @@
         },
         "required": ["id", "email", "firstName", "lastName", "avatar"]
       },
-      "AuditMetadataDto": {
+      "AuditMetadataWithActorsDto": {
         "type": "object",
         "properties": {
           "createdAt": {
@@ -3748,6 +5851,16 @@
             "format": "date-time"
           },
           "createdById": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedById": {
             "type": "string",
             "format": "uuid",
             "nullable": true
@@ -3760,16 +5873,6 @@
                 "$ref": "#/components/schemas/AuditUserDto"
               }
             ]
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "updatedById": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
           },
           "updatedBy": {
             "nullable": true,
@@ -3784,9 +5887,9 @@
         "required": [
           "createdAt",
           "createdById",
-          "createdBy",
           "updatedAt",
           "updatedById",
+          "createdBy",
           "updatedBy"
         ]
       },
@@ -3844,7 +5947,7 @@
             "$ref": "#/components/schemas/UserRoleDto"
           },
           "auditMetadata": {
-            "$ref": "#/components/schemas/AuditMetadataDto"
+            "$ref": "#/components/schemas/AuditMetadataWithActorsDto"
           }
         },
         "required": [
@@ -3917,7 +6020,7 @@
             "$ref": "#/components/schemas/UserRoleDto"
           },
           "auditMetadata": {
-            "$ref": "#/components/schemas/AuditMetadataDto"
+            "$ref": "#/components/schemas/AuditMetadataWithActorsDto"
           },
           "address": {
             "type": "string",
@@ -4118,20 +6221,34 @@
         },
         "required": ["avatar"]
       },
+      "MediaScope": {
+        "type": "string",
+        "enum": ["TEST", "AVATAR"]
+      },
+      "MediaKind": {
+        "type": "string",
+        "enum": ["AUDIO", "IMAGE"]
+      },
       "CreateUploadUrlDto": {
         "type": "object",
         "properties": {
           "scope": {
-            "type": "string",
-            "enum": ["TEST", "AVATAR"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaScope"
+              }
+            ]
           },
           "ownerId": {
             "type": "string",
             "description": "Test id for TEST, user id for AVATAR"
           },
           "kind": {
-            "type": "string",
-            "enum": ["AUDIO", "IMAGE"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKind"
+              }
+            ]
           },
           "contentType": {
             "type": "string",
@@ -4151,6 +6268,98 @@
         },
         "required": ["scope", "ownerId", "kind", "contentType"]
       },
+      "AuditMetadataDto": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdById": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedById": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": ["createdAt", "createdById", "updatedAt", "updatedById"]
+      },
+      "MediaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "scope": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaScope"
+              }
+            ]
+          },
+          "ownerId": {
+            "type": "string",
+            "description": "Test id for TEST, user id for AVATAR"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKind"
+              }
+            ]
+          },
+          "storageKey": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "sizeBytes": {
+            "type": "string",
+            "nullable": true,
+            "description": "bigint, serialised as a string",
+            "example": "1048576"
+          },
+          "durationMs": {
+            "type": "number",
+            "nullable": true
+          },
+          "transcript": {
+            "type": "string",
+            "nullable": true
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataDto"
+          },
+          "url": {
+            "type": "string",
+            "description": "Public CDN URL built from storageKey"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "ownerId",
+          "kind",
+          "storageKey",
+          "mimeType",
+          "sizeBytes",
+          "durationMs",
+          "transcript",
+          "auditMetadata",
+          "url"
+        ]
+      },
       "CreateMediaDto": {
         "type": "object",
         "properties": {
@@ -4161,16 +6370,22 @@
             "type": "string"
           },
           "scope": {
-            "type": "string",
-            "enum": ["TEST", "AVATAR"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaScope"
+              }
+            ]
           },
           "ownerId": {
             "type": "string",
             "description": "Test id for TEST, user id for AVATAR"
           },
           "kind": {
-            "type": "string",
-            "enum": ["AUDIO", "IMAGE"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKind"
+              }
+            ]
           },
           "storageKey": {
             "type": "string",
@@ -4189,6 +6404,94 @@
             "type": "string"
           }
         }
+      },
+      "RoleListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "canAccessCms": {
+            "type": "boolean"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              }
+            ]
+          },
+          "systemRole": {
+            "type": "boolean",
+            "description": "Seeded role; code and status are fixed"
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataWithActorsDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "code",
+          "canAccessCms",
+          "status",
+          "systemRole",
+          "auditMetadata"
+        ]
+      },
+      "RoleDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "canAccessCms": {
+            "type": "boolean"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              }
+            ]
+          },
+          "systemRole": {
+            "type": "boolean",
+            "description": "Seeded role; code and status are fixed"
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataWithActorsDto"
+          },
+          "permissions": {
+            "description": "Active permissions only",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PermissionDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "code",
+          "canAccessCms",
+          "status",
+          "systemRole",
+          "auditMetadata",
+          "permissions"
+        ]
       },
       "CreateRoleDto": {
         "type": "object",
@@ -4253,9 +6556,148 @@
         },
         "required": ["ids"]
       },
-      "Permission": {
+      "PermissionListItemDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "action": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PermissionAction"
+              }
+            ]
+          },
+          "subject": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PermissionSubject"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              }
+            ]
+          }
+        },
+        "required": ["id", "action", "subject", "status"]
+      },
+      "MarkedBy": {
+        "type": "string",
+        "enum": ["ALPHABET", "NUMBER", "NONE"]
+      },
+      "PassageStatus": {
+        "type": "string",
+        "enum": ["PUBLISHED", "DRAFT", "DELETED"]
+      },
+      "PassageListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "markedBy": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MarkedBy"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PassageStatus"
+              }
+            ]
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataWithActorsDto"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subtitle",
+          "markedBy",
+          "status",
+          "auditMetadata"
+        ]
+      },
+      "ParagraphDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "content": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number"
+          },
+          "passageId": {
+            "type": "number"
+          }
+        },
+        "required": ["id", "content", "order", "passageId"]
+      },
+      "PassageDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "markedBy": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MarkedBy"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PassageStatus"
+              }
+            ]
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataWithActorsDto"
+          },
+          "paragraphs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParagraphDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subtitle",
+          "markedBy",
+          "status",
+          "auditMetadata",
+          "paragraphs"
+        ]
       },
       "ParagraphInputDto": {
         "type": "object",
@@ -4281,9 +6723,12 @@
             "type": "string"
           },
           "markedBy": {
-            "type": "string",
-            "enum": ["ALPHABET", "NUMBER", "NONE"],
-            "default": "NONE"
+            "default": "NONE",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MarkedBy"
+              }
+            ]
           },
           "paragraphs": {
             "type": "array",
@@ -4305,9 +6750,12 @@
             "type": "string"
           },
           "markedBy": {
-            "type": "string",
-            "enum": ["ALPHABET", "NUMBER", "NONE"],
-            "default": "NONE"
+            "default": "NONE",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MarkedBy"
+              }
+            ]
           },
           "paragraphs": {
             "type": "array",
@@ -4389,12 +6837,176 @@
         },
         "required": ["ids"]
       },
+      "ExamType": {
+        "type": "string",
+        "enum": ["IELTS_ACADEMIC", "IELTS_GENERAL", "TOEIC_LR", "TOEIC_SW"]
+      },
+      "TestStatus": {
+        "type": "string",
+        "enum": ["PUBLISHED", "DRAFT", "DELETED"]
+      },
+      "TestListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "examType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TestStatus"
+              }
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lockedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set on the first attempt; the structure is frozen after"
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataWithActorsDto"
+          }
+        },
+        "required": [
+          "id",
+          "examType",
+          "title",
+          "source",
+          "durationMinutes",
+          "status",
+          "publishedAt",
+          "lockedAt",
+          "auditMetadata"
+        ]
+      },
+      "SkillType": {
+        "type": "string",
+        "enum": ["LISTENING", "READING", "WRITING", "SPEAKING"]
+      },
+      "TestSectionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "testId": {
+            "type": "number"
+          },
+          "skill": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
+          },
+          "order": {
+            "type": "number"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": ["id", "testId", "skill", "order", "durationMinutes"]
+      },
+      "TestDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "examType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TestStatus"
+              }
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lockedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set on the first attempt; the structure is frozen after"
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataWithActorsDto"
+          },
+          "testSections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestSectionDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "examType",
+          "title",
+          "source",
+          "durationMinutes",
+          "status",
+          "publishedAt",
+          "lockedAt",
+          "auditMetadata",
+          "testSections"
+        ]
+      },
       "TestSectionInputDto": {
         "type": "object",
         "properties": {
           "skill": {
-            "type": "string",
-            "enum": ["LISTENING", "READING", "WRITING", "SPEAKING"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
           },
           "order": {
             "type": "number",
@@ -4411,8 +7023,11 @@
         "type": "object",
         "properties": {
           "examType": {
-            "type": "string",
-            "enum": ["IELTS_ACADEMIC", "IELTS_GENERAL", "TOEIC_LR", "TOEIC_SW"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
           },
           "title": {
             "type": "string",
@@ -4439,8 +7054,11 @@
         "type": "object",
         "properties": {
           "examType": {
-            "type": "string",
-            "enum": ["IELTS_ACADEMIC", "IELTS_GENERAL", "TOEIC_LR", "TOEIC_SW"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
           },
           "title": {
             "type": "string",
@@ -4479,8 +7097,11 @@
             "type": "number"
           },
           "skill": {
-            "type": "string",
-            "enum": ["LISTENING", "READING", "WRITING", "SPEAKING"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
           },
           "order": {
             "type": "number",
@@ -4513,8 +7134,11 @@
         "type": "object",
         "properties": {
           "skill": {
-            "type": "string",
-            "enum": ["LISTENING", "READING", "WRITING", "SPEAKING"]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
           },
           "order": {
             "type": "number",
@@ -4537,6 +7161,50 @@
           }
         },
         "required": ["ids"]
+      },
+      "TestPartDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "sectionId": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "audioMediaId": {
+            "type": "number",
+            "nullable": true
+          },
+          "audioStartMs": {
+            "type": "number",
+            "nullable": true
+          },
+          "audioEndMs": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "sectionId",
+          "order",
+          "title",
+          "instruction",
+          "audioMediaId",
+          "audioStartMs",
+          "audioEndMs"
+        ]
       },
       "CreateTestPartDto": {
         "type": "object",
@@ -4624,6 +7292,275 @@
         },
         "required": ["ids"]
       },
+      "QuestionType": {
+        "type": "string",
+        "enum": [
+          "MULTIPLE_CHOICE",
+          "MULTIPLE_CHOICE_MULTI",
+          "TRUE_FALSE_NOT_GIVEN",
+          "YES_NO_NOT_GIVEN",
+          "MATCHING_HEADINGS",
+          "MATCHING_INFORMATION",
+          "MATCHING_FEATURES",
+          "MATCHING_SENTENCE_ENDINGS",
+          "CLASSIFICATION",
+          "FORM_COMPLETION",
+          "SENTENCE_COMPLETION",
+          "SUMMARY_COMPLETION",
+          "NOTE_COMPLETION",
+          "TABLE_COMPLETION",
+          "FLOW_CHART_COMPLETION",
+          "DIAGRAM_LABELLING",
+          "MAP_LABELLING",
+          "PLAN_LABELLING",
+          "SHORT_ANSWER",
+          "PHOTO_DESCRIPTION",
+          "QUESTION_RESPONSE",
+          "TEXT_COMPLETION",
+          "READ_ALOUD",
+          "DESCRIBE_PICTURE",
+          "RESPOND_TO_QUESTIONS",
+          "RESPOND_USING_INFO",
+          "EXPRESS_OPINION",
+          "WRITE_SENTENCE_PICTURE",
+          "RESPOND_WRITTEN_REQUEST",
+          "OPINION_ESSAY"
+        ]
+      },
+      "GroupPassageSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["id", "title", "subtitle"]
+      },
+      "GroupPassageDto": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "number"
+          },
+          "passageId": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "passage": {
+            "$ref": "#/components/schemas/GroupPassageSummaryDto"
+          }
+        },
+        "required": ["groupId", "passageId", "order", "passage"]
+      },
+      "QuestionGroupListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "partId": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "questionType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "wordLimit": {
+            "type": "number",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Shape depends on questionType"
+          },
+          "audioMediaId": {
+            "type": "number",
+            "nullable": true
+          },
+          "imageMediaId": {
+            "type": "number",
+            "nullable": true
+          },
+          "groupPassages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupPassageDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "partId",
+          "order",
+          "questionType",
+          "instruction",
+          "wordLimit",
+          "content",
+          "audioMediaId",
+          "imageMediaId",
+          "groupPassages"
+        ]
+      },
+      "QuestionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "groupId": {
+            "type": "number"
+          },
+          "numberFrom": {
+            "type": "number"
+          },
+          "numberTo": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "prompt": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Shape depends on the group question type"
+          },
+          "answer": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "{\"key\"} | {\"keys\"} | {\"accepted\"} | {\"sample\",\"rubric\"?}"
+          },
+          "explanation": {
+            "type": "string",
+            "nullable": true
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "audioMediaId": {
+            "type": "number",
+            "nullable": true
+          },
+          "imageMediaId": {
+            "type": "number",
+            "nullable": true
+          },
+          "audioStartMs": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "groupId",
+          "numberFrom",
+          "numberTo",
+          "order",
+          "prompt",
+          "content",
+          "answer",
+          "explanation",
+          "evidence",
+          "audioMediaId",
+          "imageMediaId",
+          "audioStartMs"
+        ]
+      },
+      "QuestionGroupDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "partId": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "questionType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "wordLimit": {
+            "type": "number",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Shape depends on questionType"
+          },
+          "audioMediaId": {
+            "type": "number",
+            "nullable": true
+          },
+          "imageMediaId": {
+            "type": "number",
+            "nullable": true
+          },
+          "groupPassages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupPassageDto"
+            }
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "partId",
+          "order",
+          "questionType",
+          "instruction",
+          "wordLimit",
+          "content",
+          "audioMediaId",
+          "imageMediaId",
+          "groupPassages",
+          "questions"
+        ]
+      },
       "QuestionInputDto": {
         "type": "object",
         "properties": {
@@ -4703,38 +7640,10 @@
             "description": "Defaults to last position"
           },
           "questionType": {
-            "type": "string",
-            "enum": [
-              "MULTIPLE_CHOICE",
-              "MULTIPLE_CHOICE_MULTI",
-              "TRUE_FALSE_NOT_GIVEN",
-              "YES_NO_NOT_GIVEN",
-              "MATCHING_HEADINGS",
-              "MATCHING_INFORMATION",
-              "MATCHING_FEATURES",
-              "MATCHING_SENTENCE_ENDINGS",
-              "CLASSIFICATION",
-              "FORM_COMPLETION",
-              "SENTENCE_COMPLETION",
-              "SUMMARY_COMPLETION",
-              "NOTE_COMPLETION",
-              "TABLE_COMPLETION",
-              "FLOW_CHART_COMPLETION",
-              "DIAGRAM_LABELLING",
-              "MAP_LABELLING",
-              "PLAN_LABELLING",
-              "SHORT_ANSWER",
-              "PHOTO_DESCRIPTION",
-              "QUESTION_RESPONSE",
-              "TEXT_COMPLETION",
-              "READ_ALOUD",
-              "DESCRIBE_PICTURE",
-              "RESPOND_TO_QUESTIONS",
-              "RESPOND_USING_INFO",
-              "EXPRESS_OPINION",
-              "WRITE_SENTENCE_PICTURE",
-              "RESPOND_WRITTEN_REQUEST",
-              "OPINION_ESSAY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
             ]
           },
           "instruction": {
@@ -4810,38 +7719,10 @@
             "description": "Defaults to last position"
           },
           "questionType": {
-            "type": "string",
-            "enum": [
-              "MULTIPLE_CHOICE",
-              "MULTIPLE_CHOICE_MULTI",
-              "TRUE_FALSE_NOT_GIVEN",
-              "YES_NO_NOT_GIVEN",
-              "MATCHING_HEADINGS",
-              "MATCHING_INFORMATION",
-              "MATCHING_FEATURES",
-              "MATCHING_SENTENCE_ENDINGS",
-              "CLASSIFICATION",
-              "FORM_COMPLETION",
-              "SENTENCE_COMPLETION",
-              "SUMMARY_COMPLETION",
-              "NOTE_COMPLETION",
-              "TABLE_COMPLETION",
-              "FLOW_CHART_COMPLETION",
-              "DIAGRAM_LABELLING",
-              "MAP_LABELLING",
-              "PLAN_LABELLING",
-              "SHORT_ANSWER",
-              "PHOTO_DESCRIPTION",
-              "QUESTION_RESPONSE",
-              "TEXT_COMPLETION",
-              "READ_ALOUD",
-              "DESCRIBE_PICTURE",
-              "RESPOND_TO_QUESTIONS",
-              "RESPOND_USING_INFO",
-              "EXPRESS_OPINION",
-              "WRITE_SENTENCE_PICTURE",
-              "RESPOND_WRITTEN_REQUEST",
-              "OPINION_ESSAY"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
             ]
           },
           "instruction": {

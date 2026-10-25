@@ -9,8 +9,19 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
+import { ApiPaginatedResponse } from '../../shared/decorators/api-paginated-response.decorator.js';
+import { DeleteResultDto, ErrorResponseDto } from '../../shared/dto/index.js';
 import {
   AuthClient,
   PermissionAction,
@@ -18,6 +29,7 @@ import {
 } from '../../types/auth.type.js';
 import { CheckPermissions } from '../auth/decorators/check-permissions.decorator.js';
 import { Clients } from '../auth/decorators/clients.decorator.js';
+import { ParagraphDto } from './dto/paragraph-response.dto.js';
 import {
   CreateParagraphDto,
   DeleteParagraphsDto,
@@ -31,11 +43,15 @@ import { ParagraphsService } from './paragraphs.service.js';
 @ApiBearerAuth()
 @Controller('paragraphs')
 @ApiTags('Paragraphs')
+@ApiUnauthorizedResponse({ type: ErrorResponseDto })
+@ApiForbiddenResponse({ type: ErrorResponseDto })
 export class ParagraphsController {
   constructor(private readonly paragraphsService: ParagraphsService) {}
 
   @Get()
   @ApiOperation({ summary: 'List paragraphs of a passage (paginated)' })
+  @ApiPaginatedResponse(ParagraphDto)
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.READ, PermissionSubject.PARAGRAPH])
   findAll(@Query() query: ListParagraphsDto) {
     return this.paragraphsService.findAll(query);
@@ -43,6 +59,8 @@ export class ParagraphsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a paragraph by id' })
+  @ApiOkResponse({ type: ParagraphDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.READ, PermissionSubject.PARAGRAPH])
   findById(@Param('id', ParseIntPipe) id: number) {
     return this.paragraphsService.findById(id);
@@ -50,6 +68,8 @@ export class ParagraphsController {
 
   @Post()
   @ApiOperation({ summary: 'Add a paragraph to a passage' })
+  @ApiCreatedResponse({ type: ParagraphDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.CREATE, PermissionSubject.PARAGRAPH])
   create(@Body() dto: CreateParagraphDto) {
     return this.paragraphsService.create(dto);
@@ -57,6 +77,8 @@ export class ParagraphsController {
 
   @Patch('reorder')
   @ApiOperation({ summary: 'Reorder paragraphs of a passage' })
+  @ApiOkResponse({ type: [ParagraphDto] })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.UPDATE, PermissionSubject.PARAGRAPH])
   reorder(@Body() dto: ReorderParagraphsDto) {
     return this.paragraphsService.reorder(dto);
@@ -64,6 +86,8 @@ export class ParagraphsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a paragraph' })
+  @ApiOkResponse({ type: ParagraphDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.UPDATE, PermissionSubject.PARAGRAPH])
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -74,6 +98,7 @@ export class ParagraphsController {
 
   @Delete()
   @ApiOperation({ summary: 'Delete paragraphs by ids' })
+  @ApiOkResponse({ type: DeleteResultDto })
   @CheckPermissions([PermissionAction.DELETE, PermissionSubject.PARAGRAPH])
   deleteByIds(@Body() dto: DeleteParagraphsDto) {
     return this.paragraphsService.deleteByIds(dto);

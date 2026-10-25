@@ -24,14 +24,16 @@ export class AuditMetadataDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   createdById: string | null;
 
-  @ApiProperty({ type: AuditUserDto, nullable: true })
-  createdBy: AuditUserDto | null;
-
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   updatedAt: string | null;
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   updatedById: string | null;
+}
+
+export class AuditMetadataWithActorsDto extends AuditMetadataDto {
+  @ApiProperty({ type: AuditUserDto, nullable: true })
+  createdBy: AuditUserDto | null;
 
   @ApiProperty({ type: AuditUserDto, nullable: true })
   updatedBy: AuditUserDto | null;

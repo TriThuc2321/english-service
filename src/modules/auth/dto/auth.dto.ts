@@ -12,7 +12,11 @@ import {
 import { AuthClient, isServerClient } from '../../../types/auth.type.js';
 
 export class ClientDto {
-  @ApiProperty({ enum: AuthClient, description: 'Frontend making the request' })
+  @ApiProperty({
+    enum: AuthClient,
+    enumName: 'AuthClient',
+    description: 'Frontend making the request',
+  })
   @IsEnum(AuthClient)
   client: AuthClient;
 }

@@ -9,8 +9,18 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
+import { DeleteResultDto, ErrorResponseDto } from '../../shared/dto/index.js';
 import {
   AuthClient,
   PermissionAction,
@@ -18,6 +28,7 @@ import {
 } from '../../types/auth.type.js';
 import { CheckPermissions } from '../auth/decorators/check-permissions.decorator.js';
 import { Clients } from '../auth/decorators/clients.decorator.js';
+import { TestPartDto } from './dto/test-part-response.dto.js';
 import {
   CreateTestPartDto,
   DeleteTestPartsDto,
@@ -31,11 +42,15 @@ import { TestPartsService } from './test-parts.service.js';
 @ApiBearerAuth()
 @Controller('test-parts')
 @ApiTags('Test Parts')
+@ApiUnauthorizedResponse({ type: ErrorResponseDto })
+@ApiForbiddenResponse({ type: ErrorResponseDto })
 export class TestPartsController {
   constructor(private readonly testPartsService: TestPartsService) {}
 
   @Get()
   @ApiOperation({ summary: 'List parts of a test section' })
+  @ApiOkResponse({ type: [TestPartDto] })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.READ, PermissionSubject.TEST])
   findAll(@Query() query: ListTestPartsDto) {
     return this.testPartsService.findAll(query);
@@ -43,6 +58,8 @@ export class TestPartsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a test part by id' })
+  @ApiOkResponse({ type: TestPartDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.READ, PermissionSubject.TEST])
   findById(@Param('id', ParseIntPipe) id: number) {
     return this.testPartsService.findById(id);
@@ -50,6 +67,8 @@ export class TestPartsController {
 
   @Post()
   @ApiOperation({ summary: 'Add a part to a test section' })
+  @ApiCreatedResponse({ type: TestPartDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.CREATE, PermissionSubject.TEST])
   create(@Body() dto: CreateTestPartDto) {
     return this.testPartsService.create(dto);
@@ -57,6 +76,8 @@ export class TestPartsController {
 
   @Patch('reorder')
   @ApiOperation({ summary: 'Reorder parts of a test section' })
+  @ApiOkResponse({ type: [TestPartDto] })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.UPDATE, PermissionSubject.TEST])
   reorder(@Body() dto: ReorderTestPartsDto) {
     return this.testPartsService.reorder(dto);
@@ -64,6 +85,8 @@ export class TestPartsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a test part' })
+  @ApiOkResponse({ type: TestPartDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.UPDATE, PermissionSubject.TEST])
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -74,6 +97,7 @@ export class TestPartsController {
 
   @Delete()
   @ApiOperation({ summary: 'Delete test parts (and their groups) by ids' })
+  @ApiOkResponse({ type: DeleteResultDto })
   @CheckPermissions([PermissionAction.DELETE, PermissionSubject.TEST])
   deleteByIds(@Body() dto: DeleteTestPartsDto) {
     return this.testPartsService.deleteByIds(dto);

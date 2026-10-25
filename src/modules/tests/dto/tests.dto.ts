@@ -26,7 +26,7 @@ import { ExamType, SkillType, TestStatus } from '../../../types/test.type.js';
 const EDITABLE_STATUSES = [TestStatus.PUBLISHED, TestStatus.DRAFT] as const;
 
 export class TestSectionInputDto {
-  @ApiProperty({ enum: SkillType })
+  @ApiProperty({ enum: SkillType, enumName: 'SkillType' })
   @IsEnum(SkillType)
   skill: SkillType;
 
@@ -44,7 +44,7 @@ export class TestSectionInputDto {
 }
 
 export class CreateTestDto {
-  @ApiProperty({ enum: ExamType })
+  @ApiProperty({ enum: ExamType, enumName: 'ExamType' })
   @IsEnum(ExamType)
   examType: ExamType;
 
@@ -96,7 +96,7 @@ export class ListTestsDto extends PageOptionsDto {
   @IsIn(EDITABLE_STATUSES)
   readonly status?: TestStatus.PUBLISHED | TestStatus.DRAFT;
 
-  @ApiPropertyOptional({ enum: ExamType })
+  @ApiPropertyOptional({ enum: ExamType, enumName: 'ExamType' })
   @IsOptional()
   @IsEnum(ExamType)
   readonly examType?: ExamType;
