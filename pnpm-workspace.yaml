@@ -1,3 +1,6 @@
 allowBuilds:
   '@scarf/scarf': true
   bcrypt: true
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

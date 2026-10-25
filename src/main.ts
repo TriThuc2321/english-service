@@ -1,11 +1,9 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
 
 import { AppModule } from './app.module.js';
+import { configureApp } from './app.setup.js';
 import { getHttpsOptions, getLocalDomain } from './configs/common.config.js';
 import { configSwagger, SWAGGER_PATH } from './configs/swagger.config.js';
 
@@ -17,44 +15,7 @@ async function bootstrap() {
     httpsOptions,
   });
 
-  const configService = app.get(ConfigService);
-
-  const trustProxy = configService.get<string>('TRUST_PROXY');
-  if (trustProxy) {
-    // Lets the throttler key on the real client IP forwarded by the student
-    // BFF / load balancer instead of the proxy's own address.
-    app.set(
-      'trust proxy',
-      /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy,
-    );
-  }
-
-  app.use(helmet());
-  app.use(cookieParser());
-  app.use(
-    `/${SWAGGER_PATH}`,
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-          'script-src': ["'self'", "'unsafe-inline'"],
-          'style-src': ["'self'", "'unsafe-inline'"],
-          'img-src': ["'self'", 'data:'],
-        },
-      },
-    }),
-  );
-  app.enableCors({
-    origin: configService.get<string[]>('cors.origins'),
-    credentials: true,
-  });
-  app.setGlobalPrefix('api');
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-    }),
-  );
-
+  configureApp(app);
   configSwagger(app);
 
   await app.listen(APP_PORT, '0.0.0.0', () => {
