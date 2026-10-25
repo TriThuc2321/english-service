@@ -15,10 +15,10 @@ pnpm lint:fix             # oxlint --fix
 pnpm format               # oxfmt . (writes)
 pnpm format:check         # oxfmt --check .
 
-pnpm test                 # vitest run (unit, *.spec.ts)
+pnpm test                 # vitest run (unit, src/**/*.spec.ts)
 pnpm test:watch           # vitest watch mode
 pnpm test:cov             # vitest run --coverage
-pnpm test:e2e             # vitest run --config ./vitest.config.e2e.ts (*.e2e-spec.ts)
+pnpm test:e2e             # vitest run --config ./vitest.config.e2e.ts (test/**/*.e2e-spec.ts, needs Docker)
 
 # run a single test file
 pnpm vitest run path/to/file.spec.ts
@@ -28,9 +28,17 @@ pnpm vitest run -t "test name"
 
 Pre-commit runs `lint-staged` (oxfmt + oxlint --fix on staged files) then `tsc --noEmit` via husky. Commit messages are enforced by commitlint (`@commitlint/config-conventional`) — use conventional commit format (`feat:`, `fix:`, etc).
 
-CI (`.github/workflows/ci.yml`, on PRs/pushes to `dev`/`main`) runs `format:check` → `lint` → `typecheck` → `build`. It does **not** run tests, and there are currently no spec files in the repo. PRs to `dev`/`main` also get an automated Claude code review (`claude-code-review.yml`).
+CI (`.github/workflows/ci.yml`, on PRs/pushes to `dev`/`main`) runs `format:check` → `lint` → `typecheck` → `test` → `test:e2e` → `build`. PRs to `dev`/`main` also get an automated Claude code review (`claude-code-review.yml`).
 
 Lint/format are handled by **oxlint** and **oxfmt**, not ESLint/Prettier — there are no `.eslintrc`/`.prettierrc` files, config lives in `.oxlintrc.json` / `.oxfmtrc.json`.
+
+### Tests
+
+- Unit specs sit next to the code (`src/**/*.spec.ts`) and need no DB. Vite 8's transform honours `emitDecoratorMetadata` from `tsconfig.json`, so Nest DI works in specs with no swc plugin.
+- E2E specs live in `test/`. `test/global-setup.ts` starts one `postgres:16-alpine` Testcontainer per run; `test/setup-env.ts` creates a fresh database per test file and sets every required env var (so a local `.env` is never used). Files run sequentially.
+- `createTestApp()` (`test/utils/app.ts`) boots the real `AppModule` with `configureApp` (`src/app.setup.ts`, shared with `main.ts`), replaces `StorageService` with `vi.fn()` fakes, and feeds TypeORM the entity classes imported through Vite — TypeORM's own `.ts` glob uses native `import()` and can't load them.
+- `test/utils/fixtures.ts`: `createUser` (system role via `roleCode`, or a CMS role holding exactly `permissions`), `loginBo`/`loginWeb`, `sessionsOf`. The refresh cookie is `secure`, so pass it back with `.set('Cookie', cookie)` — supertest won't replay it over http.
+- Auth routes are throttled to 10/min per handler and the throttler state lives per app instance — keep each file under 10 calls per auth route, or split the file.
 
 Copy `.env.example` to `.env`; required vars are validated at boot (see below). There are no TypeORM migrations — the schema comes from `DATABASE_SYNC=true` (`synchronize`), so entity changes are applied directly to the DB on start.
 

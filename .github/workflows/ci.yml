@@ -37,5 +37,12 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Unit tests
+        run: pnpm test
+
+      # Testcontainers starts Postgres through the runner's Docker daemon
+      - name: E2E tests
+        run: pnpm test:e2e
+
       - name: Build
         run: pnpm build
