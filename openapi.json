@@ -7383,6 +7383,16 @@
             "items": {
               "$ref": "#/components/schemas/GroupPassageDto"
             }
+          },
+          "numberFrom": {
+            "type": "number",
+            "nullable": true,
+            "description": "Lowest numberFrom of the questions; null when it has none"
+          },
+          "numberTo": {
+            "type": "number",
+            "nullable": true,
+            "description": "Highest numberTo of the questions; null when it has none"
           }
         },
         "required": [
@@ -7395,7 +7405,9 @@
           "content",
           "audioMediaId",
           "imageMediaId",
-          "groupPassages"
+          "groupPassages",
+          "numberFrom",
+          "numberTo"
         ]
       },
       "QuestionDto": {
@@ -7516,6 +7528,16 @@
               "$ref": "#/components/schemas/GroupPassageDto"
             }
           },
+          "numberFrom": {
+            "type": "number",
+            "nullable": true,
+            "description": "Lowest numberFrom of the questions; null when it has none"
+          },
+          "numberTo": {
+            "type": "number",
+            "nullable": true,
+            "description": "Highest numberTo of the questions; null when it has none"
+          },
           "questions": {
             "type": "array",
             "items": {
@@ -7534,6 +7556,8 @@
           "audioMediaId",
           "imageMediaId",
           "groupPassages",
+          "numberFrom",
+          "numberTo",
           "questions"
         ]
       },

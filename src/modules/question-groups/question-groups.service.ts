@@ -46,12 +46,32 @@ export class QuestionGroupsService {
   async findAll({ partId }: ListQuestionGroupsDto) {
     await this.testPartsService.findPartTest(partId);
 
-    return this.withPassages()
+    const groups = await this.withPassages()
       .where('g.partId = :partId', { partId })
       .orderBy('g.order', 'ASC')
       .addOrderBy('g.id', 'ASC')
       .addOrderBy('gp.order', 'ASC')
       .getMany();
+    if (!groups.length) return [];
+
+    const ranges = await this.questionRepository
+      .createQueryBuilder('q')
+      .select('q.groupId', 'groupId')
+      .addSelect('MIN(q.numberFrom)', 'numberFrom')
+      .addSelect('MAX(q.numberTo)', 'numberTo')
+      .where('q.groupId IN (:...ids)', { ids: groups.map((g) => g.id) })
+      .groupBy('q.groupId')
+      .getRawMany<{ groupId: number; numberFrom: number; numberTo: number }>();
+    const rangeByGroup = new Map(ranges.map((r) => [r.groupId, r]));
+
+    return groups.map((group) => {
+      const range = rangeByGroup.get(group.id);
+      return {
+        ...group,
+        numberFrom: range?.numberFrom ?? null,
+        numberTo: range?.numberTo ?? null,
+      };
+    });
   }
 
   async findById(id: number) {
@@ -67,7 +87,16 @@ export class QuestionGroupsService {
       throw new NotFoundException(`Question group with ID ${id} not found`);
     }
 
-    return group;
+    const { questions } = group;
+    return {
+      ...group,
+      numberFrom: questions.length
+        ? Math.min(...questions.map((q) => q.numberFrom))
+        : null,
+      numberTo: questions.length
+        ? Math.max(...questions.map((q) => q.numberTo))
+        : null,
+    };
   }
 
   async create(dto: CreateQuestionGroupDto) {
