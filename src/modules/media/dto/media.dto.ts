@@ -11,7 +11,10 @@ import {
   Min,
 } from 'class-validator';
 
-import { AuditMetadataDto, PageOptionsDto } from '../../../shared/dto/index.js';
+import {
+  AuditMetadataWithActorsDto,
+  PageOptionsDto,
+} from '../../../shared/dto/index.js';
 import { MediaKind, MediaScope } from '../../../types/media.type.js';
 import { MEDIA_KEY_PATTERN, MEDIA_MIME_TYPES } from '../media.constant.js';
 
@@ -20,11 +23,14 @@ export class CreateUploadUrlDto {
   @IsEnum(MediaScope)
   scope: MediaScope;
 
-  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
+  @ApiPropertyOptional({
+    description: 'Test id for TEST, user id for AVATAR; omit for LIBRARY',
+  })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(64)
-  ownerId: string;
+  ownerId?: string;
 
   @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
   @IsEnum(MediaKind)
@@ -53,11 +59,14 @@ export class CreateMediaDto extends UpdateMediaDto {
   @IsEnum(MediaScope)
   scope: MediaScope;
 
-  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
+  @ApiPropertyOptional({
+    description: 'Test id for TEST, user id for AVATAR; omit for LIBRARY',
+  })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(64)
-  ownerId: string;
+  ownerId?: string;
 
   @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
   @IsEnum(MediaKind)
@@ -115,8 +124,12 @@ export class MediaDto {
   @ApiProperty({ enum: MediaScope, enumName: 'MediaScope' })
   scope: MediaScope;
 
-  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
-  ownerId: string;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Test id for TEST, user id for AVATAR, null for LIBRARY',
+  })
+  ownerId: string | null;
 
   @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
   kind: MediaKind;
@@ -141,8 +154,8 @@ export class MediaDto {
   @ApiProperty({ type: String, nullable: true })
   transcript: string | null;
 
-  @ApiProperty({ type: AuditMetadataDto })
-  auditMetadata: AuditMetadataDto;
+  @ApiProperty({ type: AuditMetadataWithActorsDto })
+  auditMetadata: AuditMetadataWithActorsDto;
 
   @ApiProperty({ description: 'Public CDN URL built from storageKey' })
   url: string;

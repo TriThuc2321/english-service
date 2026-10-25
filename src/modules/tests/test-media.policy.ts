@@ -30,8 +30,8 @@ export class TestMediaPolicy implements IMediaOwnerPolicy, OnModuleInit {
     this.registry.register(this);
   }
 
-  async assertOwnerWritable(ownerId: string) {
-    if (!TEST_ID_PATTERN.test(ownerId)) {
+  async assertOwnerWritable(ownerId?: string) {
+    if (!ownerId || !TEST_ID_PATTERN.test(ownerId)) {
       throw new BadRequestException('Owner id must be a test id');
     }
     await this.testsService.findEditableTest(Number(ownerId));

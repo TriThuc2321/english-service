@@ -22,7 +22,22 @@ import { MediaPolicyRegistry } from './media-policy.registry.js';
 import { MEDIA_MIME_EXTENSIONS, MB, mediaKeyPrefix } from './media.constant.js';
 
 const PG_FOREIGN_KEY_VIOLATION = '23503';
+const PG_RESTRICT_VIOLATION = '23001';
 const PG_UNIQUE_VIOLATION = '23505';
+
+const COLUMNS = [
+  'm',
+  'creator.id',
+  'creator.email',
+  'creator.firstName',
+  'creator.lastName',
+  'creator.avatar',
+  'updater.id',
+  'updater.email',
+  'updater.firstName',
+  'updater.lastName',
+  'updater.avatar',
+];
 
 @Injectable()
 export class MediaService {
@@ -63,17 +78,32 @@ export class MediaService {
     };
   }
 
+  private baseQuery() {
+    return this.mediaRepository
+      .createQueryBuilder('m')
+      .leftJoin('m.auditMetadata.createdBy', 'creator')
+      .leftJoin('m.auditMetadata.updatedBy', 'updater')
+      .select(COLUMNS);
+  }
+
   async findAll({ page, take, scope, ownerId, kind }: ListMediaDto) {
-    const [data, totalCount] = await this.mediaRepository.findAndCount({
-      where: {
-        ...(scope && { scope }),
-        ...(ownerId && { ownerId }),
-        ...(kind && { kind }),
-      },
-      order: { id: 'DESC' },
-      skip: (page - 1) * take,
-      take,
-    });
+    const qb = this.baseQuery();
+
+    if (scope) {
+      qb.andWhere('m.scope = :scope', { scope });
+    }
+    if (ownerId) {
+      qb.andWhere('m.ownerId = :ownerId', { ownerId });
+    }
+    if (kind) {
+      qb.andWhere('m.kind = :kind', { kind });
+    }
+
+    const [data, totalCount] = await qb
+      .orderBy('m.id', 'DESC')
+      .skip((page - 1) * take)
+      .take(take)
+      .getManyAndCount();
 
     return new PaginationDto(
       data.map((media) => this.withUrl(media)),
@@ -82,7 +112,7 @@ export class MediaService {
   }
 
   async findById(id: number) {
-    const media = await this.mediaRepository.findOneBy({ id });
+    const media = await this.baseQuery().where('m.id = :id', { id }).getOne();
     if (!media) {
       throw new NotFoundException(`Media with ID ${id} not found`);
     }
@@ -96,7 +126,8 @@ export class MediaService {
       scope,
       ownerId,
       kind,
-    }: Pick<Media, 'scope'> & Partial<Pick<Media, 'ownerId' | 'kind'>>,
+    }: Pick<Media, 'scope'> &
+      Partial<Pick<Media, 'kind'>> & { ownerId?: string },
   ) {
     const media = await this.mediaRepository.findOneBy({
       id,
@@ -124,7 +155,7 @@ export class MediaService {
     const { policy, maxBytes } = this.policies.getForKind(scope, kind);
     if (!storageKey.startsWith(mediaKeyPrefix(policy.prefix, ownerId, kind))) {
       throw new BadRequestException(
-        `Storage key does not belong to ${kind} of ${scope} ${ownerId}`,
+        `Storage key does not belong to ${kind} of ${[scope, ownerId].filter(Boolean).join(' ')}`,
       );
     }
 
@@ -154,7 +185,7 @@ export class MediaService {
       media = await this.mediaRepository.save({
         ...rest,
         scope,
-        ownerId,
+        ownerId: ownerId ?? null,
         kind,
         storageKey,
         mimeType: contentType,
@@ -199,7 +230,9 @@ export class MediaService {
     } catch (err) {
       if (
         err instanceof QueryFailedError &&
-        (err.driverError as { code?: string }).code === PG_FOREIGN_KEY_VIOLATION
+        [PG_FOREIGN_KEY_VIOLATION, PG_RESTRICT_VIOLATION].includes(
+          (err.driverError as { code?: string }).code ?? '',
+        )
       ) {
         throw new ConflictException(`Media with ID ${id} is in use`);
       }

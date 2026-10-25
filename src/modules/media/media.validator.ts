@@ -33,7 +33,11 @@ export class MediaValidator {
 
     for (const [id, kind] of expected) {
       const media = byId.get(id);
-      if (!media || media.scope !== scope) {
+      // Library media is shared, so it fits any scope
+      if (
+        !media ||
+        (media.scope !== scope && media.scope !== MediaScope.LIBRARY)
+      ) {
         throw new BadRequestException(`Media with ID ${id} not found`);
       }
       if (media.kind !== kind) {
