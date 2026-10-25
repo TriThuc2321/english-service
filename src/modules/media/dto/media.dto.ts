@@ -11,7 +11,10 @@ import {
   Min,
 } from 'class-validator';
 
-import { AuditMetadataDto, PageOptionsDto } from '../../../shared/dto/index.js';
+import {
+  AuditMetadataWithActorsDto,
+  PageOptionsDto,
+} from '../../../shared/dto/index.js';
 import { MediaKind, MediaScope } from '../../../types/media.type.js';
 import { MEDIA_KEY_PATTERN, MEDIA_MIME_TYPES } from '../media.constant.js';
 
@@ -151,8 +154,8 @@ export class MediaDto {
   @ApiProperty({ type: String, nullable: true })
   transcript: string | null;
 
-  @ApiProperty({ type: AuditMetadataDto })
-  auditMetadata: AuditMetadataDto;
+  @ApiProperty({ type: AuditMetadataWithActorsDto })
+  auditMetadata: AuditMetadataWithActorsDto;
 
   @ApiProperty({ description: 'Public CDN URL built from storageKey' })
   url: string;

@@ -25,6 +25,20 @@ const PG_FOREIGN_KEY_VIOLATION = '23503';
 const PG_RESTRICT_VIOLATION = '23001';
 const PG_UNIQUE_VIOLATION = '23505';
 
+const COLUMNS = [
+  'm',
+  'creator.id',
+  'creator.email',
+  'creator.firstName',
+  'creator.lastName',
+  'creator.avatar',
+  'updater.id',
+  'updater.email',
+  'updater.firstName',
+  'updater.lastName',
+  'updater.avatar',
+];
+
 @Injectable()
 export class MediaService {
   private readonly logger = new Logger(MediaService.name);
@@ -64,17 +78,32 @@ export class MediaService {
     };
   }
 
+  private baseQuery() {
+    return this.mediaRepository
+      .createQueryBuilder('m')
+      .leftJoin('m.auditMetadata.createdBy', 'creator')
+      .leftJoin('m.auditMetadata.updatedBy', 'updater')
+      .select(COLUMNS);
+  }
+
   async findAll({ page, take, scope, ownerId, kind }: ListMediaDto) {
-    const [data, totalCount] = await this.mediaRepository.findAndCount({
-      where: {
-        ...(scope && { scope }),
-        ...(ownerId && { ownerId }),
-        ...(kind && { kind }),
-      },
-      order: { id: 'DESC' },
-      skip: (page - 1) * take,
-      take,
-    });
+    const qb = this.baseQuery();
+
+    if (scope) {
+      qb.andWhere('m.scope = :scope', { scope });
+    }
+    if (ownerId) {
+      qb.andWhere('m.ownerId = :ownerId', { ownerId });
+    }
+    if (kind) {
+      qb.andWhere('m.kind = :kind', { kind });
+    }
+
+    const [data, totalCount] = await qb
+      .orderBy('m.id', 'DESC')
+      .skip((page - 1) * take)
+      .take(take)
+      .getManyAndCount();
 
     return new PaginationDto(
       data.map((media) => this.withUrl(media)),
@@ -83,7 +112,7 @@ export class MediaService {
   }
 
   async findById(id: number) {
-    const media = await this.mediaRepository.findOneBy({ id });
+    const media = await this.baseQuery().where('m.id = :id', { id }).getOne();
     if (!media) {
       throw new NotFoundException(`Media with ID ${id} not found`);
     }
