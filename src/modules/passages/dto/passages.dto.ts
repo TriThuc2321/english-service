@@ -49,7 +49,11 @@ export class CreatePassageDto {
   @MaxLength(255)
   subtitle?: string;
 
-  @ApiPropertyOptional({ enum: MarkedBy, default: MarkedBy.NONE })
+  @ApiPropertyOptional({
+    enum: MarkedBy,
+    enumName: 'MarkedBy',
+    default: MarkedBy.NONE,
+  })
   @IsOptional()
   @IsEnum(MarkedBy)
   markedBy?: MarkedBy;
@@ -82,7 +86,7 @@ export class ListPassagesDto extends PageOptionsDto {
   @IsIn(EDITABLE_STATUSES)
   readonly status?: PassageStatus.PUBLISHED | PassageStatus.DRAFT;
 
-  @ApiPropertyOptional({ enum: MarkedBy })
+  @ApiPropertyOptional({ enum: MarkedBy, enumName: 'MarkedBy' })
   @IsOptional()
   @IsEnum(MarkedBy)
   readonly markedBy?: MarkedBy;

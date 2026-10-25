@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { AuditMetadataDto } from '../../../shared/dto/index.js';
+import { AuditMetadataWithActorsDto } from '../../../shared/dto/index.js';
 import { Status } from '../../../types/common.type.js';
 import { Provider } from '../../../types/user.type.js';
 
@@ -59,8 +59,8 @@ export class UserListItemDto {
   @ApiProperty({ type: UserRoleDto })
   role: UserRoleDto;
 
-  @ApiProperty({ type: AuditMetadataDto })
-  auditMetadata: AuditMetadataDto;
+  @ApiProperty({ type: AuditMetadataWithActorsDto })
+  auditMetadata: AuditMetadataWithActorsDto;
 }
 
 export class UserDetailDto extends UserListItemDto {

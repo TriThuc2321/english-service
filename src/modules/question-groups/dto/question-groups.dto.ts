@@ -33,7 +33,7 @@ export class CreateQuestionGroupDto {
   @Min(0)
   order?: number;
 
-  @ApiProperty({ enum: QuestionType })
+  @ApiProperty({ enum: QuestionType, enumName: 'QuestionType' })
   @IsEnum(QuestionType)
   questionType: QuestionType;
 
