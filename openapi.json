@@ -1,0 +1,5069 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "operationId": "Auth_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Log in with email and password",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/auth/google": {
+      "get": {
+        "operationId": "Auth_googleAuth",
+        "parameters": [
+          {
+            "name": "client",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": ["web", "bo"],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Redirect to Google OAuth consent screen",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/auth/google/callback": {
+      "get": {
+        "operationId": "Auth_googleAuthCallback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Handle Google OAuth callback and issue tokens",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "operationId": "Auth_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Rotate the refresh token cookie and issue a new access token",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/auth/profile": {
+      "get": {
+        "operationId": "Auth_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the current user profile",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "Auth_logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Log out the current session, or all devices when allDevices is true",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/users": {
+      "get": {
+        "operationId": "Users_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches email, first name, last name or phone",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ACTIVE", "INACTIVE"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserListItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List users (paginated)",
+        "tags": ["Users"]
+      },
+      "post": {
+        "operationId": "Users_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a user",
+        "tags": ["Users"]
+      },
+      "delete": {
+        "operationId": "Users_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteUsersDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soft-delete users by ids",
+        "tags": ["Users"]
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "operationId": "Users_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a user by id",
+        "tags": ["Users"]
+      },
+      "patch": {
+        "operationId": "Users_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a user",
+        "tags": ["Users"]
+      }
+    },
+    "/api/me/avatar/upload-url": {
+      "post": {
+        "operationId": "Me_createAvatarUploadUrl",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAvatarUploadUrlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a presigned PUT URL for a new avatar; upload it, then call PUT /me/avatar",
+        "tags": ["Me"]
+      }
+    },
+    "/api/me/avatar": {
+      "put": {
+        "operationId": "Me_setAvatar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAvatarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Set the uploaded file as the current avatar",
+        "tags": ["Me"]
+      },
+      "delete": {
+        "operationId": "Me_removeAvatar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove the current avatar",
+        "tags": ["Me"]
+      }
+    },
+    "/api/media/upload-url": {
+      "post": {
+        "operationId": "Media_createUploadUrl",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUploadUrlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a presigned PUT URL; upload the file with the returned headers, then call POST /media",
+        "tags": ["Media"]
+      }
+    },
+    "/api/media": {
+      "get": {
+        "operationId": "Media_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["TEST", "AVATAR"]
+            }
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["AUDIO", "IMAGE"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List media (paginated, with public URLs)",
+        "tags": ["Media"]
+      },
+      "post": {
+        "operationId": "Media_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMediaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register an uploaded file as media",
+        "tags": ["Media"]
+      }
+    },
+    "/api/media/{id}": {
+      "get": {
+        "operationId": "Media_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a media with its public URL",
+        "tags": ["Media"]
+      },
+      "patch": {
+        "operationId": "Media_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMediaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update media metadata (duration, transcript)",
+        "tags": ["Media"]
+      },
+      "delete": {
+        "operationId": "Media_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete media and its file (409 if in use)",
+        "tags": ["Media"]
+      }
+    },
+    "/api/roles": {
+      "get": {
+        "operationId": "Roles_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches name or code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ACTIVE", "INACTIVE"]
+            }
+          },
+          {
+            "name": "canAccessCms",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List roles (paginated)",
+        "tags": ["Roles"]
+      },
+      "post": {
+        "operationId": "Roles_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a role",
+        "tags": ["Roles"]
+      },
+      "delete": {
+        "operationId": "Roles_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteRolesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soft-delete roles by ids",
+        "tags": ["Roles"]
+      }
+    },
+    "/api/roles/{id}": {
+      "get": {
+        "operationId": "Roles_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a role by id",
+        "tags": ["Roles"]
+      },
+      "patch": {
+        "operationId": "Roles_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a role",
+        "tags": ["Roles"]
+      }
+    },
+    "/api/permissions": {
+      "get": {
+        "operationId": "Permissions_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Returns all permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Permission"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all permissions",
+        "tags": ["Permissions"]
+      }
+    },
+    "/api/passages": {
+      "get": {
+        "operationId": "Passages_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches title or subtitle",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["PUBLISHED", "DRAFT"]
+            }
+          },
+          {
+            "name": "markedBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ALPHABET", "NUMBER", "NONE"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List passages (paginated)",
+        "tags": ["Passages"]
+      },
+      "post": {
+        "operationId": "Passages_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePassageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a passage (optionally with paragraphs)",
+        "tags": ["Passages"]
+      },
+      "delete": {
+        "operationId": "Passages_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePassagesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soft-delete passages by ids",
+        "tags": ["Passages"]
+      }
+    },
+    "/api/passages/{id}": {
+      "get": {
+        "operationId": "Passages_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a passage with its paragraphs",
+        "tags": ["Passages"]
+      },
+      "patch": {
+        "operationId": "Passages_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePassageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a passage; `paragraphs` replaces the whole list",
+        "tags": ["Passages"]
+      }
+    },
+    "/api/paragraphs": {
+      "get": {
+        "operationId": "Paragraphs_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "passageId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List paragraphs of a passage (paginated)",
+        "tags": ["Paragraphs"]
+      },
+      "post": {
+        "operationId": "Paragraphs_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateParagraphDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a paragraph to a passage",
+        "tags": ["Paragraphs"]
+      },
+      "delete": {
+        "operationId": "Paragraphs_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteParagraphsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete paragraphs by ids",
+        "tags": ["Paragraphs"]
+      }
+    },
+    "/api/paragraphs/{id}": {
+      "get": {
+        "operationId": "Paragraphs_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a paragraph by id",
+        "tags": ["Paragraphs"]
+      },
+      "patch": {
+        "operationId": "Paragraphs_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParagraphDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a paragraph",
+        "tags": ["Paragraphs"]
+      }
+    },
+    "/api/paragraphs/reorder": {
+      "patch": {
+        "operationId": "Paragraphs_reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderParagraphsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reorder paragraphs of a passage",
+        "tags": ["Paragraphs"]
+      }
+    },
+    "/api/tests": {
+      "get": {
+        "operationId": "Tests_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches title or source",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["PUBLISHED", "DRAFT"]
+            }
+          },
+          {
+            "name": "examType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IELTS_ACADEMIC",
+                "IELTS_GENERAL",
+                "TOEIC_LR",
+                "TOEIC_SW"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List tests (paginated)",
+        "tags": ["Tests"]
+      },
+      "post": {
+        "operationId": "Tests_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a test (optionally with sections)",
+        "tags": ["Tests"]
+      },
+      "delete": {
+        "operationId": "Tests_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteTestsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soft-delete tests by ids",
+        "tags": ["Tests"]
+      }
+    },
+    "/api/tests/{id}": {
+      "get": {
+        "operationId": "Tests_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a test with its sections",
+        "tags": ["Tests"]
+      },
+      "patch": {
+        "operationId": "Tests_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a test; sections change via /test-sections",
+        "tags": ["Tests"]
+      }
+    },
+    "/api/test-sections": {
+      "get": {
+        "operationId": "TestSections_findAll",
+        "parameters": [
+          {
+            "name": "testId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List sections of a test",
+        "tags": ["Test Sections"]
+      },
+      "post": {
+        "operationId": "TestSections_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTestSectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a section to a test",
+        "tags": ["Test Sections"]
+      },
+      "delete": {
+        "operationId": "TestSections_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteTestSectionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete test sections (and their parts) by ids",
+        "tags": ["Test Sections"]
+      }
+    },
+    "/api/test-sections/{id}": {
+      "get": {
+        "operationId": "TestSections_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a test section by id",
+        "tags": ["Test Sections"]
+      },
+      "patch": {
+        "operationId": "TestSections_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTestSectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a test section",
+        "tags": ["Test Sections"]
+      }
+    },
+    "/api/test-sections/reorder": {
+      "patch": {
+        "operationId": "TestSections_reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderTestSectionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reorder sections of a test",
+        "tags": ["Test Sections"]
+      }
+    },
+    "/api/test-parts": {
+      "get": {
+        "operationId": "TestParts_findAll",
+        "parameters": [
+          {
+            "name": "sectionId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List parts of a test section",
+        "tags": ["Test Parts"]
+      },
+      "post": {
+        "operationId": "TestParts_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTestPartDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a part to a test section",
+        "tags": ["Test Parts"]
+      },
+      "delete": {
+        "operationId": "TestParts_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteTestPartsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete test parts (and their groups) by ids",
+        "tags": ["Test Parts"]
+      }
+    },
+    "/api/test-parts/{id}": {
+      "get": {
+        "operationId": "TestParts_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a test part by id",
+        "tags": ["Test Parts"]
+      },
+      "patch": {
+        "operationId": "TestParts_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTestPartDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a test part",
+        "tags": ["Test Parts"]
+      }
+    },
+    "/api/test-parts/reorder": {
+      "patch": {
+        "operationId": "TestParts_reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderTestPartsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reorder parts of a test section",
+        "tags": ["Test Parts"]
+      }
+    },
+    "/api/question-groups": {
+      "get": {
+        "operationId": "QuestionGroups_findAll",
+        "parameters": [
+          {
+            "name": "partId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List question groups of a test part",
+        "tags": ["Question Groups"]
+      },
+      "post": {
+        "operationId": "QuestionGroups_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuestionGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a question group (optionally with questions) to a part",
+        "tags": ["Question Groups"]
+      },
+      "delete": {
+        "operationId": "QuestionGroups_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteQuestionGroupsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete question groups (and their questions) by ids",
+        "tags": ["Question Groups"]
+      }
+    },
+    "/api/question-groups/{id}": {
+      "get": {
+        "operationId": "QuestionGroups_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a question group with its questions and passages",
+        "tags": ["Question Groups"]
+      },
+      "patch": {
+        "operationId": "QuestionGroups_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuestionGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a question group; passageIds replaces all links",
+        "tags": ["Question Groups"]
+      }
+    },
+    "/api/question-groups/reorder": {
+      "patch": {
+        "operationId": "QuestionGroups_reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderQuestionGroupsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reorder question groups of a part",
+        "tags": ["Question Groups"]
+      }
+    },
+    "/api/questions": {
+      "get": {
+        "operationId": "Questions_findAll",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List questions of a group (with answers)",
+        "tags": ["Questions"]
+      },
+      "post": {
+        "operationId": "Questions_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a question to a group",
+        "tags": ["Questions"]
+      },
+      "delete": {
+        "operationId": "Questions_deleteByIds",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteQuestionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete questions by ids",
+        "tags": ["Questions"]
+      }
+    },
+    "/api/questions/{id}": {
+      "get": {
+        "operationId": "Questions_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a question by id (with answer)",
+        "tags": ["Questions"]
+      },
+      "patch": {
+        "operationId": "Questions_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a question; only answer/explanation/evidence once locked",
+        "tags": ["Questions"]
+      }
+    },
+    "/api/questions/reorder": {
+      "patch": {
+        "operationId": "Questions_reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderQuestionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reorder questions of a group",
+        "tags": ["Questions"]
+      }
+    }
+  },
+  "info": {
+    "title": "My English APIs",
+    "description": "My English APIs document",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "type": "string",
+            "enum": ["web", "bo"],
+            "description": "Frontend making the request"
+          },
+          "email": {
+            "type": "string",
+            "example": "test1@gmail.com"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": ["client", "email", "password"]
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "type": "string",
+            "enum": ["web", "bo"],
+            "description": "Frontend making the request"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Required for server clients, which receive the refresh token in the body instead of a cookie"
+          }
+        },
+        "required": ["client"]
+      },
+      "LogoutDto": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "type": "string",
+            "enum": ["web", "bo"],
+            "description": "Frontend making the request"
+          },
+          "allDevices": {
+            "type": "boolean",
+            "description": "Revoke every session for the user across all clients, not just the current one"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Server clients only; web clients use the cookie"
+          }
+        },
+        "required": ["client"]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "Validation errors come back as an array of messages"
+          },
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          },
+          "code": {
+            "type": "string",
+            "description": "Machine-readable reason, e.g. REFRESH_TOKEN_ROTATED"
+          }
+        },
+        "required": ["message"]
+      },
+      "PageMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "take": {
+            "type": "number"
+          },
+          "totalCount": {
+            "type": "number"
+          }
+        },
+        "required": ["page", "take", "totalCount"]
+      },
+      "Provider": {
+        "type": "string",
+        "enum": ["local", "google"]
+      },
+      "Status": {
+        "type": "string",
+        "enum": ["ACTIVE", "INACTIVE", "DELETED"]
+      },
+      "UserRoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "canAccessCms": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "name", "code", "canAccessCms"]
+      },
+      "AuditUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["id", "email", "firstName", "lastName", "avatar"]
+      },
+      "AuditMetadataDto": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdById": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuditUserDto"
+              }
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedById": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "updatedBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuditUserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "createdAt",
+          "createdById",
+          "createdBy",
+          "updatedAt",
+          "updatedById",
+          "updatedBy"
+        ]
+      },
+      "UserListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true,
+            "description": "Display URL: Google picture or the avatar media public URL"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "provider": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Provider"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              }
+            ]
+          },
+          "systemUser": {
+            "type": "boolean"
+          },
+          "roleId": {
+            "type": "number"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRoleDto"
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataDto"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "avatar",
+          "phone",
+          "emailVerified",
+          "provider",
+          "status",
+          "systemUser",
+          "roleId",
+          "role",
+          "auditMetadata"
+        ]
+      },
+      "UserDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true,
+            "description": "Display URL: Google picture or the avatar media public URL"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "provider": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Provider"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              }
+            ]
+          },
+          "systemUser": {
+            "type": "boolean"
+          },
+          "roleId": {
+            "type": "number"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRoleDto"
+          },
+          "auditMetadata": {
+            "$ref": "#/components/schemas/AuditMetadataDto"
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "1990-01-31"
+          },
+          "avatarMediaId": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "avatar",
+          "phone",
+          "emailVerified",
+          "provider",
+          "status",
+          "systemUser",
+          "roleId",
+          "role",
+          "auditMetadata",
+          "address",
+          "dateOfBirth",
+          "avatarMediaId"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "test1@gmail.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "example": "1990-01-31"
+          },
+          "roleId": {
+            "type": "number"
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "default": false
+          },
+          "provider": {
+            "default": "local",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Provider"
+              }
+            ]
+          }
+        },
+        "required": ["email", "firstName", "roleId"]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "example": "1990-01-31"
+          },
+          "roleId": {
+            "type": "number"
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "default": false
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "INACTIVE"]
+          },
+          "avatarMediaId": {
+            "type": "number",
+            "nullable": true,
+            "description": "AVATAR media uploaded for this user via POST /media; null removes it"
+          }
+        }
+      },
+      "DeleteUsersDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["ids"]
+      },
+      "DeleteResultDto": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "number",
+            "description": "Number of rows actually deleted"
+          }
+        },
+        "required": ["deleted"]
+      },
+      "CreateAvatarUploadUrlDto": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": ["image/jpeg", "image/png", "image/webp", "image/avif"],
+            "example": "image/webp"
+          }
+        },
+        "required": ["contentType"]
+      },
+      "UploadUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "description": "Pass back when confirming the upload"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "description": "Presigned PUT URL"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Headers the PUT request must send unchanged",
+            "example": {
+              "Content-Type": "image/webp",
+              "Cache-Control": "public, max-age=31536000, immutable"
+            }
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Seconds until uploadUrl expires"
+          }
+        },
+        "required": ["storageKey", "uploadUrl", "headers", "expiresIn"]
+      },
+      "SetAvatarDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "description": "Key returned by POST /me/avatar/upload-url"
+          }
+        },
+        "required": ["storageKey"]
+      },
+      "AvatarResponseDto": {
+        "type": "object",
+        "properties": {
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["avatar"]
+      },
+      "CreateUploadUrlDto": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["TEST", "AVATAR"]
+          },
+          "ownerId": {
+            "type": "string",
+            "description": "Test id for TEST, user id for AVATAR"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["AUDIO", "IMAGE"]
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "audio/mpeg",
+              "audio/mp4",
+              "audio/ogg",
+              "audio/webm",
+              "audio/wav",
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+              "image/avif"
+            ],
+            "example": "audio/mpeg"
+          }
+        },
+        "required": ["scope", "ownerId", "kind", "contentType"]
+      },
+      "CreateMediaDto": {
+        "type": "object",
+        "properties": {
+          "durationMs": {
+            "type": "number"
+          },
+          "transcript": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["TEST", "AVATAR"]
+          },
+          "ownerId": {
+            "type": "string",
+            "description": "Test id for TEST, user id for AVATAR"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["AUDIO", "IMAGE"]
+          },
+          "storageKey": {
+            "type": "string",
+            "description": "Key returned by POST /media/upload-url"
+          }
+        },
+        "required": ["scope", "ownerId", "kind", "storageKey"]
+      },
+      "UpdateMediaDto": {
+        "type": "object",
+        "properties": {
+          "durationMs": {
+            "type": "number"
+          },
+          "transcript": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Administrator"
+          },
+          "code": {
+            "type": "string",
+            "example": "ADMIN"
+          },
+          "canAccessCms": {
+            "type": "boolean",
+            "default": false
+          },
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["name", "code"]
+      },
+      "UpdateRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Administrator"
+          },
+          "code": {
+            "type": "string",
+            "example": "ADMIN"
+          },
+          "canAccessCms": {
+            "type": "boolean",
+            "default": false
+          },
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "INACTIVE"]
+          }
+        }
+      },
+      "DeleteRolesDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["ids"]
+      },
+      "Permission": {
+        "type": "object",
+        "properties": {}
+      },
+      "ParagraphInputDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to array index"
+          }
+        },
+        "required": ["content"]
+      },
+      "CreatePassageDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "The Solar System"
+          },
+          "subtitle": {
+            "type": "string"
+          },
+          "markedBy": {
+            "type": "string",
+            "enum": ["ALPHABET", "NUMBER", "NONE"],
+            "default": "NONE"
+          },
+          "paragraphs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParagraphInputDto"
+            }
+          }
+        },
+        "required": ["title"]
+      },
+      "UpdatePassageDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "The Solar System"
+          },
+          "subtitle": {
+            "type": "string"
+          },
+          "markedBy": {
+            "type": "string",
+            "enum": ["ALPHABET", "NUMBER", "NONE"],
+            "default": "NONE"
+          },
+          "paragraphs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParagraphInputDto"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PUBLISHED", "DRAFT"]
+          }
+        }
+      },
+      "DeletePassagesDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["ids"]
+      },
+      "CreateParagraphDto": {
+        "type": "object",
+        "properties": {
+          "passageId": {
+            "type": "number"
+          },
+          "content": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          }
+        },
+        "required": ["passageId", "content"]
+      },
+      "ReorderParagraphsDto": {
+        "type": "object",
+        "properties": {
+          "passageId": {
+            "type": "number"
+          },
+          "ids": {
+            "description": "Paragraph ids in new order",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["passageId", "ids"]
+      },
+      "UpdateParagraphDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          }
+        }
+      },
+      "DeleteParagraphsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["ids"]
+      },
+      "TestSectionInputDto": {
+        "type": "object",
+        "properties": {
+          "skill": {
+            "type": "string",
+            "enum": ["LISTENING", "READING", "WRITING", "SPEAKING"]
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to array index"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "description": "IELTS: per-section limit"
+          }
+        },
+        "required": ["skill"]
+      },
+      "CreateTestDto": {
+        "type": "object",
+        "properties": {
+          "examType": {
+            "type": "string",
+            "enum": ["IELTS_ACADEMIC", "IELTS_GENERAL", "TOEIC_LR", "TOEIC_SW"]
+          },
+          "title": {
+            "type": "string",
+            "example": "Cambridge IELTS 18 - Test 1"
+          },
+          "source": {
+            "type": "string",
+            "example": "Cambridge 18"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "description": "Overall limit (TOEIC LR = 120)"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestSectionInputDto"
+            }
+          }
+        },
+        "required": ["examType", "title"]
+      },
+      "UpdateTestDto": {
+        "type": "object",
+        "properties": {
+          "examType": {
+            "type": "string",
+            "enum": ["IELTS_ACADEMIC", "IELTS_GENERAL", "TOEIC_LR", "TOEIC_SW"]
+          },
+          "title": {
+            "type": "string",
+            "example": "Cambridge IELTS 18 - Test 1"
+          },
+          "source": {
+            "type": "string",
+            "example": "Cambridge 18"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "description": "Overall limit (TOEIC LR = 120)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PUBLISHED", "DRAFT"]
+          }
+        }
+      },
+      "DeleteTestsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["ids"]
+      },
+      "CreateTestSectionDto": {
+        "type": "object",
+        "properties": {
+          "testId": {
+            "type": "number"
+          },
+          "skill": {
+            "type": "string",
+            "enum": ["LISTENING", "READING", "WRITING", "SPEAKING"]
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "description": "IELTS: per-section limit"
+          }
+        },
+        "required": ["testId", "skill"]
+      },
+      "ReorderTestSectionsDto": {
+        "type": "object",
+        "properties": {
+          "testId": {
+            "type": "number"
+          },
+          "ids": {
+            "description": "Section ids in new order",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["testId", "ids"]
+      },
+      "UpdateTestSectionDto": {
+        "type": "object",
+        "properties": {
+          "skill": {
+            "type": "string",
+            "enum": ["LISTENING", "READING", "WRITING", "SPEAKING"]
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "description": "IELTS: per-section limit"
+          }
+        }
+      },
+      "DeleteTestSectionsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["ids"]
+      },
+      "CreateTestPartDto": {
+        "type": "object",
+        "properties": {
+          "sectionId": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "title": {
+            "type": "string",
+            "example": "Part 1"
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "audioMediaId": {
+            "type": "number",
+            "description": "AUDIO media for the whole part"
+          },
+          "audioStartMs": {
+            "type": "number",
+            "description": "When several parts share one audio"
+          },
+          "audioEndMs": {
+            "type": "number"
+          }
+        },
+        "required": ["sectionId"]
+      },
+      "ReorderTestPartsDto": {
+        "type": "object",
+        "properties": {
+          "sectionId": {
+            "type": "number"
+          },
+          "ids": {
+            "description": "Part ids in new order",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["sectionId", "ids"]
+      },
+      "UpdateTestPartDto": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "title": {
+            "type": "string",
+            "example": "Part 1"
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "audioMediaId": {
+            "type": "number",
+            "description": "AUDIO media for the whole part"
+          },
+          "audioStartMs": {
+            "type": "number",
+            "description": "When several parts share one audio"
+          },
+          "audioEndMs": {
+            "type": "number"
+          }
+        }
+      },
+      "DeleteTestPartsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["ids"]
+      },
+      "QuestionInputDto": {
+        "type": "object",
+        "properties": {
+          "numberFrom": {
+            "type": "number",
+            "example": 21,
+            "description": "Displayed question number"
+          },
+          "numberTo": {
+            "type": "number",
+            "example": 22,
+            "description": "Defaults to numberFrom; higher for \"Choose TWO\""
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "content": {
+            "type": "object",
+            "description": "Shape depends on the group question type (see docs/question-formats.md): MCQ/TEXT_COMPLETION -> {\"options\":[{\"key\",\"text\"}]}; PHOTO_DESCRIPTION/QUESTION_RESPONSE -> {\"options\":[{\"key\"}]}; Speaking/Writing -> {\"prepSeconds\"?,\"responseSeconds\"?}; other types take no content",
+            "example": {
+              "options": [
+                {
+                  "key": "A",
+                  "text": "at the station"
+                },
+                {
+                  "key": "B",
+                  "text": "in the office"
+                }
+              ]
+            }
+          },
+          "answer": {
+            "type": "object",
+            "description": "Shape depends on the group question type: {\"key\"} | {\"keys\"} | {\"accepted\"} | {\"sample\",\"rubric\"?}",
+            "example": {
+              "key": "B"
+            }
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "object",
+            "example": {
+              "paragraphId": 12,
+              "quote": "..."
+            }
+          },
+          "audioMediaId": {
+            "type": "number",
+            "description": "AUDIO media (TOEIC Part 1/2 clip)"
+          },
+          "imageMediaId": {
+            "type": "number",
+            "description": "IMAGE media (TOEIC Part 1 photo)"
+          },
+          "audioStartMs": {
+            "type": "number",
+            "description": "Review: jump to the answer in audio"
+          }
+        },
+        "required": ["numberFrom", "answer"]
+      },
+      "CreateQuestionGroupDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "questionType": {
+            "type": "string",
+            "enum": [
+              "MULTIPLE_CHOICE",
+              "MULTIPLE_CHOICE_MULTI",
+              "TRUE_FALSE_NOT_GIVEN",
+              "YES_NO_NOT_GIVEN",
+              "MATCHING_HEADINGS",
+              "MATCHING_INFORMATION",
+              "MATCHING_FEATURES",
+              "MATCHING_SENTENCE_ENDINGS",
+              "CLASSIFICATION",
+              "FORM_COMPLETION",
+              "SENTENCE_COMPLETION",
+              "SUMMARY_COMPLETION",
+              "NOTE_COMPLETION",
+              "TABLE_COMPLETION",
+              "FLOW_CHART_COMPLETION",
+              "DIAGRAM_LABELLING",
+              "MAP_LABELLING",
+              "PLAN_LABELLING",
+              "SHORT_ANSWER",
+              "PHOTO_DESCRIPTION",
+              "QUESTION_RESPONSE",
+              "TEXT_COMPLETION",
+              "READ_ALOUD",
+              "DESCRIBE_PICTURE",
+              "RESPOND_TO_QUESTIONS",
+              "RESPOND_USING_INFO",
+              "EXPRESS_OPINION",
+              "WRITE_SENTENCE_PICTURE",
+              "RESPOND_WRITTEN_REQUEST",
+              "OPINION_ESSAY"
+            ]
+          },
+          "instruction": {
+            "type": "string",
+            "example": "Questions 1-6: Do the following statements agree..."
+          },
+          "wordLimit": {
+            "type": "number",
+            "description": "\"NO MORE THAN TWO WORDS\" -> 2"
+          },
+          "content": {
+            "type": "object",
+            "description": "Shape depends on questionType (see docs/question-formats.md): matching -> {\"options\",\"allowReuse\"?}; form/note/flow-chart/sentence -> {\"template\"}; summary -> {\"template\",\"options\"?}; table -> {\"table\":{\"headers\"?,\"rows\"}}; map/plan -> {\"options\"}; RESPOND_USING_INFO -> {\"info\"}; other types take no content",
+            "example": {
+              "options": [
+                {
+                  "key": "i",
+                  "text": "The history of the region"
+                },
+                {
+                  "key": "ii",
+                  "text": "A new approach to farming"
+                }
+              ],
+              "allowReuse": false
+            }
+          },
+          "audioMediaId": {
+            "type": "number",
+            "description": "AUDIO media (TOEIC Part 3/4)"
+          },
+          "imageMediaId": {
+            "type": "number",
+            "description": "IMAGE media (graphic, map, diagram)"
+          },
+          "passageIds": {
+            "description": "Linked passages in display order (TOEIC Part 7: up to 3)",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionInputDto"
+            }
+          }
+        },
+        "required": ["partId", "questionType"]
+      },
+      "ReorderQuestionGroupsDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number"
+          },
+          "ids": {
+            "description": "Group ids in new order",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["partId", "ids"]
+      },
+      "UpdateQuestionGroupDto": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "questionType": {
+            "type": "string",
+            "enum": [
+              "MULTIPLE_CHOICE",
+              "MULTIPLE_CHOICE_MULTI",
+              "TRUE_FALSE_NOT_GIVEN",
+              "YES_NO_NOT_GIVEN",
+              "MATCHING_HEADINGS",
+              "MATCHING_INFORMATION",
+              "MATCHING_FEATURES",
+              "MATCHING_SENTENCE_ENDINGS",
+              "CLASSIFICATION",
+              "FORM_COMPLETION",
+              "SENTENCE_COMPLETION",
+              "SUMMARY_COMPLETION",
+              "NOTE_COMPLETION",
+              "TABLE_COMPLETION",
+              "FLOW_CHART_COMPLETION",
+              "DIAGRAM_LABELLING",
+              "MAP_LABELLING",
+              "PLAN_LABELLING",
+              "SHORT_ANSWER",
+              "PHOTO_DESCRIPTION",
+              "QUESTION_RESPONSE",
+              "TEXT_COMPLETION",
+              "READ_ALOUD",
+              "DESCRIBE_PICTURE",
+              "RESPOND_TO_QUESTIONS",
+              "RESPOND_USING_INFO",
+              "EXPRESS_OPINION",
+              "WRITE_SENTENCE_PICTURE",
+              "RESPOND_WRITTEN_REQUEST",
+              "OPINION_ESSAY"
+            ]
+          },
+          "instruction": {
+            "type": "string",
+            "example": "Questions 1-6: Do the following statements agree..."
+          },
+          "wordLimit": {
+            "type": "number",
+            "description": "\"NO MORE THAN TWO WORDS\" -> 2"
+          },
+          "content": {
+            "type": "object",
+            "description": "Shape depends on questionType (see docs/question-formats.md): matching -> {\"options\",\"allowReuse\"?}; form/note/flow-chart/sentence -> {\"template\"}; summary -> {\"template\",\"options\"?}; table -> {\"table\":{\"headers\"?,\"rows\"}}; map/plan -> {\"options\"}; RESPOND_USING_INFO -> {\"info\"}; other types take no content",
+            "example": {
+              "options": [
+                {
+                  "key": "i",
+                  "text": "The history of the region"
+                },
+                {
+                  "key": "ii",
+                  "text": "A new approach to farming"
+                }
+              ],
+              "allowReuse": false
+            }
+          },
+          "audioMediaId": {
+            "type": "number",
+            "description": "AUDIO media (TOEIC Part 3/4)"
+          },
+          "imageMediaId": {
+            "type": "number",
+            "description": "IMAGE media (graphic, map, diagram)"
+          },
+          "passageIds": {
+            "description": "Linked passages in display order (TOEIC Part 7: up to 3)",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "DeleteQuestionGroupsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["ids"]
+      },
+      "CreateQuestionDto": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "number"
+          },
+          "numberFrom": {
+            "type": "number",
+            "example": 21,
+            "description": "Displayed question number"
+          },
+          "numberTo": {
+            "type": "number",
+            "example": 22,
+            "description": "Defaults to numberFrom; higher for \"Choose TWO\""
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "content": {
+            "type": "object",
+            "description": "Shape depends on the group question type (see docs/question-formats.md): MCQ/TEXT_COMPLETION -> {\"options\":[{\"key\",\"text\"}]}; PHOTO_DESCRIPTION/QUESTION_RESPONSE -> {\"options\":[{\"key\"}]}; Speaking/Writing -> {\"prepSeconds\"?,\"responseSeconds\"?}; other types take no content",
+            "example": {
+              "options": [
+                {
+                  "key": "A",
+                  "text": "at the station"
+                },
+                {
+                  "key": "B",
+                  "text": "in the office"
+                }
+              ]
+            }
+          },
+          "answer": {
+            "type": "object",
+            "description": "Shape depends on the group question type: {\"key\"} | {\"keys\"} | {\"accepted\"} | {\"sample\",\"rubric\"?}",
+            "example": {
+              "key": "B"
+            }
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "object",
+            "example": {
+              "paragraphId": 12,
+              "quote": "..."
+            }
+          },
+          "audioMediaId": {
+            "type": "number",
+            "description": "AUDIO media (TOEIC Part 1/2 clip)"
+          },
+          "imageMediaId": {
+            "type": "number",
+            "description": "IMAGE media (TOEIC Part 1 photo)"
+          },
+          "audioStartMs": {
+            "type": "number",
+            "description": "Review: jump to the answer in audio"
+          }
+        },
+        "required": ["groupId", "numberFrom", "answer"]
+      },
+      "ReorderQuestionsDto": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "number"
+          },
+          "ids": {
+            "description": "Question ids in new order",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["groupId", "ids"]
+      },
+      "UpdateQuestionDto": {
+        "type": "object",
+        "properties": {
+          "numberFrom": {
+            "type": "number",
+            "example": 21,
+            "description": "Displayed question number"
+          },
+          "numberTo": {
+            "type": "number",
+            "example": 22,
+            "description": "Defaults to numberFrom; higher for \"Choose TWO\""
+          },
+          "order": {
+            "type": "number",
+            "description": "Defaults to last position"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "content": {
+            "type": "object",
+            "description": "Shape depends on the group question type (see docs/question-formats.md): MCQ/TEXT_COMPLETION -> {\"options\":[{\"key\",\"text\"}]}; PHOTO_DESCRIPTION/QUESTION_RESPONSE -> {\"options\":[{\"key\"}]}; Speaking/Writing -> {\"prepSeconds\"?,\"responseSeconds\"?}; other types take no content",
+            "example": {
+              "options": [
+                {
+                  "key": "A",
+                  "text": "at the station"
+                },
+                {
+                  "key": "B",
+                  "text": "in the office"
+                }
+              ]
+            }
+          },
+          "answer": {
+            "type": "object",
+            "description": "Shape depends on the group question type: {\"key\"} | {\"keys\"} | {\"accepted\"} | {\"sample\",\"rubric\"?}",
+            "example": {
+              "key": "B"
+            }
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "object",
+            "example": {
+              "paragraphId": 12,
+              "quote": "..."
+            }
+          },
+          "audioMediaId": {
+            "type": "number",
+            "description": "AUDIO media (TOEIC Part 1/2 clip)"
+          },
+          "imageMediaId": {
+            "type": "number",
+            "description": "IMAGE media (TOEIC Part 1 photo)"
+          },
+          "audioStartMs": {
+            "type": "number",
+            "description": "Review: jump to the answer in audio"
+          }
+        }
+      },
+      "DeleteQuestionsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["ids"]
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ pnpm lint                 # oxlint src/ test/
 pnpm lint:fix             # oxlint --fix
 pnpm format               # oxfmt . (writes)
 pnpm format:check         # oxfmt --check .
+pnpm openapi:generate     # build + write openapi.json (FE contract, commit it)
 
 pnpm test                 # vitest run (unit, src/**/*.spec.ts)
 pnpm test:watch           # vitest watch mode
@@ -28,7 +29,7 @@ pnpm vitest run -t "test name"
 
 Pre-commit runs `lint-staged` (oxfmt + oxlint --fix on staged files) then `tsc --noEmit` via husky. Commit messages are enforced by commitlint (`@commitlint/config-conventional`) — use conventional commit format (`feat:`, `fix:`, etc).
 
-CI (`.github/workflows/ci.yml`, on PRs/pushes to `dev`/`main`) runs `format:check` → `lint` → `typecheck` → `test` → `test:e2e` → `build`. PRs to `dev`/`main` also get an automated Claude code review (`claude-code-review.yml`).
+CI (`.github/workflows/ci.yml`, on PRs/pushes to `dev`/`main`) runs `format:check` → `lint` → `typecheck` → `test` → `test:e2e` → `build` → OpenAPI diff (regenerates `openapi.json` and fails if it differs from the committed one). `api-changelog.yml` diffs the PR's `openapi.json` against the base branch with `oasdiff`, keeps the result as a sticky PR comment (that's what the FE reads — they don't codegen), and fails on breaking changes unless the PR has the `api-breaking` label. PRs to `dev`/`main` also get an automated Claude code review (`claude-code-review.yml`).
 
 Lint/format are handled by **oxlint** and **oxfmt**, not ESLint/Prettier — there are no `.eslintrc`/`.prettierrc` files, config lives in `.oxlintrc.json` / `.oxfmtrc.json`.
 
@@ -84,6 +85,7 @@ Global guard chain, applied in `app.module.ts` via `APP_GUARD` in this order: `T
 
 - Import ordering/grouping is enforced by oxfmt (`sortImports` in `.oxfmtrc.json`): type imports, then external, then internal types, internal values, then relative imports (parent/sibling/index) — run `pnpm format` rather than hand-ordering imports.
 - DTOs use `class-validator`/`class-transformer`; the global `ValidationPipe` in `main.ts` has `transform: true`.
+- `openapi.json` (repo root) is the API contract the FEs generate their clients from. `src/openapi.ts` boots `AppModule` in Nest `preview` mode (no DB, placeholder env) and writes it via `createOpenApiDocument` (`configs/swagger.config.ts`, shared with `/docs`). Every endpoint should declare its response with `@ApiOkResponse`/`@ApiCreatedResponse({ type })` or `@ApiPaginatedResponse(Dto)` (`shared/decorators`), using response DTOs (`dto/*-response.dto.ts`) rather than entities; errors use `ErrorResponseDto` (400/429 are added globally). Name enums with `enumName` so codegen emits one shared type. Fields that are always present but can be `null` are `@ApiProperty({ nullable: true })`, not optional. Run `pnpm openapi:generate` and commit the diff whenever DTOs/decorators change.
 - API is served under the `/api` prefix (`app.setGlobalPrefix('api')`); Swagger docs are at `/docs` (`SWAGGER_PATH`), which gets a relaxed CSP via a second `helmet()` instance scoped to that path in `main.ts`.
 - HTTPS is optional locally: set `HTTPS_KEY_PATH`/`HTTPS_CERT_PATH` (see `certs/`) or the server falls back to HTTP.
 - Do not add redundant comments — no comments that restate what the code already says (e.g. `// get user by id` above `getUserById`). Only comment non-obvious WHY (a workaround, a hidden constraint, a subtle invariant).
