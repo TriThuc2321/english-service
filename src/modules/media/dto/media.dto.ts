@@ -20,11 +20,14 @@ export class CreateUploadUrlDto {
   @IsEnum(MediaScope)
   scope: MediaScope;
 
-  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
+  @ApiPropertyOptional({
+    description: 'Test id for TEST, user id for AVATAR; omit for LIBRARY',
+  })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(64)
-  ownerId: string;
+  ownerId?: string;
 
   @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
   @IsEnum(MediaKind)
@@ -53,11 +56,14 @@ export class CreateMediaDto extends UpdateMediaDto {
   @IsEnum(MediaScope)
   scope: MediaScope;
 
-  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
+  @ApiPropertyOptional({
+    description: 'Test id for TEST, user id for AVATAR; omit for LIBRARY',
+  })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(64)
-  ownerId: string;
+  ownerId?: string;
 
   @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
   @IsEnum(MediaKind)
@@ -115,8 +121,12 @@ export class MediaDto {
   @ApiProperty({ enum: MediaScope, enumName: 'MediaScope' })
   scope: MediaScope;
 
-  @ApiProperty({ description: 'Test id for TEST, user id for AVATAR' })
-  ownerId: string;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Test id for TEST, user id for AVATAR, null for LIBRARY',
+  })
+  ownerId: string | null;
 
   @ApiProperty({ enum: MediaKind, enumName: 'MediaKind' })
   kind: MediaKind;

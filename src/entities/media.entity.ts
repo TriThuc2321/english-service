@@ -4,7 +4,8 @@ import { MediaKind, MediaScope } from '../types/media.type.js';
 import { AuditMetadata } from './audit-metadata.entity.js';
 
 // Owner is polymorphic (test id, user uuid, ...), so there is no FK to it;
-// MediaService checks the owner per scope before issuing or registering a key
+// MediaService checks the owner per scope before issuing or registering a key.
+// LIBRARY media is shared and has no owner
 @Entity('media', { schema: 'public' })
 @Index('idx_media_scope_owner', ['scope', 'ownerId'])
 export class Media {
@@ -19,8 +20,8 @@ export class Media {
   })
   scope: MediaScope;
 
-  @Column({ name: 'owner_id', type: 'varchar', length: 64 })
-  ownerId: string;
+  @Column({ name: 'owner_id', type: 'varchar', length: 64, nullable: true })
+  ownerId: string | null;
 
   @Column({
     name: 'kind',

@@ -97,7 +97,8 @@ export class MediaService {
       scope,
       ownerId,
       kind,
-    }: Pick<Media, 'scope'> & Partial<Pick<Media, 'ownerId' | 'kind'>>,
+    }: Pick<Media, 'scope'> &
+      Partial<Pick<Media, 'kind'>> & { ownerId?: string },
   ) {
     const media = await this.mediaRepository.findOneBy({
       id,
@@ -125,7 +126,7 @@ export class MediaService {
     const { policy, maxBytes } = this.policies.getForKind(scope, kind);
     if (!storageKey.startsWith(mediaKeyPrefix(policy.prefix, ownerId, kind))) {
       throw new BadRequestException(
-        `Storage key does not belong to ${kind} of ${scope} ${ownerId}`,
+        `Storage key does not belong to ${kind} of ${[scope, ownerId].filter(Boolean).join(' ')}`,
       );
     }
 
@@ -155,7 +156,7 @@ export class MediaService {
       media = await this.mediaRepository.save({
         ...rest,
         scope,
-        ownerId,
+        ownerId: ownerId ?? null,
         kind,
         storageKey,
         mimeType: contentType,

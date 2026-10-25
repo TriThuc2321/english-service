@@ -22,6 +22,17 @@ describe('media keys', () => {
     ).toBe(true);
   });
 
+  it('builds an owner-less prefix', () => {
+    expect(mediaKeyPrefix('library', null, MediaKind.AUDIO)).toBe(
+      'library/audio/',
+    );
+    expect(
+      MEDIA_KEY_PATTERN.test(
+        `${mediaKeyPrefix('library', undefined, MediaKind.IMAGE)}${uuid}.png`,
+      ),
+    ).toBe(true);
+  });
+
   it.each([
     ['an unknown kind', `tests/12/video/${uuid}.mp4`],
     ['a missing extension', `tests/12/audio/${uuid}`],

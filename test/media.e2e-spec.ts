@@ -77,3 +77,54 @@ describe('DELETE /media/:id', () => {
       .expect(409);
   });
 });
+
+describe('POST /media/upload-url', () => {
+  let testApp: TestApp;
+  let accessToken: string;
+
+  const createUploadUrl = (body: object) =>
+    testApp
+      .http()
+      .post('/api/media/upload-url')
+      .auth(accessToken, { type: 'bearer' })
+      .send(body);
+
+  beforeAll(async () => {
+    testApp = await createTestApp();
+    const user = await createUser(testApp, {
+      permissions: [[PermissionAction.CREATE, PermissionSubject.MEDIA]],
+    });
+    ({ accessToken } = await loginBo(testApp, user));
+  });
+
+  afterAll(async () => {
+    await testApp?.app.close();
+  });
+
+  it('issues an owner-less key for library media', async () => {
+    const res = await createUploadUrl({
+      scope: MediaScope.LIBRARY,
+      kind: MediaKind.AUDIO,
+      contentType: 'audio/mpeg',
+    }).expect(201);
+
+    expect(res.body.storageKey).toMatch(/^library\/audio\/[0-9a-f-]{36}\.mp3$/);
+  });
+
+  it('rejects an owner for library media', async () => {
+    await createUploadUrl({
+      scope: MediaScope.LIBRARY,
+      ownerId: '1',
+      kind: MediaKind.AUDIO,
+      contentType: 'audio/mpeg',
+    }).expect(400);
+  });
+
+  it('still requires an owner for test media', async () => {
+    await createUploadUrl({
+      scope: MediaScope.TEST,
+      kind: MediaKind.AUDIO,
+      contentType: 'audio/mpeg',
+    }).expect(400);
+  });
+});

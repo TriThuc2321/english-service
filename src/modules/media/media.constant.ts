@@ -25,14 +25,15 @@ export const MEDIA_MIME_TYPES = Object.values(MEDIA_MIME_EXTENSIONS).flatMap(
 
 export const MB = 1024 * 1024;
 
+// Owner-less (LIBRARY) keys skip the owner segment
 export const mediaKeyPrefix = (
   prefix: string,
-  ownerId: string,
+  ownerId: string | null | undefined,
   kind: MediaKind,
-) => `${prefix}/${ownerId}/${kind.toLowerCase()}/`;
+) => `${prefix}/${ownerId ? `${ownerId}/` : ''}${kind.toLowerCase()}/`;
 
 export const MEDIA_KEY_PATTERN = new RegExp(
-  `^[a-z0-9-]+/[0-9a-z-]+/(${Object.values(MediaKind)
+  `^[a-z0-9-]+/(?:[0-9a-z-]+/)?(${Object.values(MediaKind)
     .map((k) => k.toLowerCase())
     .join('|')})/[0-9a-f-]{36}\\.[a-z0-9]+$`,
 );

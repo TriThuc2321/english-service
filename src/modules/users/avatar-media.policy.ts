@@ -32,8 +32,8 @@ export class AvatarMediaPolicy implements IMediaOwnerPolicy, OnModuleInit {
     this.registry.register(this);
   }
 
-  async assertOwnerWritable(ownerId: string) {
-    if (!USER_ID_PATTERN.test(ownerId)) {
+  async assertOwnerWritable(ownerId?: string) {
+    if (!ownerId || !USER_ID_PATTERN.test(ownerId)) {
       throw new BadRequestException('Owner id must be a user id');
     }
     const exists = await this.userRepository.existsBy({
