@@ -1,7 +1,7 @@
 // IELTS/TOEIC test schema – phase 1: IELTS Listening & Reading, TOEIC LR
 // Bảng nào có created_at là bảng dùng AuditMetadata
 // (created_at, created_by_id, updated_at, updated_by_id), ở đây chỉ ghi created_at cho gọn.
-// AuditMetadata hiện là `timestamp without time zone`; các mốc thời gian nghiệp vụ (deadline, submit...) dùng timestamptz.
+// Mọi mốc thời gian (AuditMetadata lẫn deadline, submit...) đều là timestamptz.
 
 Enum exam_type_enum {
   IELTS_ACADEMIC
@@ -71,6 +71,12 @@ Enum question_type_enum {
 Enum media_kind_enum {
   AUDIO
   IMAGE
+}
+
+Enum media_scope_enum {
+  TEST
+  AVATAR
+  LIBRARY
 }
 
 Enum attempt_mode_enum {
@@ -164,7 +170,7 @@ Table test_sections {
   test_id int [not null]
   skill skill_enum [not null]
   "order" int [not null]
-  duration_minutes int [note: 'IELTS: Listening 30 (+10 transfer), Reading 60. TOEIC: null']
+  duration_minutes int [note: 'IELTS: Listening 30 (+10 transfer), Reading 60. TOEIC: Listening 45, Reading 75 (dùng khi luyện SECTION; FULL dùng tests.duration_minutes)']
 
   indexes {
     (test_id, skill) [unique]
@@ -253,13 +259,19 @@ Table questions {
 
 Table media {
   media_id int [pk, increment]
+  scope media_scope_enum [not null]
+  owner_id varchar(64) [note: 'Owner đa hình (test id, user uuid...), không có FK; LIBRARY không có owner']
   kind media_kind_enum [not null]
-  storage_key varchar(500) [not null, note: 'Key trong storage; URL/signed URL build lúc trả về']
+  storage_key varchar(500) [not null, unique, note: 'Key trong storage; URL public build lúc trả về']
   mime_type varchar(100)
   size_bytes bigint
   duration_ms int
   transcript text
   created_at timestamp
+
+  indexes {
+    (scope, owner_id)
+  }
   Note: 'Không cho sửa/xoá khi đang được test đã locked trỏ tới'
 }
 
@@ -275,15 +287,19 @@ Table attempts {
   deadline_at timestamptz [note: 'Hạn tổng (TOEIC LR). IELTS dùng deadline của attempt_sections']
   submitted_at timestamptz
   overall_score numeric(5,1) [note: 'TOEIC = L + R. IELTS: null ở phase 1 (chỉ có L/R)']
+  created_at timestamp
 
   indexes {
     (user_id, started_at) [note: 'Lịch sử làm bài, sort DESC']
     (user_id, test_id)
-    status
   }
   Note: '''
-  Partial unique: UNIQUE (user_id, test_id) WHERE status = 'IN_PROGRESS'.
-  Không có scheduler -> EXPIRED xử lý lazy: khi đọc/lưu mà now > deadline + grace thì auto-submit và chấm.
+  Partial unique: UNIQUE (user_id, test_id) WHERE status = 'IN_PROGRESS' (cũng là index tìm attempt đang làm).
+  Không có scheduler -> EXPIRED xử lý lazy: khi đọc/lưu mà now > deadline + grace thì auto-submit và chấm;
+  EXPIRED là trạng thái cuối, đã có điểm, chấm/thống kê coi như SUBMITTED/GRADED.
+  Phase 1 (L/R) chấm đồng bộ lúc nộp -> đi thẳng GRADED; SUBMITTED dành cho phase 2 (chờ AI/giáo viên).
+  Chỉ start trên test PUBLISHED; lock bằng UPDATE tests SET locked_at = now() WHERE locked_at IS NULL trong cùng transaction.
+  numeric trả về string từ pg -> entity dùng transformer sang number.
   '''
 }
 
@@ -304,7 +320,8 @@ Table attempt_sections {
   }
   Note: '''
   FULL: tạo đủ các section của test. SECTION: chỉ tạo section user chọn.
-  Autosave answer phải check deadline của section chứa câu hỏi.
+  Autosave answer phải check deadline của section chứa câu hỏi, và câu hỏi phải thuộc một section của attempt
+  -> tra bằng cây test đã cache (không đổi sau lock), nên attempt_answers không cần attempt_section_id.
   '''
 }
 
