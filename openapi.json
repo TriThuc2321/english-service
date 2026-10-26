@@ -3459,6 +3459,206 @@
         "tags": ["Tests"]
       }
     },
+    "/api/student/tests": {
+      "get": {
+        "operationId": "StudentTests_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches title or source",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "examType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ExamType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StudentTestListItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List published tests (paginated)",
+        "tags": ["Student Tests"]
+      }
+    },
+    "/api/student/tests/{id}": {
+      "get": {
+        "operationId": "StudentTests_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentTestDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a published test with all its content, without answers",
+        "tags": ["Student Tests"]
+      }
+    },
     "/api/test-sections": {
       "get": {
         "operationId": "TestSections_findAll",
@@ -7066,6 +7266,454 @@
         },
         "required": ["ids"]
       },
+      "StudentTestSectionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "skill": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
+          },
+          "order": {
+            "type": "number"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": ["id", "skill", "order", "durationMinutes"]
+      },
+      "StudentTestListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "examType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "testSections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentTestSectionDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "examType",
+          "title",
+          "source",
+          "durationMinutes",
+          "publishedAt",
+          "testSections"
+        ]
+      },
+      "StudentMediaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MediaKind"
+              }
+            ]
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationMs": {
+            "type": "number",
+            "nullable": true
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "kind", "mimeType", "durationMs", "url"]
+      },
+      "StudentParagraphDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "content": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number"
+          }
+        },
+        "required": ["id", "content", "order"]
+      },
+      "StudentPassageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "markedBy": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MarkedBy"
+              }
+            ]
+          },
+          "paragraphs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentParagraphDto"
+            }
+          }
+        },
+        "required": ["id", "title", "subtitle", "markedBy", "paragraphs"]
+      },
+      "QuestionType": {
+        "type": "string",
+        "enum": [
+          "MULTIPLE_CHOICE",
+          "MULTIPLE_CHOICE_MULTI",
+          "TRUE_FALSE_NOT_GIVEN",
+          "YES_NO_NOT_GIVEN",
+          "MATCHING_HEADINGS",
+          "MATCHING_INFORMATION",
+          "MATCHING_FEATURES",
+          "MATCHING_SENTENCE_ENDINGS",
+          "CLASSIFICATION",
+          "FORM_COMPLETION",
+          "SENTENCE_COMPLETION",
+          "SUMMARY_COMPLETION",
+          "NOTE_COMPLETION",
+          "TABLE_COMPLETION",
+          "FLOW_CHART_COMPLETION",
+          "DIAGRAM_LABELLING",
+          "MAP_LABELLING",
+          "PLAN_LABELLING",
+          "SHORT_ANSWER",
+          "PHOTO_DESCRIPTION",
+          "QUESTION_RESPONSE",
+          "TEXT_COMPLETION",
+          "READ_ALOUD",
+          "DESCRIBE_PICTURE",
+          "RESPOND_TO_QUESTIONS",
+          "RESPOND_USING_INFO",
+          "EXPRESS_OPINION",
+          "WRITE_SENTENCE_PICTURE",
+          "RESPOND_WRITTEN_REQUEST",
+          "OPINION_ESSAY"
+        ]
+      },
+      "StudentQuestionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "numberFrom": {
+            "type": "number"
+          },
+          "numberTo": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "prompt": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Shape depends on the group question type"
+          },
+          "audioStartMs": {
+            "type": "number",
+            "nullable": true
+          },
+          "audio": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudentMediaDto"
+              }
+            ]
+          },
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudentMediaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "numberFrom",
+          "numberTo",
+          "order",
+          "prompt",
+          "content",
+          "audioStartMs",
+          "audio",
+          "image"
+        ]
+      },
+      "StudentQuestionGroupDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "questionType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "wordLimit": {
+            "type": "number",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Shape depends on questionType"
+          },
+          "audio": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudentMediaDto"
+              }
+            ]
+          },
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudentMediaDto"
+              }
+            ]
+          },
+          "passages": {
+            "description": "Group's own passages (TOEIC Part 7); empty for most groups",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentPassageDto"
+            }
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentQuestionDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "questionType",
+          "instruction",
+          "wordLimit",
+          "content",
+          "audio",
+          "image",
+          "passages",
+          "questions"
+        ]
+      },
+      "StudentTestPartDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "audio": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudentMediaDto"
+              }
+            ]
+          },
+          "audioStartMs": {
+            "type": "number",
+            "nullable": true
+          },
+          "audioEndMs": {
+            "type": "number",
+            "nullable": true
+          },
+          "passage": {
+            "nullable": true,
+            "description": "IELTS Reading: shared by every group without passages of its own",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudentPassageDto"
+              }
+            ]
+          },
+          "questionGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentQuestionGroupDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "title",
+          "instruction",
+          "audio",
+          "audioStartMs",
+          "audioEndMs",
+          "passage",
+          "questionGroups"
+        ]
+      },
+      "StudentTestSectionDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "skill": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
+          },
+          "order": {
+            "type": "number"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "testParts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentTestPartDto"
+            }
+          }
+        },
+        "required": ["id", "skill", "order", "durationMinutes", "testParts"]
+      },
+      "StudentTestDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "examType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "testSections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentTestSectionDetailDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "examType",
+          "title",
+          "source",
+          "durationMinutes",
+          "publishedAt",
+          "testSections"
+        ]
+      },
       "CreateTestSectionDto": {
         "type": "object",
         "properties": {
@@ -7308,41 +7956,6 @@
           }
         },
         "required": ["ids"]
-      },
-      "QuestionType": {
-        "type": "string",
-        "enum": [
-          "MULTIPLE_CHOICE",
-          "MULTIPLE_CHOICE_MULTI",
-          "TRUE_FALSE_NOT_GIVEN",
-          "YES_NO_NOT_GIVEN",
-          "MATCHING_HEADINGS",
-          "MATCHING_INFORMATION",
-          "MATCHING_FEATURES",
-          "MATCHING_SENTENCE_ENDINGS",
-          "CLASSIFICATION",
-          "FORM_COMPLETION",
-          "SENTENCE_COMPLETION",
-          "SUMMARY_COMPLETION",
-          "NOTE_COMPLETION",
-          "TABLE_COMPLETION",
-          "FLOW_CHART_COMPLETION",
-          "DIAGRAM_LABELLING",
-          "MAP_LABELLING",
-          "PLAN_LABELLING",
-          "SHORT_ANSWER",
-          "PHOTO_DESCRIPTION",
-          "QUESTION_RESPONSE",
-          "TEXT_COMPLETION",
-          "READ_ALOUD",
-          "DESCRIBE_PICTURE",
-          "RESPOND_TO_QUESTIONS",
-          "RESPOND_USING_INFO",
-          "EXPRESS_OPINION",
-          "WRITE_SENTENCE_PICTURE",
-          "RESPOND_WRITTEN_REQUEST",
-          "OPINION_ESSAY"
-        ]
       },
       "GroupPassageDto": {
         "type": "object",
