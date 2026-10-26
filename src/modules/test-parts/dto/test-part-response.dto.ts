@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { GroupPassageSummaryDto } from '../../question-groups/dto/question-group-response.dto.js';
+
 export class TestPartDto {
   @ApiProperty()
   id: number;
@@ -24,4 +26,10 @@ export class TestPartDto {
 
   @ApiProperty({ type: Number, nullable: true })
   audioEndMs: number | null;
+
+  @ApiProperty({ type: Number, nullable: true })
+  passageId: number | null;
+
+  @ApiProperty({ type: GroupPassageSummaryDto, nullable: true })
+  passage: GroupPassageSummaryDto | null;
 }

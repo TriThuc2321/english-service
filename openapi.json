@@ -7138,6 +7138,22 @@
         },
         "required": ["ids"]
       },
+      "GroupPassageSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["id", "title", "subtitle"]
+      },
       "TestPartDto": {
         "type": "object",
         "properties": {
@@ -7169,6 +7185,19 @@
           "audioEndMs": {
             "type": "number",
             "nullable": true
+          },
+          "passageId": {
+            "type": "number",
+            "nullable": true
+          },
+          "passage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GroupPassageSummaryDto"
+              }
+            ]
           }
         },
         "required": [
@@ -7179,7 +7208,9 @@
           "instruction",
           "audioMediaId",
           "audioStartMs",
-          "audioEndMs"
+          "audioEndMs",
+          "passageId",
+          "passage"
         ]
       },
       "CreateTestPartDto": {
@@ -7209,6 +7240,11 @@
           },
           "audioEndMs": {
             "type": "number"
+          },
+          "passageId": {
+            "type": "number",
+            "nullable": true,
+            "description": "Passage shared by every group of the part (IELTS Reading); groups with their own passages override it"
           }
         },
         "required": ["sectionId"]
@@ -7253,6 +7289,11 @@
           },
           "audioEndMs": {
             "type": "number"
+          },
+          "passageId": {
+            "type": "number",
+            "nullable": true,
+            "description": "Passage shared by every group of the part (IELTS Reading); groups with their own passages override it"
           }
         }
       },
@@ -7302,22 +7343,6 @@
           "RESPOND_WRITTEN_REQUEST",
           "OPINION_ESSAY"
         ]
-      },
-      "GroupPassageSummaryDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number"
-          },
-          "title": {
-            "type": "string"
-          },
-          "subtitle": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": ["id", "title", "subtitle"]
       },
       "GroupPassageDto": {
         "type": "object",

@@ -1,10 +1,25 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, DataSource, In, Not, Repository } from 'typeorm';
+import {
+  Brackets,
+  DataSource,
+  In,
+  Not,
+  type ObjectLiteral,
+  Repository,
+  type SelectQueryBuilder,
+} from 'typeorm';
 
+import { GroupPassage } from '../../entities/group-passage.entity.js';
 import { Paragraph } from '../../entities/paragraph.entity.js';
 import { Passage, PassageStatus } from '../../entities/passage.entity.js';
+import { TestPart } from '../../entities/test-part.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
+import { TestStatus } from '../../types/test.type.js';
 import {
   CreatePassageDto,
   DeletePassagesDto,
@@ -120,6 +135,7 @@ export class PassagesService {
     if (!passage) {
       throw new NotFoundException(`Passage with ID ${id} not found`);
     }
+    await this.assertNotLocked([id]);
 
     const { paragraphs, ...rest } = dto;
 
@@ -145,6 +161,8 @@ export class PassagesService {
   }
 
   async deleteByIds({ ids }: DeletePassagesDto, actorId: string) {
+    await this.assertNotLocked(ids);
+
     const result = await this.passageRepository.update(
       { id: In(ids), status: Not(PassageStatus.DELETED) },
       {
@@ -154,6 +172,54 @@ export class PassagesService {
     );
 
     return { deleted: result.affected ?? 0 };
+  }
+
+  async assertExist(ids: number[]) {
+    if (!ids.length) return;
+
+    const count = await this.passageRepository.countBy({
+      id: In(ids),
+      status: Not(PassageStatus.DELETED),
+    });
+    if (count !== ids.length) {
+      throw new BadRequestException('One or more passages not found');
+    }
+  }
+
+  private async assertNotLocked(ids: number[]) {
+    const lockedTests = <T extends ObjectLiteral>(qb: SelectQueryBuilder<T>) =>
+      qb
+        .innerJoin('p.testSection', 's')
+        .innerJoin('s.test', 't')
+        .andWhere('t.lockedAt IS NOT NULL')
+        .andWhere('t.status != :deleted', { deleted: TestStatus.DELETED })
+        .getRawMany<{ passageId: number }>();
+
+    const [viaGroups, viaParts] = await Promise.all([
+      lockedTests(
+        this.dataSource
+          .createQueryBuilder(GroupPassage, 'gp')
+          .select('DISTINCT gp.passageId', 'passageId')
+          .innerJoin('gp.questionGroup', 'g')
+          .innerJoin('g.testPart', 'p')
+          .where('gp.passageId IN (:...ids)', { ids }),
+      ),
+      lockedTests(
+        this.dataSource
+          .createQueryBuilder(TestPart, 'p')
+          .select('DISTINCT p.passageId', 'passageId')
+          .where('p.passageId IN (:...ids)', { ids }),
+      ),
+    ]);
+
+    const locked = [
+      ...new Set([...viaGroups, ...viaParts].map((r) => r.passageId)),
+    ];
+    if (locked.length) {
+      throw new BadRequestException(
+        `Passage(s) ${locked.join(', ')} are used by a locked test and can no longer change`,
+      );
+    }
   }
 
   private normalizeParagraphs(paragraphs: ParagraphInputDto[] = []) {

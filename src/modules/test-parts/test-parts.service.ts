@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, type FindOptionsSelect, In, Repository } from 'typeorm';
 
 import { TestPart } from '../../entities/test-part.entity.js';
 import { TestSection } from '../../entities/test-section.entity.js';
@@ -12,6 +12,7 @@ import { Test } from '../../entities/test.entity.js';
 import { MediaScope } from '../../types/media.type.js';
 import { TestStatus } from '../../types/test.type.js';
 import { MediaValidator } from '../media/media.validator.js';
+import { PassagesService } from '../passages/passages.service.js';
 import { TestsService } from '../tests/tests.service.js';
 import {
   CreateTestPartDto,
@@ -21,6 +22,19 @@ import {
   UpdateTestPartDto,
 } from './dto/test-parts.dto.js';
 
+const PART_SELECT: FindOptionsSelect<TestPart> = {
+  id: true,
+  sectionId: true,
+  order: true,
+  title: true,
+  instruction: true,
+  audioMediaId: true,
+  audioStartMs: true,
+  audioEndMs: true,
+  passageId: true,
+  passage: { id: true, title: true, subtitle: true },
+};
+
 @Injectable()
 export class TestPartsService {
   constructor(
@@ -28,6 +42,7 @@ export class TestPartsService {
     @InjectRepository(Test) private testRepository: Repository<Test>,
     private testsService: TestsService,
     private mediaValidator: MediaValidator,
+    private passagesService: PassagesService,
     private dataSource: DataSource,
   ) {}
 
@@ -38,7 +53,11 @@ export class TestPartsService {
   }
 
   async findById(id: number) {
-    const part = await this.partRepository.findOneBy({ id });
+    const part = await this.partRepository.findOne({
+      where: { id },
+      relations: { passage: true },
+      select: PART_SELECT,
+    });
     if (!part) {
       throw new NotFoundException(`Test part with ID ${id} not found`);
     }
@@ -51,6 +70,9 @@ export class TestPartsService {
     this.testsService.assertEditable(test);
     this.assertAudioRange(dto);
     await this.mediaValidator.assertRefs(dto, MediaScope.TEST);
+    if (dto.passageId != null) {
+      await this.passagesService.assertExist([dto.passageId]);
+    }
 
     let { order } = dto;
     if (order === undefined) {
@@ -71,6 +93,9 @@ export class TestPartsService {
     this.testsService.assertEditable(test);
     this.assertAudioRange({ ...part, ...dto });
     await this.mediaValidator.assertRefs(dto, MediaScope.TEST);
+    if (dto.passageId != null) {
+      await this.passagesService.assertExist([dto.passageId]);
+    }
 
     await this.partRepository.update(id, dto);
 
@@ -164,6 +189,8 @@ export class TestPartsService {
   private findBySectionId(sectionId: number) {
     return this.partRepository.find({
       where: { sectionId },
+      relations: { passage: true },
+      select: PART_SELECT,
       order: { order: 'ASC', id: 'ASC' },
     });
   }

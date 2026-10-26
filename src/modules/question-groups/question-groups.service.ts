@@ -4,15 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Not, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 
 import { GroupPassage } from '../../entities/group-passage.entity.js';
-import { Passage, PassageStatus } from '../../entities/passage.entity.js';
 import { QuestionGroup } from '../../entities/question-group.entity.js';
 import { Question } from '../../entities/question.entity.js';
 import { MediaScope } from '../../types/media.type.js';
 import { TestStatus } from '../../types/test.type.js';
 import { MediaValidator } from '../media/media.validator.js';
+import { PassagesService } from '../passages/passages.service.js';
 import { assertValidAnswer } from '../questions/question-answer.js';
 import {
   assertValidEvidence,
@@ -36,9 +36,9 @@ export class QuestionGroupsService {
     private groupRepository: Repository<QuestionGroup>,
     @InjectRepository(Question)
     private questionRepository: Repository<Question>,
-    @InjectRepository(Passage) private passageRepository: Repository<Passage>,
     private testsService: TestsService,
     private testPartsService: TestPartsService,
+    private passagesService: PassagesService,
     private mediaValidator: MediaValidator,
     private dataSource: DataSource,
   ) {}
@@ -120,7 +120,7 @@ export class QuestionGroupsService {
     for (const q of normalized) {
       await this.mediaValidator.assertRefs(q, MediaScope.TEST);
     }
-    await this.assertPassagesExist(passageIds);
+    await this.passagesService.assertExist(passageIds);
 
     let { order } = rest;
     if (order === undefined) {
@@ -179,7 +179,7 @@ export class QuestionGroupsService {
 
     await this.mediaValidator.assertRefs(rest, MediaScope.TEST);
     if (passageIds) {
-      await this.assertPassagesExist(passageIds);
+      await this.passagesService.assertExist(passageIds);
     }
 
     await this.dataSource.transaction(async (manager) => {
@@ -288,17 +288,5 @@ export class QuestionGroupsService {
         'passage.title',
         'passage.subtitle',
       ]);
-  }
-
-  private async assertPassagesExist(ids: number[]) {
-    if (!ids.length) return;
-
-    const count = await this.passageRepository.countBy({
-      id: In(ids),
-      status: Not(PassageStatus.DELETED),
-    });
-    if (count !== ids.length) {
-      throw new BadRequestException('One or more passages not found');
-    }
   }
 }
