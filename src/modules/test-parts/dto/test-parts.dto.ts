@@ -55,6 +55,16 @@ export class CreateTestPartDto {
   @IsInt()
   @Min(0)
   audioEndMs?: number;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description:
+      'Passage shared by every group of the part (IELTS Reading); groups with their own passages override it',
+  })
+  @IsOptional()
+  @IsInt()
+  passageId?: number | null;
 }
 
 export class UpdateTestPartDto extends PartialType(

@@ -10,11 +10,13 @@ import {
 } from 'typeorm';
 
 import { Media } from './media.entity.js';
+import { Passage } from './passage.entity.js';
 import { QuestionGroup } from './question-group.entity.js';
 import { TestSection } from './test-section.entity.js';
 
 @Entity('test_parts', { schema: 'public' })
 @Index('idx_test_parts_section_id', ['sectionId'])
+@Index('idx_test_parts_passage_id', ['passageId'])
 export class TestPart {
   @PrimaryGeneratedColumn('increment', { name: 'part_id' })
   id: number;
@@ -41,6 +43,11 @@ export class TestPart {
   @Column({ name: 'audio_end_ms', type: 'int', nullable: true })
   audioEndMs?: number | null;
 
+  // IELTS Reading: shared by every group of the part; groups with their own
+  // group_passages (TOEIC Part 7) take precedence
+  @Column({ name: 'passage_id', type: 'int', nullable: true })
+  passageId?: number | null;
+
   @ManyToOne(() => TestSection, (section) => section.testParts, {
     onDelete: 'CASCADE',
   })
@@ -50,6 +57,10 @@ export class TestPart {
   @ManyToOne(() => Media, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'audio_media_id', referencedColumnName: 'id' })
   audioMedia?: Relation<Media> | null;
+
+  @ManyToOne(() => Passage, { onDelete: 'RESTRICT', nullable: true })
+  @JoinColumn({ name: 'passage_id', referencedColumnName: 'id' })
+  passage?: Relation<Passage> | null;
 
   @OneToMany(() => QuestionGroup, (group) => group.testPart, {
     cascade: ['insert'],

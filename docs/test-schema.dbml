@@ -119,7 +119,7 @@ Table passages {
   }
   Note: '''
   Bảng có sẵn.
-  Không cho sửa/xoá passage khi đang được group_passages của một test đã locked trỏ tới (check ở service).
+  Không cho sửa/xoá passage khi đang được group_passages hoặc test_parts của một test đã locked trỏ tới (check ở service).
   '''
 }
 
@@ -180,9 +180,11 @@ Table test_parts {
   audio_media_id int [note: 'Audio của cả part (IELTS Listening)']
   audio_start_ms int [note: 'Khi nhiều part dùng chung một file audio']
   audio_end_ms int
+  passage_id int [note: 'IELTS Reading: passage dùng chung cho mọi group của part; group có group_passages thì ưu tiên group_passages']
 
   indexes {
     section_id
+    passage_id
   }
 }
 
@@ -216,7 +218,7 @@ Table group_passages {
     (group_id, passage_id) [pk]
     passage_id
   }
-  Note: 'TOEIC Part 7 có group gồm 2-3 passage'
+  Note: 'TOEIC Part 7 có group gồm 2-3 passage. Passage của group = group_passages nếu có, không thì test_parts.passage_id'
 }
 
 Table questions {
@@ -369,6 +371,7 @@ Ref: questions.group_id > question_groups.group_id [delete: cascade]
 
 Ref: group_passages.group_id > question_groups.group_id [delete: cascade]
 Ref: group_passages.passage_id > passages.passage_id [delete: restrict]
+Ref: test_parts.passage_id > passages.passage_id [delete: restrict]
 
 Ref: test_parts.audio_media_id > media.media_id [delete: restrict]
 Ref: question_groups.audio_media_id > media.media_id [delete: restrict]
