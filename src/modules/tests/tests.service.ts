@@ -1,14 +1,16 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, In, Not, Repository } from 'typeorm';
+import { Brackets, In, Like, Not, Repository } from 'typeorm';
 
 import { TestSection } from '../../entities/test-section.entity.js';
 import { Test } from '../../entities/test.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
+import { slugify } from '../../shared/utils/slugify.js';
 import {
   EXAM_SKILLS,
   ExamType,
@@ -27,6 +29,7 @@ const LIST_COLUMNS = [
   't.id',
   't.examType',
   't.title',
+  't.slug',
   't.source',
   't.durationMinutes',
   't.status',
@@ -124,8 +127,17 @@ export class TestsService {
       normalized.map((s) => s.skill),
     );
 
+    let slug: string;
+    if (dto.slug) {
+      await this.assertSlugAvailable(dto.slug);
+      slug = dto.slug;
+    } else {
+      slug = await this.generateSlug(dto.title);
+    }
+
     const test = await this.testRepository.save({
       ...rest,
+      slug,
       testSections: normalized,
       auditMetadata: { createdById: actorId },
     });
@@ -150,6 +162,15 @@ export class TestsService {
         dto.examType,
         sections.map((s) => s.skill),
       );
+    }
+
+    if (dto.slug && dto.slug !== test.slug) {
+      if (test.publishedAt) {
+        throw new BadRequestException(
+          'Cannot change the slug of a test that has been published',
+        );
+      }
+      await this.assertSlugAvailable(dto.slug, id);
     }
 
     const publishedAt =
@@ -215,6 +236,35 @@ export class TestsService {
     if (new Set(skills).size !== skills.length) {
       throw new BadRequestException('Each skill can appear only once per test');
     }
+  }
+
+  private async assertSlugAvailable(slug: string, exceptId?: number) {
+    const taken = await this.testRepository.exists({
+      where: {
+        slug,
+        status: Not(TestStatus.DELETED),
+        ...(exceptId && { id: Not(exceptId) }),
+      },
+    });
+    if (taken) {
+      throw new ConflictException('Slug is already in use');
+    }
+  }
+
+  private async generateSlug(title: string) {
+    const base = slugify(title) || 'test';
+    const rows = await this.testRepository.find({
+      select: { slug: true },
+      where: { slug: Like(`${base}%`), status: Not(TestStatus.DELETED) },
+    });
+    const taken = new Set(rows.map((t) => t.slug));
+
+    let slug = base;
+    for (let n = 2; taken.has(slug); n++) {
+      slug = `${base}-${n}`;
+    }
+
+    return slug;
   }
 
   private normalizeSections(sections: TestSectionInputDto[] = []) {

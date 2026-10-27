@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -38,14 +38,14 @@ export class StudentTestsController {
     return this.studentTestsService.findAll(query);
   }
 
-  @Get(':id')
+  @Get(':slug')
   @ApiOperation({
     summary: 'Get a published test with all its content, without answers',
   })
   @ApiOkResponse({ type: StudentTestDetailDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @CheckPermissions()
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.studentTestsService.findById(id);
+  findBySlug(@Param('slug') slug: string) {
+    return this.studentTestsService.findBySlug(slug);
   }
 }

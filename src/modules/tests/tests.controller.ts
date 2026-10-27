@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -69,6 +70,7 @@ export class TestsController {
   @Post()
   @ApiOperation({ summary: 'Create a test (optionally with sections)' })
   @ApiCreatedResponse({ type: TestDetailDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.CREATE, PermissionSubject.TEST])
   create(@Body() dto: CreateTestDto, @Req() req: IRequestWithUser) {
     return this.testsService.create(dto, req.user.id);
@@ -80,6 +82,7 @@ export class TestsController {
   })
   @ApiOkResponse({ type: TestDetailDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.UPDATE, PermissionSubject.TEST])
   update(
     @Param('id', ParseIntPipe) id: number,

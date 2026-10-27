@@ -180,6 +180,9 @@ export class StudentTestListItemDto {
   @ApiProperty()
   id: number;
 
+  @ApiProperty()
+  slug: string;
+
   @ApiProperty({ enum: ExamType, enumName: 'ExamType' })
   examType: ExamType;
 

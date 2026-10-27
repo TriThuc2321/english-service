@@ -17,6 +17,7 @@ const LIST_COLUMNS = [
   't.id',
   't.examType',
   't.title',
+  't.slug',
   't.source',
   't.durationMinutes',
   't.publishedAt',
@@ -120,13 +121,13 @@ export class StudentTestsService {
     return new PaginationDto(data, new PageMetaDto({ page, take, totalCount }));
   }
 
-  async findById(id: number) {
+  async findBySlug(slug: string) {
     const test = await this.publishedQuery(DETAIL_COLUMNS)
       .leftJoin('s.testParts', 'p')
       .leftJoin('p.questionGroups', 'g')
       .leftJoin('g.groupPassages', 'gp')
       .leftJoin('g.questions', 'q')
-      .andWhere('t.id = :id', { id })
+      .andWhere('t.slug = :slug', { slug })
       .orderBy('s.order', 'ASC')
       .addOrderBy('s.id', 'ASC')
       .addOrderBy('p.order', 'ASC')
@@ -138,7 +139,7 @@ export class StudentTestsService {
       .addOrderBy('q.id', 'ASC')
       .getOne();
     if (!test) {
-      throw new NotFoundException(`Test with ID ${id} not found`);
+      throw new NotFoundException(`Test "${slug}" not found`);
     }
 
     const parts = test.testSections.flatMap((s) => s.testParts);

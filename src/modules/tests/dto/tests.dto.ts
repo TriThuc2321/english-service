@@ -15,12 +15,17 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 
 import { PageOptionsDto } from '../../../shared/dto/index.js';
+import {
+  SLUG_MAX_LENGTH,
+  SLUG_PATTERN,
+} from '../../../shared/utils/slugify.js';
 import { ExamType, SkillType, TestStatus } from '../../../types/test.type.js';
 
 const EDITABLE_STATUSES = [TestStatus.PUBLISHED, TestStatus.DRAFT] as const;
@@ -53,6 +58,18 @@ export class CreateTestDto {
   @IsNotEmpty({ message: 'Title is required' })
   @MaxLength(255)
   title: string;
+
+  @ApiPropertyOptional({
+    example: 'cambridge-ielts-18-test-1',
+    description:
+      'URL identifier for the student site; generated from the title when omitted. Cannot change once the test has been published',
+  })
+  @IsOptional()
+  @Matches(SLUG_PATTERN, {
+    message: 'slug must be lowercase letters, digits and single dashes',
+  })
+  @MaxLength(SLUG_MAX_LENGTH)
+  slug?: string;
 
   @ApiPropertyOptional({ example: 'Cambridge 18' })
   @IsOptional()

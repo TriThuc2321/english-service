@@ -14,6 +14,10 @@ import { TestSection } from './test-section.entity.js';
 @Entity('tests', { schema: 'public' })
 @Index('idx_tests_exam_type', ['examType'])
 @Index('idx_tests_status', ['status'])
+@Index('uq_tests_slug', ['slug'], {
+  unique: true,
+  where: `"status" != '${TestStatus.DELETED}'`,
+})
 export class Test {
   @PrimaryGeneratedColumn('increment', { name: 'test_id' })
   id: number;
@@ -28,6 +32,9 @@ export class Test {
 
   @Column({ name: 'title', type: 'varchar', length: 255 })
   title: string;
+
+  @Column({ name: 'slug', type: 'varchar', length: 255 })
+  slug: string;
 
   @Column({ name: 'source', type: 'varchar', length: 255, nullable: true })
   source?: string | null;
