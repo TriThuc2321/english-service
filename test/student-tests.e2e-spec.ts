@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { GroupPassage } from '../src/entities/group-passage.entity.js';
 import { Media } from '../src/entities/media.entity.js';
 import { Paragraph } from '../src/entities/paragraph.entity.js';
@@ -41,6 +43,7 @@ describe('Student tests', () => {
     testApp.dataSource.getRepository(Test).save({
       examType: ExamType.IELTS_ACADEMIC,
       title: 'Cambridge 18 - Test 1',
+      slug: `cambridge-18-test-1-${randomUUID()}`,
       status: TestStatus.PUBLISHED,
       publishedAt: new Date(),
       ...overrides,
@@ -104,6 +107,7 @@ describe('Student tests', () => {
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0]).toMatchObject({
       id: published.id,
+      slug: published.slug,
       title: 'Listed Alpha',
       testSections: [
         { skill: SkillType.LISTENING, order: 0, durationMinutes: 30 },
@@ -209,7 +213,7 @@ describe('Student tests', () => {
 
     const res = await testApp
       .http()
-      .get(`/api/student/tests/${test.id}`)
+      .get(`/api/student/tests/${test.slug}`)
       .auth(webToken, { type: 'bearer' })
       .expect(200);
 
@@ -285,10 +289,10 @@ describe('Student tests', () => {
     const draft = await createTest({ status: TestStatus.DRAFT });
     const deleted = await createTest({ status: TestStatus.DELETED });
 
-    for (const id of [draft.id, deleted.id, 999_999]) {
+    for (const slug of [draft.slug, deleted.slug, 'unknown-test']) {
       await testApp
         .http()
-        .get(`/api/student/tests/${id}`)
+        .get(`/api/student/tests/${slug}`)
         .auth(webToken, { type: 'bearer' })
         .expect(404);
     }
@@ -304,7 +308,7 @@ describe('Student tests', () => {
       .expect(403);
     await testApp
       .http()
-      .get(`/api/student/tests/${test.id}`)
+      .get(`/api/student/tests/${test.slug}`)
       .auth(boToken, { type: 'bearer' })
       .expect(403);
     await testApp.http().get('/api/student/tests').expect(401);

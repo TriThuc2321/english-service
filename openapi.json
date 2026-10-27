@@ -3190,6 +3190,16 @@
               }
             }
           },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Too Many Requests",
             "content": {
@@ -3439,6 +3449,16 @@
               }
             }
           },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Too Many Requests",
             "content": {
@@ -3575,16 +3595,16 @@
         "tags": ["Student Tests"]
       }
     },
-    "/api/student/tests/{id}": {
+    "/api/student/tests/{slug}": {
       "get": {
-        "operationId": "StudentTests_findById",
+        "operationId": "StudentTests_findBySlug",
         "parameters": [
           {
-            "name": "id",
+            "name": "slug",
             "required": true,
             "in": "path",
             "schema": {
-              "type": "number"
+              "type": "string"
             }
           }
         ],
@@ -7027,6 +7047,9 @@
           "id": {
             "type": "number"
           },
+          "slug": {
+            "type": "string"
+          },
           "examType": {
             "allOf": [
               {
@@ -7069,6 +7092,7 @@
         },
         "required": [
           "id",
+          "slug",
           "examType",
           "title",
           "source",
@@ -7114,6 +7138,9 @@
         "properties": {
           "id": {
             "type": "number"
+          },
+          "slug": {
+            "type": "string"
           },
           "examType": {
             "allOf": [
@@ -7163,6 +7190,7 @@
         },
         "required": [
           "id",
+          "slug",
           "examType",
           "title",
           "source",
@@ -7209,6 +7237,11 @@
             "type": "string",
             "example": "Cambridge IELTS 18 - Test 1"
           },
+          "slug": {
+            "type": "string",
+            "example": "cambridge-ielts-18-test-1",
+            "description": "URL identifier for the student site; generated from the title when omitted. Cannot change once the test has been published"
+          },
           "source": {
             "type": "string",
             "example": "Cambridge 18"
@@ -7239,6 +7272,11 @@
           "title": {
             "type": "string",
             "example": "Cambridge IELTS 18 - Test 1"
+          },
+          "slug": {
+            "type": "string",
+            "example": "cambridge-ielts-18-test-1",
+            "description": "URL identifier for the student site; generated from the title when omitted. Cannot change once the test has been published"
           },
           "source": {
             "type": "string",
@@ -7295,6 +7333,9 @@
           "id": {
             "type": "number"
           },
+          "slug": {
+            "type": "string"
+          },
           "examType": {
             "allOf": [
               {
@@ -7327,6 +7368,7 @@
         },
         "required": [
           "id",
+          "slug",
           "examType",
           "title",
           "source",
@@ -7674,6 +7716,9 @@
           "id": {
             "type": "number"
           },
+          "slug": {
+            "type": "string"
+          },
           "examType": {
             "allOf": [
               {
@@ -7706,6 +7751,7 @@
         },
         "required": [
           "id",
+          "slug",
           "examType",
           "title",
           "source",

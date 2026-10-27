@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { GroupPassage } from '../src/entities/group-passage.entity.js';
 import { Passage, PassageStatus } from '../src/entities/passage.entity.js';
 import { QuestionGroup } from '../src/entities/question-group.entity.js';
@@ -20,6 +22,7 @@ describe('Test part passage', () => {
     const test = await testApp.dataSource.getRepository(Test).save({
       examType: ExamType.IELTS_ACADEMIC,
       title: 'Cambridge 18 - Test 1',
+      slug: `cambridge-18-test-1-${randomUUID()}`,
     });
     const section = await testApp.dataSource
       .getRepository(TestSection)
