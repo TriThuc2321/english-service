@@ -29,7 +29,7 @@ export function normalizeText(value: string): string {
     .replace(/[“”„]/g, '"')
     .trim()
     .replace(/\s+/g, ' ')
-    .replace(/^[.,;:!?]+|[.,;:!?"']+$/g, '');
+    .replace(/^[.,;:!?"']+|[.,;:!?"']+$/g, '');
 }
 
 export function countWords(normalized: string): number {

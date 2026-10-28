@@ -80,6 +80,18 @@ describe('gradeAnswer', () => {
       });
     });
 
+    it('ignores surrounding quotes', () => {
+      expect(
+        gradeAnswer(
+          { ...single, answer: { accepted: ['color'] } },
+          { text: '"color"' },
+        ),
+      ).toEqual({
+        isCorrect: true,
+        score: 1,
+      });
+    });
+
     it('rejects other words', () => {
       expect(gradeAnswer(q, { text: 'colours' })).toEqual({
         isCorrect: false,
@@ -144,7 +156,7 @@ describe('helpers', () => {
   });
 
   it('normalises quotes, spacing and edge punctuation', () => {
-    expect(normalizeText('  “Hello”,   World! ')).toBe('"hello", world');
+    expect(normalizeText('  “Hello”,   World! ')).toBe('hello", world');
   });
 
   it('derives the max score from the number range', () => {
