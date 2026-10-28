@@ -199,7 +199,6 @@ export class StudentAttemptsService {
     const [attempts, totalCount] = await qb
       .orderBy('a.startedAt', 'DESC')
       .addOrderBy('a.id', 'DESC')
-      .addOrderBy('ts.order', 'ASC')
       .skip((page - 1) * take)
       .take(take)
       .getManyAndCount();

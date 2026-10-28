@@ -508,6 +508,30 @@ describe('Student attempts', () => {
     expect(await answersOf(attempt.id)).toHaveLength(3);
   });
 
+  it('paginates history by attempt, not by attempt section', async () => {
+    const { test } = await seedToeic();
+    const { body: first } = await start(test.id).expect(201);
+    await submit(first.id).expect(201);
+    await start(test.id).expect(201);
+
+    const pages = await Promise.all(
+      [1, 2].map((page) =>
+        testApp
+          .http()
+          .get(`/api/student/attempts?testId=${test.id}&take=1&page=${page}`)
+          .auth(webToken, { type: 'bearer' })
+          .expect(200),
+      ),
+    );
+
+    for (const res of pages) {
+      expect(res.body.meta.totalCount).toBe(2);
+      expect(res.body.data).toHaveLength(1);
+      expect(res.body.data[0].sections).toHaveLength(2);
+    }
+    expect(pages[0].body.data[0].id).not.toBe(pages[1].body.data[0].id);
+  });
+
   it('lists attempts newest first without answers', async () => {
     const { test } = await seedToeic();
     const { body: first } = await start(test.id).expect(201);
