@@ -3,13 +3,16 @@ import { BadRequestException } from '@nestjs/common';
 import { QuestionType } from '../../types/test.type.js';
 import { type Fail, isNonEmptyString, isPlainObject } from './json-shape.js';
 
-type AnswerKind = 'key' | 'keys' | 'accepted' | 'sample';
+export type AnswerKind = 'key' | 'keys' | 'accepted' | 'sample';
 
 const KEY = ['key'] as const;
 const ACCEPTED = ['accepted'] as const;
 const SAMPLE = ['sample'] as const;
 
-const QUESTION_ANSWER_KINDS: Record<QuestionType, readonly AnswerKind[]> = {
+export const QUESTION_ANSWER_KINDS: Record<
+  QuestionType,
+  readonly AnswerKind[]
+> = {
   [QuestionType.MULTIPLE_CHOICE]: KEY,
   [QuestionType.MULTIPLE_CHOICE_MULTI]: ['keys'],
   [QuestionType.TRUE_FALSE_NOT_GIVEN]: KEY,
