@@ -37,19 +37,36 @@
 ### Task 1: Grader (pure)
 
 **Files:**
+
 - Create: `src/modules/student-attempts/attempt-grader.ts`
 - Test: `src/modules/student-attempts/attempt-grader.spec.ts`
 
 **Interfaces:**
+
 - Produces:
+
   ```ts
-  export type AttemptResponse = { key: string } | { keys: string[] } | { text: string };
-  export interface IGradable { answer: Record<string, unknown>; numberFrom: number; numberTo: number; wordLimit?: number | null }
-  export interface IGrade { isCorrect: boolean | null; score: number }
-  export const maxScoreOf: (q: Pick<IGradable, 'numberFrom' | 'numberTo'>) => number; // numberTo - numberFrom + 1
+  export type AttemptResponse =
+    { key: string } | { keys: string[] } | { text: string };
+  export interface IGradable {
+    answer: Record<string, unknown>;
+    numberFrom: number;
+    numberTo: number;
+    wordLimit?: number | null;
+  }
+  export interface IGrade {
+    isCorrect: boolean | null;
+    score: number;
+  }
+  export const maxScoreOf: (
+    q: Pick<IGradable, 'numberFrom' | 'numberTo'>,
+  ) => number; // numberTo - numberFrom + 1
   export function normalizeText(value: string): string;
   export function countWords(normalized: string): number;
-  export function gradeAnswer(q: IGradable, response: AttemptResponse | null | undefined): IGrade;
+  export function gradeAnswer(
+    q: IGradable,
+    response: AttemptResponse | null | undefined,
+  ): IGrade;
   ```
 
 - [ ] **Step 1: Write the failing tests** — `describe('gradeAnswer')`:
@@ -75,24 +92,57 @@
 ### Task 2: Timeline (pure)
 
 **Files:**
+
 - Create: `src/modules/student-attempts/attempt-timeline.ts`
 - Test: `src/modules/student-attempts/attempt-timeline.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `AttemptStatus`, `AttemptSectionStatus`, `AttemptMode` (`src/types/attempt.type.ts`), `ExamType`.
 - Produces:
+
   ```ts
   export const GRACE_MS = 30_000;
-  export interface ITimelineSection { sectionId: number; order: number; durationMinutes: number | null;
-    status: AttemptSectionStatus; startedAt: Date | null; deadlineAt: Date | null; submittedAt: Date | null }
-  export interface ITimeline { deadlineAt: Date | null; sections: ITimelineSection[] } // sections sorted by order
-  export function openTimeline(input: { examType: ExamType; mode: AttemptMode; testDurationMinutes: number | null;
-    sections: Pick<ITimelineSection, 'sectionId' | 'order' | 'durationMinutes'>[] }, now: Date): ITimeline;
-  export function reconcile(examType: ExamType, timeline: ITimeline, now: Date): { timeline: ITimeline; expired: boolean };
-  export function submitSection(examType: ExamType, timeline: ITimeline, sectionId: number, now: Date): ITimeline; // throws nothing; caller checks status first
+  export interface ITimelineSection {
+    sectionId: number;
+    order: number;
+    durationMinutes: number | null;
+    status: AttemptSectionStatus;
+    startedAt: Date | null;
+    deadlineAt: Date | null;
+    submittedAt: Date | null;
+  }
+  export interface ITimeline {
+    deadlineAt: Date | null;
+    sections: ITimelineSection[];
+  } // sections sorted by order
+  export function openTimeline(
+    input: {
+      examType: ExamType;
+      mode: AttemptMode;
+      testDurationMinutes: number | null;
+      sections: Pick<
+        ITimelineSection,
+        'sectionId' | 'order' | 'durationMinutes'
+      >[];
+    },
+    now: Date,
+  ): ITimeline;
+  export function reconcile(
+    examType: ExamType,
+    timeline: ITimeline,
+    now: Date,
+  ): { timeline: ITimeline; expired: boolean };
+  export function submitSection(
+    examType: ExamType,
+    timeline: ITimeline,
+    sectionId: number,
+    now: Date,
+  ): ITimeline; // throws nothing; caller checks status first
   export function closeAll(timeline: ITimeline, now: Date): ITimeline; // IN_PROGRESS/NOT_STARTED → SUBMITTED
   export const isFinished: (timeline: ITimeline) => boolean; // no IN_PROGRESS or NOT_STARTED left
   ```
+
   All functions return new objects; they never mutate the input.
 
 - [ ] **Step 1: Write the failing tests**, with `now = new Date('2026-10-28T10:00:00Z')`:
@@ -120,10 +170,12 @@
 ### Task 3: Score scales and module skeleton
 
 **Files:**
+
 - Create: `src/modules/student-attempts/score-scales.constant.ts`, `score-scales.constant.spec.ts`, `score-scales.seeder.ts`, `student-attempts.module.ts`
 - Modify: `src/app.module.ts` (import `StudentAttemptsModule` next to `StudentTestsModule`)
 
 **Interfaces:**
+
 - Produces:
   ```ts
   export interface IScaleRow { examType: ExamType; skill: SkillType; rawScore: number; scaledScore: number }
@@ -152,20 +204,44 @@ Values (the constant expands ranges / interpolates to one row per raw score; not
 ### Task 4: Test tree cache and response validation
 
 **Files:**
+
 - Create: `src/modules/student-attempts/attempt-tree.service.ts`, `attempt-response.ts`, `attempt-response.spec.ts`
 - Modify: `src/modules/questions/question-answer.ts` (export `QUESTION_ANSWER_KINDS` and `type AnswerKind`), `student-attempts.module.ts` (provider)
 
 **Interfaces:**
+
 - Consumes: `AttemptResponse` (Task 1).
 - Produces:
   ```ts
-  export interface ITreeQuestion { id: number; sectionId: number; questionType: QuestionType; wordLimit: number | null;
-    numberFrom: number; numberTo: number; keys: ReadonlySet<string> | null } // null = any key / free text
-  export interface ITreeSection { sectionId: number; skill: SkillType; order: number; durationMinutes: number | null }
-  export interface IAttemptTree { testId: number; sections: ITreeSection[]; questions: ReadonlyMap<number, ITreeQuestion>;
-    mediaIds: ReadonlyMap<number, number[]> } // sectionId → audio media ids (part, group, question)
-  @Injectable() export class AttemptTreeService { get(testId: number): Promise<IAttemptTree> }
-  export function parseResponse(q: ITreeQuestion, raw: unknown): AttemptResponse | null; // throws BadRequestException
+  export interface ITreeQuestion {
+    id: number;
+    sectionId: number;
+    questionType: QuestionType;
+    wordLimit: number | null;
+    numberFrom: number;
+    numberTo: number;
+    keys: ReadonlySet<string> | null;
+  } // null = any key / free text
+  export interface ITreeSection {
+    sectionId: number;
+    skill: SkillType;
+    order: number;
+    durationMinutes: number | null;
+  }
+  export interface IAttemptTree {
+    testId: number;
+    sections: ITreeSection[];
+    questions: ReadonlyMap<number, ITreeQuestion>;
+    mediaIds: ReadonlyMap<number, number[]>;
+  } // sectionId → audio media ids (part, group, question)
+  @Injectable()
+  export class AttemptTreeService {
+    get(testId: number): Promise<IAttemptTree>;
+  }
+  export function parseResponse(
+    q: ITreeQuestion,
+    raw: unknown,
+  ): AttemptResponse | null; // throws BadRequestException
   ```
 
 `keys` per question: `question.content.options[].key` if present, else `group.content.options[].key` if present, else `null` (TRUE/FALSE/YES/NO keys are not fixed in the codebase, so they are not checked). `SUMMARY_COMPLETION` takes `key` when the group content has `options`, else `text`.
@@ -188,17 +264,27 @@ Values (the constant expands ranges / interpolates to one row per raw score; not
 ### Task 5: Scoring service
 
 **Files:**
+
 - Create: `src/modules/student-attempts/attempt-scoring.service.ts`
 - Modify: `student-attempts.module.ts`
 
 **Interfaces:**
+
 - Consumes: `gradeAnswer`, `maxScoreOf` (Task 1); `IAttemptTree` (Task 4).
 - Produces:
+
   ```ts
-  @Injectable() export class AttemptScoringService {
-    grade(manager: EntityManager, attempt: Attempt, tree: IAttemptTree, examType: ExamType): Promise<void>;
+  @Injectable()
+  export class AttemptScoringService {
+    grade(
+      manager: EntityManager,
+      attempt: Attempt,
+      tree: IAttemptTree,
+      examType: ExamType,
+    ): Promise<void>;
   }
   ```
+
   Writes `attempt_answers.isCorrect/score` (inserting blank rows for missing questions), `attempt_sections.rawScore/maxScore/scaledScore`, `attempts.overallScore`. Does **not** change statuses — the caller does.
 
 - [ ] **Step 1: Implement** `grade`: load `answer` for the tree's question ids of the attempt's sections (`.addSelect('q.answer')`), load existing `AttemptAnswer` rows, grade with `wordLimit` from the tree, `upsert` all rows, compute section sums, look up scales with one query `WHERE exam_type = :examType AND skill = :skill AND raw_score = :raw AND (test_id = :testId OR test_id IS NULL) ORDER BY test_id NULLS LAST LIMIT 1` per section. `overallScore` = L + R only for `TOEIC_LR` + `AttemptMode.FULL` with both scaled values present, else `null`.
@@ -210,17 +296,20 @@ Values (the constant expands ranges / interpolates to one row per raw score; not
 ### Task 6: Lifecycle endpoints
 
 **Files:**
+
 - Create: `src/modules/student-attempts/student-attempts.controller.ts`, `student-attempts.service.ts`, `dto/student-attempts.dto.ts`, `dto/student-attempt-response.dto.ts`
 - Modify: `src/types/attempt.type.ts` (add `AttemptErrorCode` const, same pattern as `UserErrorEnum`), `student-attempts.module.ts`
 - Test: `test/student-attempts.e2e-spec.ts`
 
 **Interfaces:**
+
 - Consumes: Tasks 1–5.
 - Produces (request DTOs): `StartAttemptDto { testId: number; mode: AttemptMode; sectionIds?: number[] }` (`sectionIds` `@ValidateIf(mode === SECTION)` `@ArrayNotEmpty`), `ListAttemptsDto extends PageOptionsDto { testId?: number; status?: AttemptStatus }`, `SaveAnswersDto { answers: SaveAnswerItemDto[] }` (`@ArrayMinSize(1) @ArrayMaxSize(200)`), `SaveAnswerItemDto { questionId: number; response: object | null; flagged?: boolean }`.
 - Produces (response DTOs): `AttemptDto`, `AttemptSectionDto`, `AttemptAnswerStateDto`, `AttemptListItemDto`, `SaveAnswersResultDto { savedAt; serverNow }`, `AttemptInProgressErrorDto extends ErrorResponseDto { attemptId: string }` — field lists exactly as in the spec's "Response DTOs".
 - Service: `start(userId, dto)`, `findAll(userId, dto)`, `findOne(userId, id)`, `saveAnswers(userId, id, dto)`, `submitSection(userId, id, sectionId)`, `submit(userId, id)`, all returning the DTO shapes.
 
 Implementation notes the tests do not pin:
+
 - Every write and `findOne` runs `dataSource.transaction(async (m) => …)`; first statement locks the attempt with `m.findOne(Attempt, { where: { id, userId }, lock: { mode: 'pessimistic_write' } })` (no relations — Postgres refuses `FOR UPDATE` on outer joins), then loads sections separately, maps to `ITimeline`, runs `reconcile`. If `expired`, persist the timeline, call `AttemptScoringService.grade`, set `status = EXPIRED`, `submittedAt` = attempt deadline (TOEIC) or last section's `submittedAt` (IELTS). For writes after expiry, commit that work and **then** throw `ATTEMPT_CLOSED` (throw after the transaction resolves, otherwise the grading rolls back).
 - Write on a `GRADED`/`EXPIRED` attempt → 409 `ATTEMPT_CLOSED`.
 - `start`: a `QueryFailedError` with `driverError.code === '23505'` and `driverError.constraint === 'uq_attempts_user_id_test_id_in_progress'` aborts the transaction; look up the existing in-progress attempt id **outside** it and throw 409 with `{ message, code: ATTEMPT_IN_PROGRESS, attemptId }`.
@@ -251,10 +340,12 @@ Implementation notes the tests do not pin:
 ### Task 7: Result endpoint
 
 **Files:**
+
 - Modify: `student-attempts.controller.ts`, `student-attempts.service.ts`, `dto/student-attempt-response.dto.ts`
 - Test: `test/student-attempts.e2e-spec.ts`
 
 **Interfaces:**
+
 - Produces: `AttemptResultDto`, `AttemptResultQuestionDto`, `AttemptTranscriptDto { mediaId; transcript }` (fields per spec); `service.result(userId, id): Promise<AttemptResultDto>`.
 
 - [ ] **Step 1: Write the failing e2e cases**: `/result` on an in-progress attempt → 409 `ATTEMPT_NOT_GRADED`; on another user's → 404; after the graded IELTS attempt from Task 6 → `questions` sorted L then R by `numberFrom`, MCQ item has `response {key:'B'}`, `isCorrect true`, `score 1`, `maxScore 1`, `answer {key:'B'}`, `explanation` and `evidence` as seeded; the MULTI item has `score 1`, `maxScore 2`; a part audio seeded with `transcript 'hello'` appears in `transcripts`, media without a transcript does not.
@@ -268,6 +359,7 @@ Implementation notes the tests do not pin:
 ### Task 8: Contract and docs
 
 **Files:**
+
 - Modify: `openapi.json`, `docs/student-tests-api.md`, `CLAUDE.md`
 
 - [ ] **Step 1:** `pnpm openapi:generate` — Expected: `openapi.json` gains the 7 `/api/student/attempts…` paths and the attempt enums as named schemas.

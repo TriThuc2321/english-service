@@ -79,15 +79,15 @@ every handler has `@CheckPermissions()` with no arguments, and every query is
 scoped to `userId = req.user.sub`. Another user's attempt returns **404**, never
 403, so its existence is not revealed.
 
-| Method | Path                                             | Purpose                                                                                                                                                     |
-| ------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/student/attempts`                              | Start. Body `{ testId, mode: FULL \| SECTION, sectionIds? }` (`sectionIds` required for SECTION). **201** `AttemptDto`                                       |
-| `GET`  | `/student/attempts`                              | History, paginated, filters `testId`, `status`, sorted `startedAt DESC`. `Paginated<AttemptListItemDto>`                                                    |
-| `GET`  | `/student/attempts/:id`                          | Resume state. `AttemptDto`                                                                                                                                  |
-| `PUT`  | `/student/attempts/:id/answers`                  | Batch autosave `{ answers: [{ questionId, response, flagged? }] }` (1–200 items). `response: null` clears the answer. Returns `{ savedAt, serverNow }`      |
-| `POST` | `/student/attempts/:id/sections/:sectionId/submit` | Submit the open section; opens the next one, or grades if it was the last. `AttemptDto`                                                                    |
-| `POST` | `/student/attempts/:id/submit`                   | Submit the whole attempt (early submit allowed; also the only way to abandon one). Closes remaining sections and grades. `AttemptDto`                       |
-| `GET`  | `/student/attempts/:id/result`                   | Scores and full review. Only when `GRADED`/`EXPIRED`, otherwise **409** `ATTEMPT_NOT_GRADED`. `AttemptResultDto`                                            |
+| Method | Path                                               | Purpose                                                                                                                                                |
+| ------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST` | `/student/attempts`                                | Start. Body `{ testId, mode: FULL \| SECTION, sectionIds? }` (`sectionIds` required for SECTION). **201** `AttemptDto`                                 |
+| `GET`  | `/student/attempts`                                | History, paginated, filters `testId`, `status`, sorted `startedAt DESC`. `Paginated<AttemptListItemDto>`                                               |
+| `GET`  | `/student/attempts/:id`                            | Resume state. `AttemptDto`                                                                                                                             |
+| `PUT`  | `/student/attempts/:id/answers`                    | Batch autosave `{ answers: [{ questionId, response, flagged? }] }` (1–200 items). `response: null` clears the answer. Returns `{ savedAt, serverNow }` |
+| `POST` | `/student/attempts/:id/sections/:sectionId/submit` | Submit the open section; opens the next one, or grades if it was the last. `AttemptDto`                                                                |
+| `POST` | `/student/attempts/:id/submit`                     | Submit the whole attempt (early submit allowed; also the only way to abandon one). Closes remaining sections and grades. `AttemptDto`                  |
+| `GET`  | `/student/attempts/:id/result`                     | Scores and full review. Only when `GRADED`/`EXPIRED`, otherwise **409** `ATTEMPT_NOT_GRADED`. `AttemptResultDto`                                       |
 
 `:sectionId` is the `test_sections.section_id` (the id the FE already has from
 the test content), not the `attempt_sections` uuid.
@@ -113,14 +113,14 @@ Validated on save against the question (400 on failure):
 
 ### Error codes
 
-| Status | `code`                | When                                                                                     |
-| ------ | --------------------- | ---------------------------------------------------------------------------------------- |
-| 404    | `TEST_NOT_FOUND`      | Start on a test that doesn't exist or isn't `PUBLISHED`                                  |
-| 404    | `ATTEMPT_NOT_FOUND`   | Attempt doesn't exist or belongs to another user                                         |
-| 409    | `ATTEMPT_IN_PROGRESS` | Start while an `IN_PROGRESS` attempt exists for that test; body includes `attemptId`     |
-| 409    | `SECTION_NOT_OPEN`    | Saving an answer for, or submitting, a section that isn't `IN_PROGRESS`                   |
-| 409    | `ATTEMPT_CLOSED`      | Any write on an attempt that is already graded or expired (including expiry just now)    |
-| 409    | `ATTEMPT_NOT_GRADED`  | `/result` before the attempt is graded                                                    |
+| Status | `code`                | When                                                                                  |
+| ------ | --------------------- | ------------------------------------------------------------------------------------- |
+| 404    | `TEST_NOT_FOUND`      | Start on a test that doesn't exist or isn't `PUBLISHED`                               |
+| 404    | `ATTEMPT_NOT_FOUND`   | Attempt doesn't exist or belongs to another user                                      |
+| 409    | `ATTEMPT_IN_PROGRESS` | Start while an `IN_PROGRESS` attempt exists for that test; body includes `attemptId`  |
+| 409    | `SECTION_NOT_OPEN`    | Saving an answer for, or submitting, a section that isn't `IN_PROGRESS`               |
+| 409    | `ATTEMPT_CLOSED`      | Any write on an attempt that is already graded or expired (including expiry just now) |
+| 409    | `ATTEMPT_NOT_GRADED`  | `/result` before the attempt is graded                                                |
 
 `ATTEMPT_IN_PROGRESS` needs an `attemptId` field, so it uses a dedicated
 `AttemptInProgressErrorDto extends ErrorResponseDto` in the OpenAPI declaration.
@@ -193,11 +193,11 @@ anything else. `GRACE_MS = 30_000`.
 
 ### `gradeAnswer({ answer, numberFrom, numberTo, wordLimit }, response) → { isCorrect, score }`
 
-| Answer kind | Rule                                                                                                                                                                                             |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `key`       | `response.key.trim() === answer.key`; score 0/1. Exact match, since the FE sends keys taken from the options                                                                                     |
-| `keys`      | `score` = size of the intersection (duplicates ignored, order ignored); `isCorrect = score === n` where `n = numberTo − numberFrom + 1`                                                           |
-| `accepted`  | Normalize both sides; if `wordLimit` is set and the response has more words than it, the answer is **wrong**; otherwise correct when it equals any normalized `accepted` value. Score 0/1       |
+| Answer kind | Rule                                                                                                                                                                                      |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`       | `response.key.trim() === answer.key`; score 0/1. Exact match, since the FE sends keys taken from the options                                                                              |
+| `keys`      | `score` = size of the intersection (duplicates ignored, order ignored); `isCorrect = score === n` where `n = numberTo − numberFrom + 1`                                                   |
+| `accepted`  | Normalize both sides; if `wordLimit` is set and the response has more words than it, the answer is **wrong**; otherwise correct when it equals any normalized `accepted` value. Score 0/1 |
 
 - `SUMMARY_COMPLETION` is graded by the kind of its `answer`; a mismatched
   response kind cannot be saved in the first place.
