@@ -8,11 +8,12 @@ import { Media } from '../../entities/media.entity.js';
 import { Question } from '../../entities/question.entity.js';
 import { ScoreScale } from '../../entities/score-scale.entity.js';
 import { Test } from '../../entities/test.entity.js';
+import { AttemptScoringService } from './attempt-scoring.service.js';
 import { AttemptTreeService } from './attempt-tree.service.js';
 import { ScoreScalesSeeder } from './score-scales.seeder.js';
 
 @Module({
-  providers: [ScoreScalesSeeder, AttemptTreeService],
+  providers: [ScoreScalesSeeder, AttemptTreeService, AttemptScoringService],
   imports: [
     TypeOrmModule.forFeature([
       Attempt,
