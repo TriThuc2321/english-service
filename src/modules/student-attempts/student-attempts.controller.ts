@@ -27,10 +27,12 @@ import { ErrorResponseDto } from '../../shared/dto/index.js';
 import { AuthClient, type IRequestWithUser } from '../../types/auth.type.js';
 import { CheckPermissions } from '../auth/decorators/check-permissions.decorator.js';
 import { Clients } from '../auth/decorators/clients.decorator.js';
+import { AttemptResultService } from './attempt-result.service.js';
 import {
   AttemptDto,
   AttemptInProgressErrorDto,
   AttemptListItemDto,
+  AttemptResultDto,
   SaveAnswersResultDto,
 } from './dto/student-attempt-response.dto.js';
 import {
@@ -49,6 +51,7 @@ import { StudentAttemptsService } from './student-attempts.service.js';
 export class StudentAttemptsController {
   constructor(
     private readonly studentAttemptsService: StudentAttemptsService,
+    private readonly attemptResultService: AttemptResultService,
   ) {}
 
   @Post()
@@ -70,6 +73,19 @@ export class StudentAttemptsController {
   @CheckPermissions()
   findAll(@Req() req: IRequestWithUser, @Query() query: ListAttemptsDto) {
     return this.studentAttemptsService.findAll(req.user.id, query);
+  }
+
+  @Get(':id/result')
+  @ApiOperation({ summary: 'Scores and full review of a graded attempt' })
+  @ApiOkResponse({ type: AttemptResultDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: 'ATTEMPT_NOT_GRADED',
+  })
+  @CheckPermissions()
+  result(@Req() req: IRequestWithUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.attemptResultService.result(req.user.id, id);
   }
 
   @Get(':id')

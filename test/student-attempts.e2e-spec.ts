@@ -3,6 +3,7 @@ import type { Response } from 'supertest';
 import { randomUUID } from 'node:crypto';
 
 import { AttemptAnswer } from '../src/entities/attempt-answer.entity.js';
+import { Media } from '../src/entities/media.entity.js';
 import { QuestionGroup } from '../src/entities/question-group.entity.js';
 import { Question } from '../src/entities/question.entity.js';
 import { TestPart } from '../src/entities/test-part.entity.js';
@@ -14,6 +15,7 @@ import {
   AttemptStatus,
 } from '../src/types/attempt.type.js';
 import { PermissionAction, PermissionSubject } from '../src/types/auth.type.js';
+import { MediaKind, MediaScope } from '../src/types/media.type.js';
 import {
   ExamType,
   QuestionType,
@@ -222,6 +224,12 @@ describe('Student attempts', () => {
       .http()
       .post(`/api/student/attempts/${id}/submit`)
       .auth(webToken, { type: 'bearer' });
+
+  const result = (id: string, token = webToken) =>
+    testApp
+      .http()
+      .get(`/api/student/attempts/${id}/result`)
+      .auth(token, { type: 'bearer' });
 
   const answersOf = (attemptId: string) =>
     testApp.dataSource
@@ -578,6 +586,90 @@ describe('Student attempts', () => {
     expect(filtered.body.data.map((a: { id: string }) => a.id)).toEqual([
       first.id,
     ]);
+  });
+
+  it('returns scores and the full review of a graded attempt', async () => {
+    const { test, listening, mcq, form, multi } = await seedIelts();
+    const [withTranscript, withoutTranscript] = await testApp.dataSource
+      .getRepository(Media)
+      .save(
+        [
+          { transcript: 'hello', storageKey: `tests/${randomUUID()}/a.mp3` },
+          { transcript: null, storageKey: `tests/${randomUUID()}/b.mp3` },
+        ].map((m) => ({
+          ...m,
+          scope: MediaScope.TEST,
+          kind: MediaKind.AUDIO,
+        })),
+      );
+    const mcqGroup = await testApp.dataSource
+      .getRepository(QuestionGroup)
+      .findOneByOrFail({ id: mcq.groupId });
+    await testApp.dataSource
+      .getRepository(TestPart)
+      .update(mcqGroup.partId, { audioMediaId: withTranscript.id });
+    await testApp.dataSource
+      .getRepository(Question)
+      .update(form.id, { audioMediaId: withoutTranscript.id });
+
+    const { body: attempt } = await start(test.id).expect(201);
+    const notGraded = await result(attempt.id).expect(409);
+    expect(notGraded.body.code).toBe('ATTEMPT_NOT_GRADED');
+    await result(attempt.id, otherToken).expect(404);
+    await save(attempt.id, [
+      { questionId: mcq.id, response: { key: 'B' } },
+      { questionId: form.id, response: { text: 'red' } },
+    ]).expect(200);
+    await submitSection(attempt.id, listening.id).expect(201);
+    await save(attempt.id, [
+      { questionId: multi.id, response: { keys: ['A', 'C'] } },
+    ]).expect(200);
+    await submit(attempt.id).expect(201);
+
+    const res = await result(attempt.id).expect(200);
+
+    expect(res.body.attempt).toMatchObject({
+      id: attempt.id,
+      status: AttemptStatus.GRADED,
+      test: { id: test.id, slug: test.slug },
+    });
+    expect(res.body.questions).toEqual([
+      {
+        questionId: mcq.id,
+        sectionId: listening.id,
+        numberFrom: 1,
+        numberTo: 1,
+        response: { key: 'B' },
+        isCorrect: true,
+        score: 1,
+        maxScore: 1,
+        flagged: false,
+        answer: { key: 'B' },
+        explanation: 'Said at 0:42',
+        evidence: null,
+      },
+      expect.objectContaining({
+        questionId: form.id,
+        numberFrom: 2,
+        isCorrect: false,
+        score: 0,
+        answer: { accepted: ['colour'] },
+        explanation: null,
+      }),
+      expect.objectContaining({
+        questionId: multi.id,
+        numberFrom: 3,
+        response: { keys: ['A', 'C'] },
+        isCorrect: false,
+        score: 1,
+        maxScore: 2,
+        evidence: { quote: 'somewhere' },
+      }),
+    ]);
+    expect(res.body.transcripts).toEqual([
+      { mediaId: withTranscript.id, transcript: 'hello' },
+    ]);
+    expect(withoutTranscript.id).toBeGreaterThan(0);
   });
 
   it('never exposes answer keys, explanations, evidence or transcripts', () => {

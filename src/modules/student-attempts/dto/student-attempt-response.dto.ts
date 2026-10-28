@@ -136,3 +136,75 @@ export class AttemptInProgressErrorDto extends ErrorResponseDto {
   @ApiProperty({ description: 'The attempt already in progress' })
   attemptId: string;
 }
+
+export class AttemptEvidenceDto {
+  @ApiProperty({ required: false })
+  paragraphId?: number;
+
+  @ApiProperty({ required: false })
+  quote?: string;
+}
+
+export class AttemptResultQuestionDto {
+  @ApiProperty()
+  questionId: number;
+
+  @ApiProperty({ description: 'test_sections id' })
+  sectionId: number;
+
+  @ApiProperty()
+  numberFrom: number;
+
+  @ApiProperty()
+  numberTo: number;
+
+  @ApiProperty({ type: 'object', additionalProperties: true, nullable: true })
+  response: Record<string, unknown> | null;
+
+  @ApiProperty({ type: Boolean, nullable: true })
+  isCorrect: boolean | null;
+
+  @ApiProperty()
+  score: number;
+
+  @ApiProperty()
+  maxScore: number;
+
+  @ApiProperty()
+  flagged: boolean;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    description: '{ key } | { keys } | { accepted }',
+  })
+  answer: Record<string, unknown>;
+
+  @ApiProperty({ type: String, nullable: true })
+  explanation: string | null;
+
+  @ApiProperty({ type: AttemptEvidenceDto, nullable: true })
+  evidence: AttemptEvidenceDto | null;
+}
+
+export class AttemptTranscriptDto {
+  @ApiProperty()
+  mediaId: number;
+
+  @ApiProperty()
+  transcript: string;
+}
+
+export class AttemptResultDto {
+  @ApiProperty({ type: AttemptListItemDto })
+  attempt: AttemptListItemDto;
+
+  @ApiProperty({
+    type: [AttemptResultQuestionDto],
+    description: 'Sorted by section order, then numberFrom',
+  })
+  questions: AttemptResultQuestionDto[];
+
+  @ApiProperty({ type: [AttemptTranscriptDto] })
+  transcripts: AttemptTranscriptDto[];
+}
