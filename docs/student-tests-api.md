@@ -298,7 +298,7 @@ All endpoints need a `web` token. Another user's attempt returns `404`, never `4
 { "testId": 12, "mode": "SECTION", "sectionIds": [30, 31] }   // sectionIds required for SECTION
 ```
 
-`mode: "FULL"` takes every Listening/Reading section; `SECTION` takes the given test section ids (each must belong to the test and be Listening or Reading).
+`mode: "FULL"` takes every Listening/Reading section; `SECTION` takes the given test section ids (each must belong to the test and be Listening or Reading; an empty list is `400`).
 
 **Response `201`**: `Attempt`
 
@@ -306,11 +306,13 @@ All endpoints need a `web` token. Another user's attempt returns `404`, never `4
 | ------ | --------------------- | --------------------------------------------------------------------------------------------- |
 | 400    |                       | Invalid body, section not in the test, not Listening/Reading, or the test has no such section |
 | 404    | `TEST_NOT_FOUND`      | Test does not exist or is not published                                                       |
-| 409    | `ATTEMPT_IN_PROGRESS` | An attempt on this test is already open. The body includes `attemptId`: resume that one       |
+| 409    | `ATTEMPT_IN_PROGRESS` | An attempt on this test is still open. The body includes `attemptId`: resume that one         |
 
 ### `GET /student/attempts` — history
 
 Newest first. Query: `page`, `take` (as in section 1), `testId` (optional), `status` (optional `AttemptStatus`).
+
+Statuses are updated lazily: an abandoned attempt past its deadline is listed as `IN_PROGRESS` until it is read (`GET /:id`, `/result`) or a new start on that test is attempted. A start closes an overdue open attempt first, so the retake goes through.
 
 **Response `200`**: `Paginated<AttemptListItem>`
 
@@ -330,11 +332,13 @@ Newest first. Query: `page`, `take` (as in section 1), `testId` (optional), `sta
 }
 ```
 
-1–200 items. `flagged` is optional; omit it to keep the stored value. Send only changed answers; the batch is saved as a whole or rejected as a whole.
+1–200 items. `flagged` is optional; omit it to keep the stored value. Every item also sets `response`, so to flag a question resend its current `response` (`null` clears it). If a `questionId` appears twice in one batch, the last item wins. Send only changed answers; the batch is saved as a whole or rejected as a whole.
 
 **Response `200`**: `{ savedAt: string; serverNow: string }`
 
 Errors: `404 ATTEMPT_NOT_FOUND`, `409 SECTION_NOT_OPEN` (the question is in a section that is not open), `409 ATTEMPT_CLOSED`, and `400` for an invalid `response` or a question that is not part of the attempt.
+
+On `SECTION_NOT_OPEN` the whole batch was rejected (e.g. an IELTS section ran out meanwhile): re-`GET` the attempt, drop the answers of sections that are no longer `IN_PROGRESS`, and retry the rest.
 
 ### `POST /student/attempts/:id/sections/:sectionId/submit`
 
@@ -364,7 +368,7 @@ The shape depends on the question type; the server validates it on save (`400` o
 { "text": "colour" }    // completion, short answer, diagram labelling, SUMMARY_COMPLETION without a word bank: string, max 255 characters
 ```
 
-- `key` and every item of `keys` must be an option `key` from the test content (`TRUE`/`FALSE`/`NOT GIVEN` and `YES`/`NO`/`NOT GIVEN` for those types).
+- `key` and every item of `keys` must be an option `key` from the test content. `TRUE_FALSE_NOT_GIVEN` takes exactly `TRUE`, `FALSE` or `NOT GIVEN`, and `YES_NO_NOT_GIVEN` takes `YES`, `NO` or `NOT GIVEN` (upper case, with the space).
 - Do not send other fields. Questions that cannot be graded automatically (Speaking/Writing) are rejected.
 - Text is compared after normalising case, quotes, punctuation and whitespace. If the group has a `wordLimit`, an answer with more words is wrong.
 - Multi-answer questions: `score` is the number of correct keys, so partial credit is possible.

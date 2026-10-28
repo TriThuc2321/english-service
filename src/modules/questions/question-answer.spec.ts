@@ -22,6 +22,8 @@ describe('assertValidAnswer', () => {
     ],
     [QuestionType.SUMMARY_COMPLETION, single({ accepted: ['river'] })],
     [QuestionType.SUMMARY_COMPLETION, single({ key: 'C' })],
+    [QuestionType.TRUE_FALSE_NOT_GIVEN, single({ key: 'NOT GIVEN' })],
+    [QuestionType.YES_NO_NOT_GIVEN, single({ key: 'YES' })],
     [QuestionType.OPINION_ESSAY, single({ sample: 'An essay' })],
     [
       QuestionType.READ_ALOUD,
@@ -85,6 +87,18 @@ describe('assertValidAnswer', () => {
       QuestionType.MULTIPLE_CHOICE_MULTI,
       { answer: { keys: ['A', 'B', 'C'] }, numberFrom: 1, numberTo: 2 },
       /need exactly 2 keys/,
+    ],
+    [
+      'a key outside the TRUE/FALSE/NOT GIVEN set',
+      QuestionType.TRUE_FALSE_NOT_GIVEN,
+      single({ key: 'YES' }),
+      /key must be one of TRUE, FALSE, NOT GIVEN/,
+    ],
+    [
+      'a key outside the YES/NO/NOT GIVEN set',
+      QuestionType.YES_NO_NOT_GIVEN,
+      single({ key: 'NG' }),
+      /key must be one of YES, NO, NOT GIVEN/,
     ],
     [
       'an empty accepted list',

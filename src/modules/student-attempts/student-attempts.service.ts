@@ -3,6 +3,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -81,87 +82,133 @@ export class StudentAttemptsService {
   ) {}
 
   async start(userId: string, dto: StartAttemptDto): Promise<AttemptDto> {
-    const now = new Date();
+    const started = await this.tryStart(userId, dto);
+    if (started) return started;
+
+    const existingId = await this.findInProgressId(userId, dto.testId);
+    // The open attempt may be past its deadline: reconciling it closes it and frees the slot for a retake
+    const stillOpen =
+      existingId !== null &&
+      (await this.withAttempt(
+        userId,
+        existingId,
+        new Date(),
+        false,
+        async (ctx) => ctx.attempt.status === AttemptStatus.IN_PROGRESS,
+      ));
+    const retried = stillOpen ? null : await this.tryStart(userId, dto);
+    if (retried) return retried;
+
+    throw new HttpException(
+      {
+        message: 'An attempt is already in progress for this test',
+        code: AttemptErrorCode.ATTEMPT_IN_PROGRESS,
+        attemptId: stillOpen
+          ? existingId
+          : ((await this.findInProgressId(userId, dto.testId)) ?? undefined),
+      },
+      HttpStatus.CONFLICT,
+    );
+  }
+
+  private async tryStart(
+    userId: string,
+    dto: StartAttemptDto,
+  ): Promise<AttemptDto | null> {
     try {
-      return await this.dataSource.transaction(async (m) => {
-        const test = await m.findOne(Test, {
-          where: { id: dto.testId, status: TestStatus.PUBLISHED },
-        });
-        if (!test) {
-          throw fail(
-            HttpStatus.NOT_FOUND,
-            AttemptErrorCode.TEST_NOT_FOUND,
-            `Test ${dto.testId} not found`,
-          );
-        }
-
-        await m
-          .createQueryBuilder()
-          .update(Test)
-          .set({ lockedAt: now })
-          .where('id = :id AND locked_at IS NULL', { id: test.id })
-          .execute();
-
-        const tree = await this.treeService.get(test.id);
-        const chosen = this.pickSections(tree, dto);
-        const timeline = openTimeline(
-          {
-            examType: test.examType,
-            mode: dto.mode,
-            testDurationMinutes: test.durationMinutes ?? null,
-            sections: chosen,
-          },
-          now,
-        );
-
-        const attempt = await m.save(
-          m.create(Attempt, {
-            userId,
-            testId: test.id,
-            mode: dto.mode,
-            status: AttemptStatus.IN_PROGRESS,
-            startedAt: now,
-            deadlineAt: timeline.deadlineAt,
-            attemptSections: timeline.sections.map((s) =>
-              m.create(AttemptSection, {
-                sectionId: s.sectionId,
-                status: s.status,
-                startedAt: s.startedAt,
-                deadlineAt: s.deadlineAt,
-                submittedAt: s.submittedAt,
-              }),
-            ),
-          }),
-        );
-
-        return toAttemptDto({
-          attempt,
-          test,
-          sections: attempt.attemptSections,
-          sectionMeta: sectionMetaOf(tree),
-          answers: [],
-          now,
-        });
-      });
+      return await this.startOnce(userId, dto);
     } catch (error) {
-      if (!this.isInProgressConflict(error)) throw error;
-      const existing = await this.attemptRepository.findOne({
-        where: {
-          userId,
-          testId: dto.testId,
-          status: AttemptStatus.IN_PROGRESS,
-        },
-        select: { id: true },
-      });
-      throw new HttpException(
-        {
-          message: 'An attempt is already in progress for this test',
-          code: AttemptErrorCode.ATTEMPT_IN_PROGRESS,
-          attemptId: existing?.id,
-        },
-        HttpStatus.CONFLICT,
-      );
+      if (this.isInProgressConflict(error)) return null;
+      throw error;
     }
+  }
+
+  private async startOnce(
+    userId: string,
+    dto: StartAttemptDto,
+  ): Promise<AttemptDto> {
+    const now = new Date();
+    // Fetched outside the transaction so it never sees an uncommitted lockedAt (and caches nothing for a lock that may roll back)
+    const tree = await this.treeService.get(dto.testId).catch((error) => {
+      throw error instanceof NotFoundException
+        ? this.testNotFound(dto.testId)
+        : error;
+    });
+
+    return this.dataSource.transaction(async (m) => {
+      const test = await m.findOne(Test, {
+        where: { id: dto.testId, status: TestStatus.PUBLISHED },
+      });
+      if (!test) {
+        throw this.testNotFound(dto.testId);
+      }
+
+      await m
+        .createQueryBuilder()
+        .update(Test)
+        .set({ lockedAt: now })
+        .where('id = :id AND locked_at IS NULL', { id: test.id })
+        .execute();
+
+      const chosen = this.pickSections(tree, dto);
+      const timeline = openTimeline(
+        {
+          examType: test.examType,
+          mode: dto.mode,
+          testDurationMinutes: test.durationMinutes ?? null,
+          sections: chosen,
+        },
+        now,
+      );
+
+      const attempt = await m.save(
+        m.create(Attempt, {
+          userId,
+          testId: test.id,
+          mode: dto.mode,
+          status: AttemptStatus.IN_PROGRESS,
+          startedAt: now,
+          deadlineAt: timeline.deadlineAt,
+          attemptSections: timeline.sections.map((s) =>
+            m.create(AttemptSection, {
+              sectionId: s.sectionId,
+              status: s.status,
+              startedAt: s.startedAt,
+              deadlineAt: s.deadlineAt,
+              submittedAt: s.submittedAt,
+            }),
+          ),
+        }),
+      );
+
+      return toAttemptDto({
+        attempt,
+        test,
+        sections: attempt.attemptSections,
+        sectionMeta: sectionMetaOf(tree),
+        answers: [],
+        now,
+      });
+    });
+  }
+
+  private testNotFound(testId: number) {
+    return fail(
+      HttpStatus.NOT_FOUND,
+      AttemptErrorCode.TEST_NOT_FOUND,
+      `Test ${testId} not found`,
+    );
+  }
+
+  private async findInProgressId(
+    userId: string,
+    testId: number,
+  ): Promise<string | null> {
+    const existing = await this.attemptRepository.findOne({
+      where: { userId, testId, status: AttemptStatus.IN_PROGRESS },
+      select: { id: true },
+    });
+    return existing?.id ?? null;
   }
 
   async findAll(
@@ -349,7 +396,7 @@ export class StudentAttemptsService {
       where: { id: attempt.testId },
       select: { id: true, slug: true, examType: true },
     });
-    const tree = await this.treeService.get(attempt.testId);
+    const tree = await this.treeService.get(attempt.testId, m);
     const sectionMeta = sectionMetaOf(tree);
     const sections = await this.loadSections(m, attempt.id, sectionMeta);
 

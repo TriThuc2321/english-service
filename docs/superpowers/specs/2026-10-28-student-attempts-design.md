@@ -31,6 +31,8 @@ Out of scope:
   prefers a `test_id` row; there is just no way to create one yet).
 - Hiding the answer key until N retakes. Retakes are unlimited: a new attempt is
   allowed whenever there is no `IN_PROGRESS` one for that test.
+- CMS must require a `key` answer iff the SUMMARY_COMPLETION group has a word
+  bank (today either shape is accepted) — follow-up before real content.
 
 ## Module
 

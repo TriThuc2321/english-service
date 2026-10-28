@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 
 import { Test } from '../../entities/test.entity.js';
 import { QuestionType, SkillType } from '../../types/test.type.js';
+import { FIXED_ANSWER_KEYS } from '../questions/question-answer.js';
 
 export interface ITreeQuestion {
   id: number;
@@ -46,18 +46,17 @@ function optionKeys(content?: Record<string, unknown> | null) {
 export class AttemptTreeService {
   private readonly cache = new Map<number, IAttemptTree>();
 
-  constructor(
-    @InjectRepository(Test) private testRepository: Repository<Test>,
-  ) {}
+  constructor(private readonly dataSource: DataSource) {}
 
-  async get(testId: number): Promise<IAttemptTree> {
+  // Inside a transaction pass its manager: a second pool connection per request can exhaust the pool
+  async get(testId: number, manager?: EntityManager): Promise<IAttemptTree> {
     const cached = this.cache.get(testId);
     if (cached) {
       return cached;
     }
 
-    const test = await this.testRepository
-      .createQueryBuilder('t')
+    const test = await (manager ?? this.dataSource.manager)
+      .createQueryBuilder(Test, 't')
       .leftJoin('t.testSections', 's', 's.skill IN (:...skills)', {
         skills: GRADED_SKILLS,
       })
@@ -120,6 +119,7 @@ export class AttemptTreeService {
         add(p.audioMediaId);
         for (const g of p.questionGroups) {
           add(g.audioMediaId);
+          const fixedKeys = FIXED_ANSWER_KEYS[g.questionType];
           const groupKeys = optionKeys(g.content);
           for (const q of g.questions) {
             add(q.audioMediaId);
@@ -130,7 +130,7 @@ export class AttemptTreeService {
               wordLimit: g.wordLimit ?? null,
               numberFrom: q.numberFrom,
               numberTo: q.numberTo,
-              keys: optionKeys(q.content) ?? groupKeys,
+              keys: fixedKeys ?? optionKeys(q.content) ?? groupKeys,
             });
           }
         }

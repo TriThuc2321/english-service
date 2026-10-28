@@ -133,8 +133,11 @@ export class SaveAnswersResultDto {
 }
 
 export class AttemptInProgressErrorDto extends ErrorResponseDto {
-  @ApiProperty({ description: 'The attempt already in progress' })
-  attemptId: string;
+  @ApiProperty({
+    required: false,
+    description: 'The attempt already in progress',
+  })
+  attemptId?: string;
 }
 
 export class AttemptEvidenceDto {

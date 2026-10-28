@@ -3,6 +3,8 @@ import type { Response } from 'supertest';
 import { randomUUID } from 'node:crypto';
 
 import { AttemptAnswer } from '../src/entities/attempt-answer.entity.js';
+import { AttemptSection } from '../src/entities/attempt-section.entity.js';
+import { Attempt } from '../src/entities/attempt.entity.js';
 import { Media } from '../src/entities/media.entity.js';
 import { QuestionGroup } from '../src/entities/question-group.entity.js';
 import { Question } from '../src/entities/question.entity.js';
@@ -235,6 +237,24 @@ describe('Student attempts', () => {
     testApp.dataSource
       .getRepository(AttemptAnswer)
       .find({ where: { attemptId }, order: { questionId: 'ASC' } });
+
+  const backdateOpenSections = (attemptId: string) =>
+    testApp.dataSource.query(
+      `UPDATE attempt_sections
+          SET started_at = now() - interval '3 hours',
+              deadline_at = now() - interval '150 minutes'
+        WHERE attempt_id = $1 AND status = 'IN_PROGRESS'`,
+      [attemptId],
+    );
+
+  const storedAttempt = async (id: string) => ({
+    attempt: await testApp.dataSource
+      .getRepository(Attempt)
+      .findOneByOrFail({ id }),
+    sections: await testApp.dataSource
+      .getRepository(AttemptSection)
+      .find({ where: { attemptId: id }, relations: { testSection: true } }),
+  });
 
   beforeAll(async () => {
     testApp = await createTestApp();
@@ -475,13 +495,7 @@ describe('Student attempts', () => {
     await save(attempt.id, [
       { questionId: mcq.id, response: { key: 'B' } },
     ]).expect(200);
-    await testApp.dataSource.query(
-      `UPDATE attempt_sections
-          SET started_at = now() - interval '3 hours',
-              deadline_at = now() - interval '150 minutes'
-        WHERE attempt_id = $1 AND status = 'IN_PROGRESS'`,
-      [attempt.id],
-    );
+    await backdateOpenSections(attempt.id);
 
     const res = await get(attempt.id).expect(200);
 
@@ -669,7 +683,144 @@ describe('Student attempts', () => {
     expect(res.body.transcripts).toEqual([
       { mediaId: withTranscript.id, transcript: 'hello' },
     ]);
-    expect(withoutTranscript.id).toBeGreaterThan(0);
+  });
+
+  it('expires an overdue attempt on autosave and rejects the write', async () => {
+    const { test, mcq } = await seedIelts();
+    const { body: attempt } = await start(test.id).expect(201);
+    await save(attempt.id, [
+      { questionId: mcq.id, response: { key: 'B' } },
+    ]).expect(200);
+    await backdateOpenSections(attempt.id);
+
+    const closed = await save(attempt.id, [
+      { questionId: mcq.id, response: { key: 'A' } },
+    ]).expect(409);
+
+    expect(closed.body.code).toBe('ATTEMPT_CLOSED');
+    const stored = await storedAttempt(attempt.id);
+    expect(stored.attempt.status).toBe(AttemptStatus.EXPIRED);
+    expect(stored.attempt.submittedAt).not.toBeNull();
+    const bySkill = Object.fromEntries(
+      stored.sections.map((s) => [s.testSection.skill, s]),
+    );
+    expect(bySkill[SkillType.LISTENING]).toMatchObject({
+      status: AttemptSectionStatus.EXPIRED,
+      rawScore: 1,
+      maxScore: 2,
+    });
+    expect(bySkill[SkillType.READING]).toMatchObject({
+      status: AttemptSectionStatus.EXPIRED,
+      rawScore: 0,
+      maxScore: 2,
+    });
+    const mcqRow = (await answersOf(attempt.id)).find(
+      (a) => a.questionId === mcq.id,
+    );
+    expect(mcqRow?.response).toEqual({ key: 'B' });
+  });
+
+  it('starts a retake when the open attempt has already run out', async () => {
+    const { test, mcq } = await seedIelts();
+    const { body: old } = await start(test.id).expect(201);
+    await save(old.id, [{ questionId: mcq.id, response: { key: 'B' } }]).expect(
+      200,
+    );
+    await backdateOpenSections(old.id);
+
+    const res = track(await start(test.id).expect(201));
+
+    expect(res.body.id).not.toBe(old.id);
+    expect(res.body.status).toBe(AttemptStatus.IN_PROGRESS);
+    const stored = await storedAttempt(old.id);
+    expect(stored.attempt.status).toBe(AttemptStatus.EXPIRED);
+    for (const section of stored.sections) {
+      expect(section.status).toBe(AttemptSectionStatus.EXPIRED);
+      expect(section.rawScore).not.toBeNull();
+    }
+    expect(stored.sections.map((s) => s.rawScore).sort()).toEqual([0, 1]);
+  });
+
+  it('serializes an autosave racing a submit', async () => {
+    const { test, mcq } = await seedIelts();
+    const { body: attempt } = await start(test.id).expect(201);
+
+    const [saved, submitted] = await Promise.all([
+      save(attempt.id, [{ questionId: mcq.id, response: { key: 'B' } }]),
+      submit(attempt.id),
+    ]);
+
+    expect(submitted.status).toBe(201);
+    expect(submitted.body.status).toBe(AttemptStatus.GRADED);
+    expect([200, 409]).toContain(saved.status);
+    if (saved.status === 409) {
+      expect(saved.body.code).toBe('ATTEMPT_CLOSED');
+    }
+    const rows = await answersOf(attempt.id);
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows.map((r) => r.questionId)).size).toBe(3);
+    const mcqRow = rows.find((r) => r.questionId === mcq.id);
+    expect(mcqRow?.score).toBe(saved.status === 200 ? 1 : 0);
+  });
+
+  it('runs a SECTION attempt on one IELTS section only', async () => {
+    const { test, reading, mcq, multi } = await seedIelts();
+    const listeningAudio = await testApp.dataSource.getRepository(Media).save({
+      transcript: 'listening script',
+      storageKey: `tests/${randomUUID()}/l.mp3`,
+      scope: MediaScope.TEST,
+      kind: MediaKind.AUDIO,
+    });
+    const mcqGroup = await testApp.dataSource
+      .getRepository(QuestionGroup)
+      .findOneByOrFail({ id: mcq.groupId });
+    await testApp.dataSource
+      .getRepository(TestPart)
+      .update(mcqGroup.partId, { audioMediaId: listeningAudio.id });
+
+    const { body: attempt } = track(
+      await testApp
+        .http()
+        .post('/api/student/attempts')
+        .auth(webToken, { type: 'bearer' })
+        .send({
+          testId: test.id,
+          mode: AttemptMode.SECTION,
+          sectionIds: [reading.id],
+        })
+        .expect(201),
+    );
+
+    expect(attempt).toMatchObject({
+      mode: AttemptMode.SECTION,
+      status: AttemptStatus.IN_PROGRESS,
+      sections: [
+        { sectionId: reading.id, status: AttemptSectionStatus.IN_PROGRESS },
+      ],
+    });
+    expect(attempt.sections).toHaveLength(1);
+    const [r] = attempt.sections;
+    expect(
+      new Date(r.deadlineAt).getTime() - new Date(r.startedAt).getTime(),
+    ).toBe(60 * 60_000);
+    await save(attempt.id, [
+      { questionId: mcq.id, response: { key: 'B' } },
+    ]).expect(400);
+    await save(attempt.id, [
+      { questionId: multi.id, response: { keys: ['A', 'D'] } },
+    ]).expect(200);
+
+    const graded = await submit(attempt.id).expect(201);
+    expect(graded.body).toMatchObject({
+      status: AttemptStatus.GRADED,
+      sections: [{ sectionId: reading.id, rawScore: 2, maxScore: 2 }],
+    });
+
+    const res = await result(attempt.id).expect(200);
+    expect(res.body.transcripts).toEqual([]);
+    expect(
+      res.body.questions.map((q: { sectionId: number }) => q.sectionId),
+    ).toEqual([reading.id]);
   });
 
   it('never exposes answer keys, explanations, evidence or transcripts', () => {

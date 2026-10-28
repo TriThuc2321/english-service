@@ -46,6 +46,13 @@ export const QUESTION_ANSWER_KINDS: Record<
   [QuestionType.OPINION_ESSAY]: SAMPLE,
 };
 
+export const FIXED_ANSWER_KEYS: Partial<
+  Record<QuestionType, ReadonlySet<string>>
+> = {
+  [QuestionType.TRUE_FALSE_NOT_GIVEN]: new Set(['TRUE', 'FALSE', 'NOT GIVEN']),
+  [QuestionType.YES_NO_NOT_GIVEN]: new Set(['YES', 'NO', 'NOT GIVEN']),
+};
+
 const SHAPES: Record<AnswerKind, string> = {
   key: '{"key":"B"}',
   keys: '{"keys":["A","D"]}',
@@ -93,10 +100,14 @@ export function assertValidAnswer(
   }
 
   const value = answer[kind];
+  const fixedKeys = FIXED_ANSWER_KEYS[type];
   switch (kind) {
     case 'key':
     case 'sample':
       if (!isNonEmptyString(value)) fail(`${kind} must be a non-empty string`);
+      if (kind === 'key' && fixedKeys && !fixedKeys.has(value as string)) {
+        fail(`key must be one of ${[...fixedKeys].join(', ')}`);
+      }
       if (
         kind === 'sample' &&
         answer.rubric !== undefined &&

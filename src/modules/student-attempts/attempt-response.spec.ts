@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 
 import { QuestionType } from '../../types/test.type.js';
+import { FIXED_ANSWER_KEYS } from '../questions/question-answer.js';
 import { type ITreeQuestion, parseResponse } from './attempt-response.js';
 
 const question = (overrides: Partial<ITreeQuestion>): ITreeQuestion => ({
@@ -98,12 +99,22 @@ describe('parseResponse', () => {
   });
 
   it('accepts any non-empty key when keys is null', () => {
-    const q = question({
-      questionType: QuestionType.TRUE_FALSE_NOT_GIVEN,
-      keys: null,
+    const q = question({ keys: null });
+    expect(parseResponse(q, { key: 'X' })).toEqual({ key: 'X' });
+  });
+
+  describe.each([
+    [QuestionType.TRUE_FALSE_NOT_GIVEN, ['TRUE', 'FALSE', 'NOT GIVEN'], 'YES'],
+    [QuestionType.YES_NO_NOT_GIVEN, ['YES', 'NO', 'NOT GIVEN'], 'TRUE'],
+  ])('%s', (questionType, allowed, foreign) => {
+    const q = question({ questionType, keys: FIXED_ANSWER_KEYS[questionType] });
+
+    it.each(allowed)('accepts %s', (key) => {
+      expect(parseResponse(q, { key })).toEqual({ key });
     });
-    expect(parseResponse(q, { key: 'NOT GIVEN' })).toEqual({
-      key: 'NOT GIVEN',
+
+    it.each([foreign, 'NG', 'not given', 'A'])('rejects %s', (key) => {
+      expect(() => parseResponse(q, { key })).toThrow(BadRequestException);
     });
   });
 
