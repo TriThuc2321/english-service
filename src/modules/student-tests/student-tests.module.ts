@@ -11,6 +11,7 @@ import { StudentTestsService } from './student-tests.service.js';
 @Module({
   controllers: [StudentTestsController],
   providers: [StudentTestsService],
+  exports: [StudentTestsService],
   imports: [TypeOrmModule.forFeature([Test, Passage, Media]), StorageModule],
 })
 export class StudentTestsModule {}

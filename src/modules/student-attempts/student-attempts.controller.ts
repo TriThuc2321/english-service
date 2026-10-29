@@ -27,6 +27,7 @@ import { ErrorResponseDto } from '../../shared/dto/index.js';
 import { AuthClient, type IRequestWithUser } from '../../types/auth.type.js';
 import { CheckPermissions } from '../auth/decorators/check-permissions.decorator.js';
 import { Clients } from '../auth/decorators/clients.decorator.js';
+import { StudentTestDetailDto } from '../student-tests/dto/student-test-response.dto.js';
 import { AttemptResultService } from './attempt-result.service.js';
 import {
   AttemptDto,
@@ -90,6 +91,20 @@ export class StudentAttemptsController {
   ) {
     await this.studentAttemptsService.expireIfOverdue(req.user.id, id);
     return this.attemptResultService.result(req.user.id, id);
+  }
+
+  @Get(':id/content')
+  @ApiOperation({
+    summary: 'Test content of my attempt (its sections only), without answers',
+  })
+  @ApiOkResponse({ type: StudentTestDetailDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @CheckPermissions()
+  content(
+    @Req() req: IRequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.attemptResultService.content(req.user.id, id);
   }
 
   @Get(':id')

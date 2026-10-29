@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, In, Repository } from 'typeorm';
+import { Brackets, In, Repository, SelectQueryBuilder } from 'typeorm';
 
 import { Media } from '../../entities/media.entity.js';
 import { Passage } from '../../entities/passage.entity.js';
@@ -94,6 +94,23 @@ export class StudentTestsService {
       .where('t.status = :published', { published: TestStatus.PUBLISHED });
   }
 
+  private withContent(qb: SelectQueryBuilder<Test>) {
+    return qb
+      .leftJoin('s.testParts', 'p')
+      .leftJoin('p.questionGroups', 'g')
+      .leftJoin('g.groupPassages', 'gp')
+      .leftJoin('g.questions', 'q')
+      .orderBy('s.order', 'ASC')
+      .addOrderBy('s.id', 'ASC')
+      .addOrderBy('p.order', 'ASC')
+      .addOrderBy('p.id', 'ASC')
+      .addOrderBy('g.order', 'ASC')
+      .addOrderBy('g.id', 'ASC')
+      .addOrderBy('gp.order', 'ASC')
+      .addOrderBy('q.order', 'ASC')
+      .addOrderBy('q.id', 'ASC');
+  }
+
   async findAll({ page, take, search, examType }: ListStudentTestsDto) {
     const qb = this.publishedQuery(LIST_COLUMNS);
 
@@ -125,26 +142,33 @@ export class StudentTestsService {
   }
 
   async findBySlug(slug: string) {
-    const test = await this.publishedQuery(DETAIL_COLUMNS)
-      .leftJoin('s.testParts', 'p')
-      .leftJoin('p.questionGroups', 'g')
-      .leftJoin('g.groupPassages', 'gp')
-      .leftJoin('g.questions', 'q')
-      .andWhere('t.slug = :slug', { slug })
-      .orderBy('s.order', 'ASC')
-      .addOrderBy('s.id', 'ASC')
-      .addOrderBy('p.order', 'ASC')
-      .addOrderBy('p.id', 'ASC')
-      .addOrderBy('g.order', 'ASC')
-      .addOrderBy('g.id', 'ASC')
-      .addOrderBy('gp.order', 'ASC')
-      .addOrderBy('q.order', 'ASC')
-      .addOrderBy('q.id', 'ASC')
-      .getOne();
+    const test = await this.withContent(
+      this.publishedQuery(DETAIL_COLUMNS).andWhere('t.slug = :slug', { slug }),
+    ).getOne();
     if (!test) {
       throw new NotFoundException(`Test "${slug}" not found`);
     }
 
+    return this.toDetail(test);
+  }
+
+  async findContent(testId: number, sectionIds: number[]) {
+    if (!sectionIds.length) return null;
+
+    const test = await this.withContent(
+      this.testRepository
+        .createQueryBuilder('t')
+        .innerJoin('t.testSections', 's', 's.id IN (:...sectionIds)', {
+          sectionIds,
+        })
+        .select(DETAIL_COLUMNS)
+        .where('t.id = :testId', { testId }),
+    ).getOne();
+
+    return test ? this.toDetail(test) : null;
+  }
+
+  private async toDetail(test: Test) {
     const parts = test.testSections.flatMap((s) => s.testParts);
     const groups = parts.flatMap((p) => p.questionGroups);
     const questions = groups.flatMap((g) => g.questions);
