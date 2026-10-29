@@ -107,6 +107,18 @@ describe('validateTestImport', () => {
     ]);
   });
 
+  it('rejects a placeholder used more than once', () => {
+    const group = notes();
+    group.content = {
+      template: 'The {{1}} grew, the {{1}} and the {{2}} were full {{9}} {{9}}',
+    };
+
+    expect(messages(build([group, tfng()]))).toEqual([
+      expect.stringContaining('placeholder {{1}} appears more than once'),
+      'error: placeholder(s) {{9}} have no question',
+    ]);
+  });
+
   it('requires a prompt where the question is not in a template', () => {
     const group = tfng();
     group.questions[0].prompt = ' ';

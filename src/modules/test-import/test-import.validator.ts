@@ -175,7 +175,9 @@ export function validateTestImport(doc: ITestImport): IImportIssue[] {
     }
     const numbers = group.questions.map((q) => q.numberFrom);
     const missing = numbers.filter((n) => !placeholders.includes(n));
-    const orphan = placeholders.filter((n) => !numbers.includes(n));
+    const orphan = [...new Set(placeholders)].filter(
+      (n) => !numbers.includes(n),
+    );
     if (missing.length) {
       error(path, `no {{n}} placeholder for question(s) ${missing.join(', ')}`);
     }
