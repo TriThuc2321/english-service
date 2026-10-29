@@ -8,6 +8,7 @@ import { Media } from '../../entities/media.entity.js';
 import { Question } from '../../entities/question.entity.js';
 import { ScoreScale } from '../../entities/score-scale.entity.js';
 import { Test } from '../../entities/test.entity.js';
+import { StudentTestsModule } from '../student-tests/student-tests.module.js';
 import { AttemptResultService } from './attempt-result.service.js';
 import { AttemptScoringService } from './attempt-scoring.service.js';
 import { AttemptTreeService } from './attempt-tree.service.js';
@@ -34,6 +35,7 @@ import { StudentAttemptsService } from './student-attempts.service.js';
       Question,
       Media,
     ]),
+    StudentTestsModule,
   ],
 })
 export class StudentAttemptsModule {}

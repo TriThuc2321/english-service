@@ -3781,6 +3781,90 @@
         "tags": ["Student Attempts"]
       }
     },
+    "/api/student/attempts/{id}/content": {
+      "get": {
+        "operationId": "StudentAttempts_content",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentTestDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Test content of my attempt (its sections only), without answers",
+        "tags": ["Student Attempts"]
+      }
+    },
     "/api/student/attempts/{id}": {
       "get": {
         "operationId": "StudentAttempts_findOne",
@@ -8433,124 +8517,6 @@
         },
         "required": ["attempt", "questions", "transcripts"]
       },
-      "SaveAnswerItemDto": {
-        "type": "object",
-        "properties": {
-          "questionId": {
-            "type": "number"
-          },
-          "response": {
-            "type": "object",
-            "additionalProperties": true,
-            "nullable": true,
-            "description": "{ key } | { keys } | { text }; null clears the answer"
-          },
-          "flagged": {
-            "type": "boolean",
-            "description": "Omit to keep the stored value"
-          }
-        },
-        "required": ["questionId", "response"]
-      },
-      "SaveAnswersDto": {
-        "type": "object",
-        "properties": {
-          "answers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SaveAnswerItemDto"
-            }
-          }
-        },
-        "required": ["answers"]
-      },
-      "SaveAnswersResultDto": {
-        "type": "object",
-        "properties": {
-          "savedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "serverNow": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": ["savedAt", "serverNow"]
-      },
-      "StudentTestSectionDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number"
-          },
-          "skill": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SkillType"
-              }
-            ]
-          },
-          "order": {
-            "type": "number"
-          },
-          "durationMinutes": {
-            "type": "number",
-            "nullable": true
-          }
-        },
-        "required": ["id", "skill", "order", "durationMinutes"]
-      },
-      "StudentTestListItemDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "examType": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ExamType"
-              }
-            ]
-          },
-          "title": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string",
-            "nullable": true
-          },
-          "durationMinutes": {
-            "type": "number",
-            "nullable": true
-          },
-          "publishedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "testSections": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/StudentTestSectionDto"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "slug",
-          "examType",
-          "title",
-          "source",
-          "durationMinutes",
-          "publishedAt",
-          "testSections"
-        ]
-      },
       "StudentMediaDto": {
         "type": "object",
         "properties": {
@@ -8920,6 +8886,124 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/StudentTestSectionDetailDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "examType",
+          "title",
+          "source",
+          "durationMinutes",
+          "publishedAt",
+          "testSections"
+        ]
+      },
+      "SaveAnswerItemDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "number"
+          },
+          "response": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "{ key } | { keys } | { text }; null clears the answer"
+          },
+          "flagged": {
+            "type": "boolean",
+            "description": "Omit to keep the stored value"
+          }
+        },
+        "required": ["questionId", "response"]
+      },
+      "SaveAnswersDto": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaveAnswerItemDto"
+            }
+          }
+        },
+        "required": ["answers"]
+      },
+      "SaveAnswersResultDto": {
+        "type": "object",
+        "properties": {
+          "savedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "serverNow": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["savedAt", "serverNow"]
+      },
+      "StudentTestSectionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "skill": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
+          },
+          "order": {
+            "type": "number"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": ["id", "skill", "order", "durationMinutes"]
+      },
+      "StudentTestListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "examType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "testSections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentTestSectionDto"
             }
           }
         },

@@ -233,6 +233,12 @@ describe('Student attempts', () => {
       .get(`/api/student/attempts/${id}/result`)
       .auth(token, { type: 'bearer' });
 
+  const content = (id: string, token = webToken) =>
+    testApp
+      .http()
+      .get(`/api/student/attempts/${id}/content`)
+      .auth(token, { type: 'bearer' });
+
   const answersOf = (attemptId: string) =>
     testApp.dataSource
       .getRepository(AttemptAnswer)
@@ -705,9 +711,70 @@ describe('Student attempts', () => {
     });
   });
 
+  it('returns the content of my attempt even after the test is unpublished', async () => {
+    const { test, listening, reading, mcq, form, multi } = await seedIelts();
+    const { body: attempt } = await start(test.id).expect(201);
+
+    const res = track(await content(attempt.id).expect(200));
+
+    expect(res.body).toMatchObject({ id: test.id, slug: test.slug });
+    expect(res.body.testSections.map((s: { id: number }) => s.id)).toEqual([
+      listening.id,
+      reading.id,
+    ]);
+    const questionIds = res.body.testSections.flatMap(
+      (s: {
+        testParts: Array<{
+          questionGroups: Array<{ questions: Array<{ id: number }> }>;
+        }>;
+      }) =>
+        s.testParts.flatMap((p) =>
+          p.questionGroups.flatMap((g) => g.questions.map((q) => q.id)),
+        ),
+    );
+    expect(questionIds).toEqual([mcq.id, form.id, multi.id]);
+
+    await content(attempt.id, otherToken).expect(404);
+    await content(attempt.id, boToken).expect(403);
+
+    for (const status of [TestStatus.DRAFT, TestStatus.DELETED]) {
+      await testApp.dataSource.getRepository(Test).update(test.id, { status });
+      await testApp
+        .http()
+        .get(`/api/student/tests/${test.slug}`)
+        .auth(webToken, { type: 'bearer' })
+        .expect(404);
+      const after = track(await content(attempt.id).expect(200));
+      expect(after.body.testSections).toHaveLength(2);
+    }
+  });
+
+  it('returns only the attempted section for a SECTION attempt', async () => {
+    const { test, reading, multi } = await seedIelts();
+    const { body: attempt } = await testApp
+      .http()
+      .post('/api/student/attempts')
+      .auth(webToken, { type: 'bearer' })
+      .send({
+        testId: test.id,
+        mode: AttemptMode.SECTION,
+        sectionIds: [reading.id],
+      })
+      .expect(201);
+
+    const res = track(await content(attempt.id).expect(200));
+
+    expect(res.body.testSections).toMatchObject([
+      {
+        id: reading.id,
+        testParts: [{ questionGroups: [{ questions: [{ id: multi.id }] }] }],
+      },
+    ]);
+  });
+
   it('returns 404 for an unknown attempt id', async () => {
     const id = randomUUID();
-    for (const res of [await get(id), await result(id)]) {
+    for (const res of [await get(id), await result(id), await content(id)]) {
       expect(res.status).toBe(404);
       expect(res.body.code).toBe('ATTEMPT_NOT_FOUND');
     }

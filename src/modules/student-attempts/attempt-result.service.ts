@@ -11,6 +11,7 @@ import { AttemptAnswer } from '../../entities/attempt-answer.entity.js';
 import { Attempt } from '../../entities/attempt.entity.js';
 import { Media } from '../../entities/media.entity.js';
 import { AttemptErrorCode, AttemptStatus } from '../../types/attempt.type.js';
+import { StudentTestsService } from '../student-tests/student-tests.service.js';
 import { maxScoreOf } from './attempt-grader.js';
 import { AttemptTreeService } from './attempt-tree.service.js';
 import { toListItemDto } from './attempt.mapper.js';
@@ -28,7 +29,31 @@ export class AttemptResultService {
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
     private readonly treeService: AttemptTreeService,
+    private readonly studentTestsService: StudentTestsService,
   ) {}
+
+  async content(userId: string, id: string) {
+    const attempt = await this.attemptRepository
+      .createQueryBuilder('a')
+      .leftJoin('a.attemptSections', 's')
+      .select(['a.id', 'a.testId', 's.id', 's.sectionId'])
+      .where('a.id = :id AND a.userId = :userId', { id, userId })
+      .getOne();
+    const content =
+      attempt &&
+      (await this.studentTestsService.findContent(
+        attempt.testId,
+        attempt.attemptSections.map((s) => s.sectionId),
+      ));
+    if (!content) {
+      throw fail(
+        HttpStatus.NOT_FOUND,
+        AttemptErrorCode.ATTEMPT_NOT_FOUND,
+        'Attempt not found',
+      );
+    }
+    return content;
+  }
 
   async result(userId: string, id: string): Promise<AttemptResultDto> {
     const attempt = await this.attemptRepository
