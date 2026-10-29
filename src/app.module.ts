@@ -22,6 +22,7 @@ import { QuestionsModule } from './modules/questions/questions.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { StudentAttemptsModule } from './modules/student-attempts/student-attempts.module.js';
 import { StudentTestsModule } from './modules/student-tests/student-tests.module.js';
+import { TestImportModule } from './modules/test-import/test-import.module.js';
 import { TestPartsModule } from './modules/test-parts/test-parts.module.js';
 import { TestSectionsModule } from './modules/test-sections/test-sections.module.js';
 import { TestsModule } from './modules/tests/tests.module.js';
@@ -64,6 +65,7 @@ import { CaslModule } from './shared/casl/casl.module.js';
     TestPartsModule,
     QuestionGroupsModule,
     QuestionsModule,
+    TestImportModule,
     MediaModule,
     CaslModule,
   ],

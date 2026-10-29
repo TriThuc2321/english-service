@@ -6496,6 +6496,91 @@
         "summary": "Reorder questions of a group",
         "tags": ["Questions"]
       }
+    },
+    "/api/tests/import": {
+      "post": {
+        "operationId": "TestImport_import",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportTestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestImportResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a DRAFT test with its sections, parts, new passages, groups and questions in one transaction",
+        "tags": ["Tests"]
+      }
     }
   },
   "info": {
@@ -9886,6 +9971,250 @@
           }
         },
         "required": ["ids"]
+      },
+      "ImportPassageDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "markedBy": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MarkedBy"
+              }
+            ]
+          },
+          "paragraphs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["title", "markedBy", "paragraphs"]
+      },
+      "ImportEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "paragraph": {
+            "type": "number",
+            "example": 3,
+            "description": "1-based index into the paragraphs of the part passage"
+          },
+          "quote": {
+            "type": "string",
+            "description": "Copied verbatim from the paragraph"
+          }
+        }
+      },
+      "ImportQuestionDto": {
+        "type": "object",
+        "properties": {
+          "numberFrom": {
+            "type": "number",
+            "example": 23
+          },
+          "numberTo": {
+            "type": "number",
+            "example": 24,
+            "description": "Defaults to numberFrom; higher for \"Choose TWO\""
+          },
+          "prompt": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "See docs/question-formats.md"
+          },
+          "answer": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "keys": ["C", "D"]
+            },
+            "description": "{\"key\"} | {\"keys\"} | {\"accepted\"} | {\"sample\",\"rubric\"?}"
+          },
+          "explanation": {
+            "type": "string",
+            "nullable": true
+          },
+          "evidence": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImportEvidenceDto"
+              }
+            ]
+          }
+        },
+        "required": ["numberFrom", "answer"]
+      },
+      "ImportGroupDto": {
+        "type": "object",
+        "properties": {
+          "questionType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "wordLimit": {
+            "type": "number",
+            "nullable": true,
+            "example": 2
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "See docs/question-formats.md"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportQuestionDto"
+            }
+          }
+        },
+        "required": ["questionType", "questions"]
+      },
+      "ImportPartDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "passage": {
+            "nullable": true,
+            "description": "Created as a new DRAFT passage",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImportPassageDto"
+              }
+            ]
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportGroupDto"
+            }
+          }
+        },
+        "required": ["groups"]
+      },
+      "ImportSectionDto": {
+        "type": "object",
+        "properties": {
+          "skill": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true,
+            "example": 60
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportPartDto"
+            }
+          }
+        },
+        "required": ["skill", "parts"]
+      },
+      "ImportTestDto": {
+        "type": "object",
+        "properties": {
+          "examType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Cambridge IELTS 18 - Test 1"
+          },
+          "slug": {
+            "type": "string",
+            "example": "cambridge-ielts-18-test-1",
+            "description": "URL identifier for the student site; generated from the title when omitted. Cannot change once the test has been published"
+          },
+          "source": {
+            "type": "string",
+            "example": "Cambridge 18"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "description": "Overall limit (TOEIC LR = 120)"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportSectionDto"
+            }
+          }
+        },
+        "required": ["examType", "title", "sections"]
+      },
+      "ImportWarningDto": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["warning"]
+          },
+          "path": {
+            "type": "string",
+            "example": "sections[0].parts[1].groups[0].questions[2]"
+          },
+          "message": {
+            "type": "string",
+            "example": "answer \"roads\" to 3 is not in the passage"
+          }
+        },
+        "required": ["severity", "path", "message"]
+      },
+      "TestImportResultDto": {
+        "type": "object",
+        "properties": {
+          "test": {
+            "$ref": "#/components/schemas/TestDetailDto"
+          },
+          "warnings": {
+            "description": "Non-blocking findings for the reviewer; errors reject the import with 400",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportWarningDto"
+            }
+          }
+        },
+        "required": ["test", "warnings"]
       }
     }
   }

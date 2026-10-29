@@ -127,14 +127,7 @@ export class TestsService {
       normalized.map((s) => s.skill),
     );
 
-    let slug: string;
-    if (dto.slug) {
-      await this.assertSlugAvailable(dto.slug);
-      slug = dto.slug;
-    } else {
-      slug = await this.generateSlug(dto.title);
-    }
-
+    const slug = await this.resolveSlug(dto);
     const test = await this.testRepository.save({
       ...rest,
       slug,
@@ -236,6 +229,15 @@ export class TestsService {
     if (new Set(skills).size !== skills.length) {
       throw new BadRequestException('Each skill can appear only once per test');
     }
+  }
+
+  async resolveSlug({ title, slug }: { title: string; slug?: string }) {
+    if (!slug) {
+      return this.generateSlug(title);
+    }
+    await this.assertSlugAvailable(slug);
+
+    return slug;
   }
 
   private async assertSlugAvailable(slug: string, exceptId?: number) {
