@@ -3,13 +3,16 @@ import { BadRequestException } from '@nestjs/common';
 import { QuestionType } from '../../types/test.type.js';
 import { type Fail, isNonEmptyString, isPlainObject } from './json-shape.js';
 
-type AnswerKind = 'key' | 'keys' | 'accepted' | 'sample';
+export type AnswerKind = 'key' | 'keys' | 'accepted' | 'sample';
 
 const KEY = ['key'] as const;
 const ACCEPTED = ['accepted'] as const;
 const SAMPLE = ['sample'] as const;
 
-const QUESTION_ANSWER_KINDS: Record<QuestionType, readonly AnswerKind[]> = {
+export const QUESTION_ANSWER_KINDS: Record<
+  QuestionType,
+  readonly AnswerKind[]
+> = {
   [QuestionType.MULTIPLE_CHOICE]: KEY,
   [QuestionType.MULTIPLE_CHOICE_MULTI]: ['keys'],
   [QuestionType.TRUE_FALSE_NOT_GIVEN]: KEY,
@@ -41,6 +44,13 @@ const QUESTION_ANSWER_KINDS: Record<QuestionType, readonly AnswerKind[]> = {
   [QuestionType.WRITE_SENTENCE_PICTURE]: SAMPLE,
   [QuestionType.RESPOND_WRITTEN_REQUEST]: SAMPLE,
   [QuestionType.OPINION_ESSAY]: SAMPLE,
+};
+
+export const FIXED_ANSWER_KEYS: Partial<
+  Record<QuestionType, ReadonlySet<string>>
+> = {
+  [QuestionType.TRUE_FALSE_NOT_GIVEN]: new Set(['TRUE', 'FALSE', 'NOT GIVEN']),
+  [QuestionType.YES_NO_NOT_GIVEN]: new Set(['YES', 'NO', 'NOT GIVEN']),
 };
 
 const SHAPES: Record<AnswerKind, string> = {
@@ -90,10 +100,14 @@ export function assertValidAnswer(
   }
 
   const value = answer[kind];
+  const fixedKeys = FIXED_ANSWER_KEYS[type];
   switch (kind) {
     case 'key':
     case 'sample':
       if (!isNonEmptyString(value)) fail(`${kind} must be a non-empty string`);
+      if (kind === 'key' && fixedKeys && !fixedKeys.has(value as string)) {
+        fail(`key must be one of ${[...fixedKeys].join(', ')}`);
+      }
       if (
         kind === 'sample' &&
         answer.rubric !== undefined &&

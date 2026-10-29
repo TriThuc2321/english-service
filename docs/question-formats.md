@@ -39,6 +39,8 @@ Quy tắc chung:
 
 **In đậm** = bắt buộc.
 
+`key` của TRUE_FALSE_NOT_GIVEN chỉ nhận `TRUE`, `FALSE`, `NOT GIVEN`; của YES_NO_NOT_GIVEN chỉ nhận `YES`, `NO`, `NOT GIVEN` (viết hoa, có dấu cách).
+
 ## group.content
 
 ```jsonc

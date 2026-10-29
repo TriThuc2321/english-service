@@ -20,6 +20,7 @@ import { PermissionsModule } from './modules/permissions/permissions.module.js';
 import { QuestionGroupsModule } from './modules/question-groups/question-groups.module.js';
 import { QuestionsModule } from './modules/questions/questions.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
+import { StudentAttemptsModule } from './modules/student-attempts/student-attempts.module.js';
 import { StudentTestsModule } from './modules/student-tests/student-tests.module.js';
 import { TestPartsModule } from './modules/test-parts/test-parts.module.js';
 import { TestSectionsModule } from './modules/test-sections/test-sections.module.js';
@@ -57,6 +58,7 @@ import { CaslModule } from './shared/casl/casl.module.js';
     PassagesModule,
     ParagraphsModule,
     TestsModule,
+    StudentAttemptsModule,
     StudentTestsModule,
     TestSectionsModule,
     TestPartsModule,
