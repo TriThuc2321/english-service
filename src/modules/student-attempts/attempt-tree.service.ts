@@ -3,7 +3,7 @@ import { DataSource, EntityManager } from 'typeorm';
 
 import { Test } from '../../entities/test.entity.js';
 import { QuestionType, SkillType } from '../../types/test.type.js';
-import { FIXED_ANSWER_KEYS } from '../questions/question-answer.js';
+import { answerKeysOf } from '../questions/answer-text.js';
 
 export interface ITreeQuestion {
   id: number;
@@ -30,17 +30,6 @@ export interface IAttemptTree {
 }
 
 const GRADED_SKILLS = [SkillType.LISTENING, SkillType.READING];
-
-function optionKeys(content?: Record<string, unknown> | null) {
-  const options = content?.options;
-  if (!Array.isArray(options)) {
-    return null;
-  }
-  const keys = options
-    .map((o: unknown) => (o as { key?: unknown } | null)?.key)
-    .filter((k): k is string => typeof k === 'string');
-  return new Set(keys);
-}
 
 @Injectable()
 export class AttemptTreeService {
@@ -119,8 +108,6 @@ export class AttemptTreeService {
         add(p.audioMediaId);
         for (const g of p.questionGroups) {
           add(g.audioMediaId);
-          const fixedKeys = FIXED_ANSWER_KEYS[g.questionType];
-          const groupKeys = optionKeys(g.content);
           for (const q of g.questions) {
             add(q.audioMediaId);
             questions.set(q.id, {
@@ -130,7 +117,7 @@ export class AttemptTreeService {
               wordLimit: g.wordLimit ?? null,
               numberFrom: q.numberFrom,
               numberTo: q.numberTo,
-              keys: fixedKeys ?? optionKeys(q.content) ?? groupKeys,
+              keys: answerKeysOf(g.questionType, g.content, q.content),
             });
           }
         }

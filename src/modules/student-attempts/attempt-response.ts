@@ -16,6 +16,18 @@ export type { ITreeQuestion } from './attempt-tree.service.js';
 
 const MAX_TEXT_LENGTH = 255;
 
+// A word-bank summary is answered with a key, a free-text one with text
+function responseField(q: ITreeQuestion): 'key' | 'keys' | 'text' | null {
+  const kinds = QUESTION_ANSWER_KINDS[q.questionType];
+  if (kinds.includes('keys')) return 'keys';
+  if (q.questionType === QuestionType.SUMMARY_COMPLETION) {
+    return q.keys !== null ? 'key' : 'text';
+  }
+  if (kinds.includes('key')) return 'key';
+  if (kinds.includes('accepted')) return 'text';
+  return null;
+}
+
 export function parseResponse(
   q: ITreeQuestion,
   raw: unknown,
@@ -30,23 +42,9 @@ export function parseResponse(
     );
   };
 
-  const kinds = QUESTION_ANSWER_KINDS[q.questionType];
-  const isSummary = q.questionType === QuestionType.SUMMARY_COMPLETION;
-  const field = kinds.includes('keys')
-    ? 'keys'
-    : isSummary
-      ? q.keys !== null
-        ? 'key'
-        : 'text'
-      : kinds.includes('key')
-        ? 'key'
-        : kinds.includes('accepted')
-          ? 'text'
-          : null;
-
+  const field = responseField(q);
   if (field === null) {
     fail('this question cannot be answered automatically');
-    return null;
   }
   if (!isPlainObject(raw)) {
     fail('expected an object');

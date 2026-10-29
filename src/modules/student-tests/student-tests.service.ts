@@ -112,11 +112,14 @@ export class StudentTestsService {
     const [data, totalCount] = await qb
       .orderBy('t.publishedAt', 'DESC')
       .addOrderBy('t.id', 'DESC')
-      .addOrderBy('s.order', 'ASC')
-      .addOrderBy('s.id', 'ASC')
       .skip((page - 1) * take)
       .take(take)
       .getManyAndCount();
+
+    // Ordering by a joined column would make TypeORM page over section rows
+    for (const test of data) {
+      test.testSections.sort((a, b) => a.order - b.order || a.id - b.id);
+    }
 
     return new PaginationDto(data, new PageMetaDto({ page, take, totalCount }));
   }

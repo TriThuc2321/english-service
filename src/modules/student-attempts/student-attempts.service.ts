@@ -262,6 +262,10 @@ export class StudentAttemptsService {
     );
   }
 
+  async expireIfOverdue(userId: string, id: string): Promise<void> {
+    await this.withAttempt(userId, id, new Date(), false, async () => {});
+  }
+
   saveAnswers(
     userId: string,
     id: string,

@@ -132,6 +132,31 @@ describe('Student tests', () => {
     expect(res.body.data[0].examType).toBe(ExamType.TOEIC_LR);
   });
 
+  it('paginates by test, not by test section', async () => {
+    for (let i = 0; i < 2; i++) {
+      const test = await createTest({ title: `Paged ${i}` });
+      await testApp.dataSource.getRepository(TestSection).save([
+        { testId: test.id, skill: SkillType.READING, order: 1 },
+        { testId: test.id, skill: SkillType.LISTENING, order: 0 },
+      ]);
+    }
+
+    const pages = await Promise.all(
+      [1, 2].map((page) =>
+        getList(`?search=Paged&take=1&page=${page}`).expect(200),
+      ),
+    );
+
+    for (const res of pages) {
+      expect(res.body.meta.totalCount).toBe(2);
+      expect(res.body.data).toHaveLength(1);
+      expect(
+        res.body.data[0].testSections.map((s: TestSection) => s.skill),
+      ).toEqual([SkillType.LISTENING, SkillType.READING]);
+    }
+    expect(pages[0].body.data[0].id).not.toBe(pages[1].body.data[0].id);
+  });
+
   it('returns the full content of a test without answers', async () => {
     const test = await createTest();
     const [listening, reading] = await testApp.dataSource

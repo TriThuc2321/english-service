@@ -2,6 +2,7 @@ import { AttemptMode, AttemptSectionStatus } from '../../types/attempt.type.js';
 import { ExamType } from '../../types/test.type.js';
 import {
   closeAll,
+  GRACE_MS,
   isFinished,
   openTimeline,
   reconcile,
@@ -148,6 +149,19 @@ describe('reconcile', () => {
     }
   });
 
+  it.each([
+    [ExamType.TOEIC_LR, toeicFull, min(120)],
+    [ExamType.IELTS_ACADEMIC, ieltsFull, min(30)],
+  ])('treats exactly deadline + grace as still open (%s)', (exam, open, ms) => {
+    const t = open();
+    expect(reconcile(exam, t, at(ms + GRACE_MS))).toEqual({
+      timeline: t,
+      expired: false,
+    });
+    const late = reconcile(exam, t, at(ms + GRACE_MS + 1));
+    expect(late.timeline.sections[0].status).toBe(AttemptSectionStatus.EXPIRED);
+  });
+
   it('returns a finished timeline unchanged', () => {
     const t = closeAll(toeicFull(), at(min(5)));
     const r = reconcile(ExamType.TOEIC_LR, t, at(min(500)));
@@ -227,5 +241,23 @@ describe('closeAll', () => {
     }
     expect(isFinished(t)).toBe(true);
     expect(isFinished(ieltsFull())).toBe(false);
+  });
+});
+
+describe('isFinished', () => {
+  const withStatuses = (...statuses: AttemptSectionStatus[]) => {
+    const t = ieltsFull();
+    return {
+      ...t,
+      sections: t.sections.map((s, i) => ({ ...s, status: statuses[i] })),
+    };
+  };
+
+  it.each([
+    [AttemptSectionStatus.SUBMITTED, AttemptSectionStatus.EXPIRED, true],
+    [AttemptSectionStatus.EXPIRED, AttemptSectionStatus.IN_PROGRESS, false],
+    [AttemptSectionStatus.SUBMITTED, AttemptSectionStatus.NOT_STARTED, false],
+  ])('%s + %s -> %s', (first, second, finished) => {
+    expect(isFinished(withStatuses(first, second))).toBe(finished);
   });
 });

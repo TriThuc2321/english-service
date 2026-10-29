@@ -537,12 +537,14 @@ describe('Student attempts', () => {
     await start(test.id).expect(201);
 
     const pages = await Promise.all(
-      [1, 2].map((page) =>
-        testApp
-          .http()
-          .get(`/api/student/attempts?testId=${test.id}&take=1&page=${page}`)
-          .auth(webToken, { type: 'bearer' })
-          .expect(200),
+      [1, 2].map(async (page) =>
+        track(
+          await testApp
+            .http()
+            .get(`/api/student/attempts?testId=${test.id}&take=1&page=${page}`)
+            .auth(webToken, { type: 'bearer' })
+            .expect(200),
+        ),
       ),
     );
 
@@ -683,6 +685,32 @@ describe('Student attempts', () => {
     expect(res.body.transcripts).toEqual([
       { mediaId: withTranscript.id, transcript: 'hello' },
     ]);
+  });
+
+  it('expires an overdue attempt on /result and returns its review', async () => {
+    const { test, mcq } = await seedIelts();
+    const { body: attempt } = await start(test.id).expect(201);
+    await save(attempt.id, [
+      { questionId: mcq.id, response: { key: 'B' } },
+    ]).expect(200);
+    await backdateOpenSections(attempt.id);
+
+    const res = await result(attempt.id).expect(200);
+
+    expect(res.body.attempt.status).toBe(AttemptStatus.EXPIRED);
+    expect(res.body.questions[0]).toMatchObject({
+      questionId: mcq.id,
+      isCorrect: true,
+      answer: { key: 'B' },
+    });
+  });
+
+  it('returns 404 for an unknown attempt id', async () => {
+    const id = randomUUID();
+    for (const res of [await get(id), await result(id)]) {
+      expect(res.status).toBe(404);
+      expect(res.body.code).toBe('ATTEMPT_NOT_FOUND');
+    }
   });
 
   it('expires an overdue attempt on autosave and rejects the write', async () => {
