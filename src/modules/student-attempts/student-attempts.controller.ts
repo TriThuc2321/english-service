@@ -84,7 +84,11 @@ export class StudentAttemptsController {
     description: 'ATTEMPT_NOT_GRADED',
   })
   @CheckPermissions()
-  result(@Req() req: IRequestWithUser, @Param('id', ParseUUIDPipe) id: string) {
+  async result(
+    @Req() req: IRequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    await this.studentAttemptsService.expireIfOverdue(req.user.id, id);
     return this.attemptResultService.result(req.user.id, id);
   }
 
