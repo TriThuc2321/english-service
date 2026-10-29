@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 
 import { QuestionType } from '../../types/test.type.js';
-import { FIXED_ANSWER_KEYS } from '../questions/question-answer.js';
+import { FIXED_ANSWER_KEYS } from '../questions/answer-text.js';
 import { type ITreeQuestion, parseResponse } from './attempt-response.js';
 
 const question = (overrides: Partial<ITreeQuestion>): ITreeQuestion => ({

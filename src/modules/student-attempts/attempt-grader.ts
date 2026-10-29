@@ -1,3 +1,5 @@
+import { countWords, normalizeText } from '../questions/answer-text.js';
+
 export type AttemptResponse =
   | { key: string }
   | { keys: string[] }
@@ -20,21 +22,6 @@ const WRONG: IGrade = { isCorrect: false, score: 0 };
 
 export const maxScoreOf = (q: Pick<IGradable, 'numberFrom' | 'numberTo'>) =>
   q.numberTo - q.numberFrom + 1;
-
-export function normalizeText(value: string): string {
-  return value
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/[‘’‛]/g, "'")
-    .replace(/[“”„]/g, '"')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/^[.,;:!?"']+|[.,;:!?"']+$/g, '');
-}
-
-export function countWords(normalized: string): number {
-  return normalized ? normalized.split(' ').length : 0;
-}
 
 const asStrings = (value: unknown): string[] =>
   Array.isArray(value)

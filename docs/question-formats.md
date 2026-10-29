@@ -91,6 +91,12 @@ Quy tắc chung:
 
 Chỉ `keys` được dùng một dải số (`number_to > number_from`). Các shape khác phải có `number_to = number_from`.
 
+Đáp án còn được đối chiếu với content của câu/group (khi tạo/sửa câu, và khi sửa `question_type`/`content`/`word_limit` của group):
+
+- `key`/`keys` phải nằm trong `options` của câu (nếu có), nếu không thì của group. TFNG/YNNG dùng key cố định `TRUE`/`FALSE`/`NOT GIVEN` và `YES`/`NO`/`NOT GIVEN`.
+- SUMMARY_COMPLETION: group có `options` (word bank) thì answer là `key`, không có thì là `accepted`. Muốn chuyển giữa hai dạng phải xoá các câu rồi tạo lại.
+- Mỗi giá trị `accepted` sau normalize không được rỗng và không được vượt `word_limit`.
+
 ## evidence
 
 ```json

@@ -1,9 +1,5 @@
-import {
-  countWords,
-  gradeAnswer,
-  maxScoreOf,
-  normalizeText,
-} from './attempt-grader.js';
+import { countWords, normalizeText } from '../questions/answer-text.js';
+import { gradeAnswer, maxScoreOf } from './attempt-grader.js';
 
 const single = { numberFrom: 1, numberTo: 1 };
 const multi = { numberFrom: 21, numberTo: 22 };

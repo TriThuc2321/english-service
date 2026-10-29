@@ -18,7 +18,7 @@ import {
   ReorderQuestionsDto,
   UpdateQuestionDto,
 } from './dto/questions.dto.js';
-import { assertValidAnswer } from './question-answer.js';
+import { assertAnswerFitsGroup, assertValidAnswer } from './question-answer.js';
 import {
   assertValidEvidence,
   assertValidQuestionContent,
@@ -64,6 +64,7 @@ export class QuestionsService {
     const numberTo = dto.numberTo ?? dto.numberFrom;
     assertValidAnswer(group.questionType, { ...dto, numberTo });
     assertValidQuestionContent(group.questionType, dto.content, dto.numberFrom);
+    assertAnswerFitsGroup(group.questionType, group, dto);
     assertValidEvidence(dto.evidence, dto.numberFrom);
     await this.mediaValidator.assertRefs(dto, MediaScope.TEST);
 
@@ -114,6 +115,9 @@ export class QuestionsService {
     }
     if (dto.evidence !== undefined) {
       assertValidEvidence(dto.evidence, numberFrom);
+    }
+    if (dto.answer !== undefined || dto.content !== undefined) {
+      assertAnswerFitsGroup(group.questionType, group, { ...question, ...dto });
     }
     await this.mediaValidator.assertRefs(dto, MediaScope.TEST);
 

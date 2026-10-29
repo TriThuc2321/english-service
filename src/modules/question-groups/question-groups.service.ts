@@ -13,7 +13,10 @@ import { MediaScope } from '../../types/media.type.js';
 import { TestStatus } from '../../types/test.type.js';
 import { MediaValidator } from '../media/media.validator.js';
 import { PassagesService } from '../passages/passages.service.js';
-import { assertValidAnswer } from '../questions/question-answer.js';
+import {
+  assertAnswerFitsGroup,
+  assertValidAnswer,
+} from '../questions/question-answer.js';
 import {
   assertValidEvidence,
   assertValidGroupContent,
@@ -114,6 +117,7 @@ export class QuestionGroupsService {
       assertValidAnswer(dto.questionType, q);
       assertValidQuestionContent(dto.questionType, q.content, q.numberFrom);
       assertValidEvidence(q.evidence, q.numberFrom);
+      assertAnswerFitsGroup(dto.questionType, rest, q);
     }
 
     await this.mediaValidator.assertRefs(rest, MediaScope.TEST);
@@ -153,14 +157,18 @@ export class QuestionGroupsService {
       rest.questionType !== group.questionType;
     const questionType = rest.questionType ?? group.questionType;
 
+    const content = rest.content !== undefined ? rest.content : group.content;
+    const wordLimit =
+      rest.wordLimit !== undefined ? rest.wordLimit : group.wordLimit;
     if (typeChanged || rest.content !== undefined) {
-      assertValidGroupContent(
-        questionType,
-        rest.content !== undefined ? rest.content : group.content,
-      );
+      assertValidGroupContent(questionType, content);
     }
 
-    if (typeChanged) {
+    if (
+      typeChanged ||
+      rest.content !== undefined ||
+      rest.wordLimit !== undefined
+    ) {
       const questions = await this.questionRepository.find({
         select: {
           id: true,
@@ -172,8 +180,11 @@ export class QuestionGroupsService {
         where: { groupId: id },
       });
       for (const q of questions) {
-        assertValidAnswer(questionType, q);
-        assertValidQuestionContent(questionType, q.content, q.numberFrom);
+        if (typeChanged) {
+          assertValidAnswer(questionType, q);
+          assertValidQuestionContent(questionType, q.content, q.numberFrom);
+        }
+        assertAnswerFitsGroup(questionType, { content, wordLimit }, q);
       }
     }
 
