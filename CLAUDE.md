@@ -77,7 +77,7 @@ NestJS (v12) API using ESM (`"type": "module"`, `nodenext` module resolution —
 
 Sequence diagrams for the backoffice (`bo`) and student BFF (`web`) flows live in `docs/auth-flow.md` — keep them in sync when changing auth.
 
-Global guard chain, applied in `app.module.ts` via `APP_GUARD` in this order: `ThrottlerGuard` → `JwtAuthGuard` → `PermissionGuard`.
+Global guard chain, applied in `app.module.ts` via `APP_GUARD` in this order: `ThrottleGuard` → `JwtAuthGuard` → `PermissionGuard`. `ThrottleGuard` (`shared/throttle/`) is in-house instead of `@nestjs/throttler`: that package is CommonJS and `require()`s the ESM-only `@nestjs/common`, which Vercel's function loader can't do — don't add CommonJS deps that `require()` Nest packages.
 
 - **`JwtAuthGuard`** (`modules/auth/guards/jwt.guard.ts`): passport `jwt` strategy (Bearer header, `JWT_SECRET`); bypassed only by `@Public()`.
 - **`PermissionGuard`** (`modules/auth/guards/permission.guard.ts`): reads `@CheckPermissions(...)` metadata and checks it against a CASL `AppAbility` built from the JWT's embedded `permissions` array (`CaslAbilityFactory.createForUser`). **Default-deny**: if a handler has neither `@Public()` nor `@CheckPermissions()`, `canActivate` returns `false` — every new endpoint must be explicitly annotated with one or the other, or it is unreachable.

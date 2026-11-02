@@ -35,7 +35,7 @@ flowchart LR
   BE <--> G
 ```
 
-Guard chain của BE cho mọi request: `ThrottlerGuard` → `JwtAuthGuard` (bỏ qua nếu `@Public`) → `PermissionGuard` (`@Clients` + `@CheckPermissions`, mặc định deny).
+Guard chain của BE cho mọi request: `ThrottleGuard` → `JwtAuthGuard` (bỏ qua nếu `@Public`) → `PermissionGuard` (`@Clients` + `@CheckPermissions`, mặc định deny).
 
 ## 2. Backoffice
 
