@@ -23,13 +23,13 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 
 import {
   type GoogleConfig,
   googleConfig,
 } from '../../configs/google.config.js';
 import { ErrorResponseDto } from '../../shared/dto/index.js';
+import { Throttle } from '../../shared/throttle/throttle.decorator.js';
 import {
   AuthClient,
   isServerClient,
@@ -51,7 +51,7 @@ import { LoginDto, LogoutDto, RefreshDto } from './dto/auth.dto.js';
 import { GoogleAuthGuard } from './guards/google.guard.js';
 import { nonceMatches, parseOAuthState } from './oauth-state.js';
 
-const AUTH_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
+const AUTH_THROTTLE = { limit: 10, ttl: 60_000 };
 
 @Controller('auth')
 @ApiTags('Auth')

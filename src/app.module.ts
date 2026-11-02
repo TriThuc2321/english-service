@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { corsConfig } from './configs/cors.config.js';
@@ -27,6 +26,7 @@ import { TestPartsModule } from './modules/test-parts/test-parts.module.js';
 import { TestSectionsModule } from './modules/test-sections/test-sections.module.js';
 import { TestsModule } from './modules/tests/tests.module.js';
 import { CaslModule } from './shared/casl/casl.module.js';
+import { ThrottleGuard } from './shared/throttle/throttle.guard.js';
 
 @Module({
   imports: [
@@ -40,14 +40,6 @@ import { CaslModule } from './shared/casl/casl.module.js';
         storageConfig,
       ],
       validate: validateEnv,
-    }),
-    ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: 60000,
-          limit: 300,
-        },
-      ],
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -71,7 +63,7 @@ import { CaslModule } from './shared/casl/casl.module.js';
   ],
   controllers: [],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: ThrottleGuard },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
