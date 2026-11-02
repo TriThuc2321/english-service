@@ -16,7 +16,6 @@ export class Media {
     name: 'scope',
     type: 'enum',
     enum: MediaScope,
-    enumName: 'media_scope_enum',
   })
   scope: MediaScope;
 
@@ -27,7 +26,6 @@ export class Media {
     name: 'kind',
     type: 'enum',
     enum: MediaKind,
-    enumName: 'media_kind_enum',
   })
   kind: MediaKind;
 

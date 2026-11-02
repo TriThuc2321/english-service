@@ -4,8 +4,8 @@ import { inject } from 'vitest';
 
 const db = inject('db');
 
-// Each test file gets its own empty database, so the schema synced by
-// TypeORM and the seeded roles/permissions never leak between files.
+// Each test file gets its own empty database, so the migrated schema and the
+// seeded roles/permissions never leak between files.
 const database = `e2e_${randomUUID().replaceAll('-', '')}`;
 const client = new pg.Client({
   host: db.host,
@@ -26,7 +26,6 @@ Object.assign(process.env, {
   DATABASE_USERNAME: db.username,
   DATABASE_PASSWORD: db.password,
   DATABASE_NAME: database,
-  DATABASE_SYNC: 'true',
   DATABASE_SSL: 'false',
   JWT_SECRET: 'test-access-secret-at-least-32-characters',
   JWT_SECRET_REFRESH: 'test-refresh-secret-at-least-32-characters',

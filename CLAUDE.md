@@ -16,6 +16,12 @@ pnpm format               # oxfmt . (writes)
 pnpm format:check         # oxfmt --check .
 pnpm openapi:generate     # build + write openapi.json (FE contract, commit it)
 
+pnpm migration:generate src/migrations/AddFoo  # build + diff entities vs DB → new migration
+pnpm migration:create src/migrations/AddFoo    # empty migration (data fixes, hand-written SQL)
+pnpm migration:run        # apply pending migrations from dist/ (build first)
+pnpm migration:revert     # undo the last one
+pnpm migration:show       # list applied/pending
+
 pnpm test                 # vitest run (unit, src/**/*.spec.ts)
 pnpm test:watch           # vitest watch mode
 pnpm test:cov             # vitest run --coverage
@@ -36,12 +42,20 @@ Lint/format are handled by **oxlint** and **oxfmt**, not ESLint/Prettier — the
 ### Tests
 
 - Unit specs sit next to the code (`src/**/*.spec.ts`) and need no DB. Vite 8's transform honours `emitDecoratorMetadata` from `tsconfig.json`, so Nest DI works in specs with no swc plugin.
-- E2E specs live in `test/`. `test/global-setup.ts` starts one `postgres:16-alpine` Testcontainer per run; `test/setup-env.ts` creates a fresh database per test file and sets every required env var (so a local `.env` is never used). Files run sequentially.
-- `createTestApp()` (`test/utils/app.ts`) boots the real `AppModule` with `configureApp` (`src/app.setup.ts`, shared with `main.ts`), replaces `StorageService` with `vi.fn()` fakes, and feeds TypeORM the entity classes imported through Vite — TypeORM's own `.ts` glob uses native `import()` and can't load them.
+- E2E specs live in `test/`. `test/global-setup.ts` starts one `postgres:16-alpine` Testcontainer per run; `test/setup-env.ts` creates a fresh database per test file (migrated on boot) and sets every required env var (so a local `.env` is never used). Files run sequentially.
+- `createTestApp()` (`test/utils/app.ts`) boots the real `AppModule` with `configureApp` (`src/app.setup.ts`, shared with `main.ts`), replaces `StorageService` with `vi.fn()` fakes, and feeds TypeORM the entity and migration classes imported through Vite — TypeORM's own `.ts` glob uses native `import()` and can't load them.
 - `test/utils/fixtures.ts`: `createUser` (system role via `roleCode`, or a CMS role holding exactly `permissions`), `loginBo`/`loginWeb`, `sessionsOf`. The refresh cookie is `secure`, so pass it back with `.set('Cookie', cookie)` — supertest won't replay it over http.
 - Auth routes are throttled to 10/min per handler and the throttler state lives per app instance — keep each file under 10 calls per auth route, or split the file.
 
-Copy `.env.example` to `.env`; required vars are validated at boot (see below). There are no TypeORM migrations — the schema comes from `DATABASE_SYNC=true` (`synchronize`), so entity changes are applied directly to the DB on start.
+Copy `.env.example` to `.env`; required vars are validated at boot (see below).
+
+### Migrations
+
+The schema is owned by TypeORM migrations in `src/migrations/` — `synchronize` is never on, in any environment. Every entity change needs a migration in the same PR: `pnpm migration:generate src/migrations/<Name>` diffs the entities against the DB in `.env`, so run it against a DB that is migrated up to `main`. Review the generated SQL — a column rename comes out as drop + add (data loss); rewrite it as `RENAME COLUMN`. The generator also emits `CREATE TYPE`/`DROP TYPE` once per column for enum types shared across tables (`status_enum`, `exam_type_enum`, `skill_enum`) — keep only the first create and the last drop. Don't set `enumName` to TypeORM's default `<table>_<column>_enum`: it reports a phantom diff on every check.
+
+The CLI runs on the compiled `dist/data-source.js` (decorators can't run through Node's type stripping) and reads `.env` via `--env-file-if-exists`; real env vars win over it. Deployments run `pnpm migration:run` before starting the app. E2E apps run all migrations on boot (`migrationsRun`), and `test/migrations.e2e-spec.ts` fails if the migrated schema differs from the entities or doesn't revert cleanly — that's what catches a forgotten migration in CI.
+
+Deployment (Railway, `dev`/`main` environments) is described in `docs/deployment.md`.
 
 ## Architecture
 
