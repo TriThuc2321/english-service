@@ -16,9 +16,9 @@ import { StorageService } from '../../src/shared/storage/storage.service.js';
 // Not exported by @nestjs/typeorm; the provider forRootAsync registers its options under
 const TYPEORM_MODULE_OPTIONS = 'TypeOrmModuleOptions';
 
-// TypeORM's entity glob uses Node's native import(), which can't load .ts
+// TypeORM's entity/migration globs use Node's native import(), which can't load .ts
 // sources and would create class copies separate from the ones Vite hands to
-// the services, so the entities are imported through Vite instead.
+// the services, so both are imported through Vite instead.
 const entitiesDir = fileURLToPath(
   new URL('../../src/entities', import.meta.url),
 );
@@ -26,6 +26,20 @@ for (const file of readdirSync(entitiesDir)) {
   if (file.endsWith('.entity.ts')) await import(join(entitiesDir, file));
 }
 const entities = getMetadataArgsStorage().tables.map(({ target }) => target);
+
+const migrationsDir = fileURLToPath(
+  new URL('../../src/migrations', import.meta.url),
+);
+const migrations: Function[] = [];
+for (const file of readdirSync(migrationsDir)) {
+  if (file.endsWith('.ts')) {
+    migrations.push(
+      ...Object.values(await import(join(migrationsDir, file))).filter(
+        (value): value is Function => typeof value === 'function',
+      ),
+    );
+  }
+}
 
 const createFakeStorage = () => ({
   uploadUrlTtl: 600,
@@ -44,6 +58,8 @@ export async function createTestApp() {
       factory: (config: ConfigService) => ({
         ...getDbOption(config),
         entities,
+        migrations,
+        migrationsRun: true,
       }),
       inject: [ConfigService],
     })

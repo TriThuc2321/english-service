@@ -19,7 +19,6 @@ export const databaseConfig = registerAs('database', () => ({
   username: process.env.DATABASE_USERNAME,
   password: process.env.DATABASE_PASSWORD,
   name: process.env.DATABASE_NAME,
-  sync: process.env.DATABASE_SYNC === 'true',
   ssl: process.env.DATABASE_SSL === 'true',
   sslCa: process.env.DATABASE_SSL_CA,
 }));
@@ -38,21 +37,25 @@ const getSslOption = (
   return { rejectUnauthorized: true };
 };
 
-export const getDbOption = (
-  configService: ConfigService,
-): DataSourceOptions => {
-  const { host, port, username, password, name, sync, ssl, sslCa } =
-    configService.get<DatabaseConfig>('database') ?? {};
+export const toDataSourceOptions = ({
+  host,
+  port,
+  username,
+  password,
+  name,
+  ssl,
+  sslCa,
+}: DatabaseConfig): DataSourceOptions => ({
+  type: 'postgres',
+  host,
+  port,
+  username,
+  password,
+  database: name,
+  entities: [join(__dirname, './../entities/*.entity.{js,ts}')],
+  migrations: [join(__dirname, './../migrations/*.js')],
+  ssl: getSslOption(ssl, sslCa),
+});
 
-  return {
-    type: 'postgres',
-    host,
-    port,
-    username,
-    password,
-    database: name,
-    synchronize: sync,
-    entities: [join(__dirname, './../entities/*.entity.{js,ts}')],
-    ssl: getSslOption(ssl ?? false, sslCa),
-  };
-};
+export const getDbOption = (configService: ConfigService): DataSourceOptions =>
+  toDataSourceOptions(configService.getOrThrow<DatabaseConfig>('database'));
