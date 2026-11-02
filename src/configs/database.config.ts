@@ -2,6 +2,7 @@ import { ConfigService, ConfigType, registerAs } from '@nestjs/config';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import pg from 'pg';
 import { DataSourceOptions } from 'typeorm';
 
 type PostgresConnectionOptions = Extract<
@@ -47,6 +48,7 @@ export const toDataSourceOptions = ({
   sslCa,
 }: DatabaseConfig): DataSourceOptions => ({
   type: 'postgres',
+  driver: pg,
   host,
   port,
   username,
