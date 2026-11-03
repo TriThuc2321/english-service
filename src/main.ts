@@ -13,6 +13,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     httpsOptions,
+    abortOnError: false,
   });
 
   configureApp(app);
@@ -27,4 +28,9 @@ async function bootstrap() {
     Logger.log(`API docs on ${LOCAL_DOMAIN}:${APP_PORT}/${SWAGGER_PATH}`);
   });
 }
-await bootstrap();
+try {
+  await bootstrap();
+} catch (error) {
+  console.error('Bootstrap failed:', error);
+  process.exit(1);
+}

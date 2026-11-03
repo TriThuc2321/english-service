@@ -57,6 +57,7 @@ export const toDataSourceOptions = ({
   entities: [join(__dirname, './../entities/*.entity.{js,ts}')],
   migrations: [join(__dirname, './../migrations/*.js')],
   ssl: getSslOption(ssl, sslCa),
+  connectTimeoutMS: 10_000,
 });
 
 export const getDbOption = (configService: ConfigService): DataSourceOptions =>

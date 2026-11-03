@@ -43,7 +43,10 @@ import { ThrottleGuard } from './shared/throttle/throttle.guard.js';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: getDbOption,
+      useFactory: (configService: ConfigService) => ({
+        ...getDbOption(configService),
+        retryAttempts: 1,
+      }),
     }),
     AuthModule,
     RolesModule,
