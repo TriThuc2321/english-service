@@ -1,10 +1,12 @@
 import { AttemptMode, AttemptSectionStatus } from '../../types/attempt.type.js';
-import { ExamType } from '../../types/test.type.js';
+import { ExamType, SkillType } from '../../types/test.type.js';
 
 export const GRACE_MS = 30_000;
+export const SPEAKING_GRACE_MS = 120_000;
 
 export interface ITimelineSection {
   sectionId: number;
+  skill: SkillType;
   order: number;
   durationMinutes: number | null;
   status: AttemptSectionStatus;
@@ -26,6 +28,9 @@ const addMinutes = (from: Date, minutes: number): Date =>
 
 const isOpen = (s: ITimelineSection): boolean =>
   s.status === AttemptSectionStatus.IN_PROGRESS;
+
+const graceOf = (s: ITimelineSection): number =>
+  s.skill === SkillType.SPEAKING ? SPEAKING_GRACE_MS : GRACE_MS;
 
 const start = (s: ITimelineSection, at: Date): ITimelineSection => ({
   ...s,
@@ -58,7 +63,7 @@ export function openTimeline(
     testDurationMinutes: number | null;
     sections: Pick<
       ITimelineSection,
-      'sectionId' | 'order' | 'durationMinutes'
+      'sectionId' | 'skill' | 'order' | 'durationMinutes'
     >[];
   },
   now: Date,
@@ -124,7 +129,7 @@ export function reconcile(
     const open = sections.find(isOpen);
     if (
       !open?.deadlineAt ||
-      now.getTime() <= open.deadlineAt.getTime() + GRACE_MS
+      now.getTime() <= open.deadlineAt.getTime() + graceOf(open)
     ) {
       break;
     }

@@ -488,6 +488,7 @@ export class StudentAttemptsService {
         deadlineAt: attempt.deadlineAt ?? null,
         sections: sections.map((s) => ({
           sectionId: s.sectionId,
+          skill: sectionMeta.get(s.sectionId)?.skill ?? SkillType.LISTENING,
           order: sectionMeta.get(s.sectionId)?.order ?? 0,
           durationMinutes:
             sectionMeta.get(s.sectionId)?.durationMinutes ?? null,
