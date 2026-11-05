@@ -223,6 +223,10 @@ Paginated. Filters: `gradingStatus` (default `PENDING`, accepts `PENDING` or
 submission first. Each row has the student, the test, the skill, `submittedAt`,
 `gradingStatus`, and the current band and grader when graded.
 
+Expiry is lazy, so an abandoned attempt would otherwise stay `IN_PROGRESS` and
+never reach the queue. Each request first closes up to 50 overdue attempts,
+oldest first. A failure on one is logged and doesn't block the queue.
+
 ### `GET /grading/sections/:id`
 
 Everything a grading screen needs, per part: the prompt (content, image, audio),
@@ -296,6 +300,7 @@ E2E:
 - Missing permissions and `web` tokens are rejected.
 - A timed-out attempt stays `EXPIRED` and still reaches the queue. A blank section
   does not.
+- An abandoned attempt that nobody reads is closed when the queue loads.
 - A student can't get an upload URL for someone else's attempt.
 - No response exposes a public URL for attempt audio.
 
