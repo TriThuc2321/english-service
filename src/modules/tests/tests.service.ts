@@ -17,6 +17,7 @@ import {
   SkillType,
   TestStatus,
 } from '../../types/test.type.js';
+import { PassagesService } from '../passages/passages.service.js';
 import {
   CreateTestDto,
   DeleteTestsDto,
@@ -66,6 +67,7 @@ export class TestsService {
     @InjectRepository(Test) private testRepository: Repository<Test>,
     @InjectRepository(TestSection)
     private sectionRepository: Repository<TestSection>,
+    private passagesService: PassagesService,
   ) {}
 
   private baseQuery(columns: string[]) {
@@ -171,10 +173,19 @@ export class TestsService {
         ? new Date()
         : undefined;
 
-    await this.testRepository.update(id, {
-      ...dto,
-      ...(publishedAt && { publishedAt }),
-      auditMetadata: { updatedAt: new Date(), updatedById: actorId },
+    await this.testRepository.manager.transaction(async (manager) => {
+      await manager.update(Test, id, {
+        ...dto,
+        ...(publishedAt && { publishedAt }),
+        auditMetadata: { updatedAt: new Date(), updatedById: actorId },
+      });
+
+      if (
+        dto.status === TestStatus.PUBLISHED &&
+        test.status !== TestStatus.PUBLISHED
+      ) {
+        await this.passagesService.publishByTest(id, actorId, manager);
+      }
     });
 
     return this.findById(id);

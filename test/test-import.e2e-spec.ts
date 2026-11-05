@@ -1,6 +1,10 @@
 import type { ITestImport } from '../src/modules/test-import/test-import.type.js';
 
-import { MarkedBy, Passage } from '../src/entities/passage.entity.js';
+import {
+  MarkedBy,
+  Passage,
+  PassageStatus,
+} from '../src/entities/passage.entity.js';
 import { Question } from '../src/entities/question.entity.js';
 import { TestPart } from '../src/entities/test-part.entity.js';
 import { Test } from '../src/entities/test.entity.js';
@@ -89,6 +93,7 @@ describe('Test import', () => {
     const user = await createUser(testApp, {
       permissions: [
         [PermissionAction.CREATE, PermissionSubject.TEST],
+        [PermissionAction.UPDATE, PermissionSubject.TEST],
         [PermissionAction.CREATE, PermissionSubject.PASSAGE],
       ],
     });
@@ -149,6 +154,31 @@ describe('Test import', () => {
       },
       { numberFrom: 2, numberTo: 3, answer: { keys: ['A', 'C'] } },
     ]);
+  });
+
+  it('keeps imported passages as drafts until the test is published', async () => {
+    const res = await importTest({
+      ...document(),
+      title: 'Imported And Published',
+    }).expect(201);
+    const statusOfPassage = async () => {
+      const [part] = await testApp.dataSource.getRepository(TestPart).find({
+        where: { testSection: { testId: res.body.test.id } },
+        relations: { passage: true },
+      });
+      return part.passage!.status;
+    };
+
+    expect(await statusOfPassage()).toBe(PassageStatus.DRAFT);
+
+    await testApp
+      .http()
+      .patch(`/api/tests/${res.body.test.id}`)
+      .auth(accessToken, { type: 'bearer' })
+      .send({ status: TestStatus.PUBLISHED })
+      .expect(200);
+
+    expect(await statusOfPassage()).toBe(PassageStatus.PUBLISHED);
   });
 
   it('returns warnings without blocking the import', async () => {

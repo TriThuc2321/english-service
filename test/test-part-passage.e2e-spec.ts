@@ -7,7 +7,12 @@ import { TestPart } from '../src/entities/test-part.entity.js';
 import { TestSection } from '../src/entities/test-section.entity.js';
 import { Test } from '../src/entities/test.entity.js';
 import { PermissionAction, PermissionSubject } from '../src/types/auth.type.js';
-import { ExamType, QuestionType, SkillType } from '../src/types/test.type.js';
+import {
+  ExamType,
+  QuestionType,
+  SkillType,
+  TestStatus,
+} from '../src/types/test.type.js';
 import { createTestApp, type TestApp } from './utils/app.js';
 import { createUser, loginBo } from './utils/fixtures.js';
 
@@ -42,6 +47,44 @@ describe('Test part passage', () => {
       .patch(`/api/passages/${id}`)
       .auth(accessToken, { type: 'bearer' })
       .send({ title: 'Renamed' });
+
+  const patchPassage = (id: number, body: object) =>
+    testApp
+      .http()
+      .patch(`/api/passages/${id}`)
+      .auth(accessToken, { type: 'bearer' })
+      .send(body);
+
+  const publish = (test: Test) =>
+    testApp
+      .http()
+      .patch(`/api/tests/${test.id}`)
+      .auth(accessToken, { type: 'bearer' })
+      .send({ status: TestStatus.PUBLISHED })
+      .expect(200);
+
+  const statusOf = async (id: number) =>
+    (await testApp.dataSource.getRepository(Passage).findOneByOrFail({ id }))
+      .status;
+
+  const attachViaPart = async (section: TestSection, passageId: number) =>
+    testApp.dataSource
+      .getRepository(TestPart)
+      .save({ sectionId: section.id, order: 0, passageId });
+
+  const attachViaGroup = async (section: TestSection, passageId: number) => {
+    const part = await testApp.dataSource
+      .getRepository(TestPart)
+      .save({ sectionId: section.id, order: 1 });
+    const group = await testApp.dataSource.getRepository(QuestionGroup).save({
+      partId: part.id,
+      order: 0,
+      questionType: QuestionType.TRUE_FALSE_NOT_GIVEN,
+    });
+    await testApp.dataSource
+      .getRepository(GroupPassage)
+      .save({ groupId: group.id, passageId });
+  };
 
   beforeAll(async () => {
     testApp = await createTestApp();
@@ -151,5 +194,57 @@ describe('Test part passage', () => {
 
     await updatePassage(passage.id).expect(400);
     await updatePassage(free.id).expect(200);
+  });
+
+  it('still allows changing only the status of a locked passage', async () => {
+    const passage = await createPassage();
+    const { test, section } = await createSection();
+    await attachViaPart(section, passage.id);
+    await lock(test);
+
+    const res = await patchPassage(passage.id, {
+      status: PassageStatus.PUBLISHED,
+    }).expect(200);
+
+    expect(res.body.status).toBe(PassageStatus.PUBLISHED);
+    await patchPassage(passage.id, {
+      status: PassageStatus.DRAFT,
+      title: 'Renamed',
+    }).expect(400);
+    expect(await statusOf(passage.id)).toBe(PassageStatus.PUBLISHED);
+  });
+
+  it('publishes the passages of a test when the test is published', async () => {
+    const viaPart = await createPassage();
+    const viaGroup = await createPassage();
+    const deleted = await testApp.dataSource
+      .getRepository(Passage)
+      .save({ title: 'Gone', status: PassageStatus.DELETED });
+    const unrelated = await createPassage();
+    const { test, section } = await createSection();
+    await attachViaPart(section, viaPart.id);
+    await attachViaGroup(section, viaGroup.id);
+    await attachViaGroup(section, deleted.id);
+    const other = await createSection();
+    await attachViaPart(other.section, unrelated.id);
+
+    await publish(test);
+
+    expect(await statusOf(viaPart.id)).toBe(PassageStatus.PUBLISHED);
+    expect(await statusOf(viaGroup.id)).toBe(PassageStatus.PUBLISHED);
+    expect(await statusOf(deleted.id)).toBe(PassageStatus.DELETED);
+    expect(await statusOf(unrelated.id)).toBe(PassageStatus.DRAFT);
+  });
+
+  it('keeps a passage set back to draft when a published test is saved again', async () => {
+    const passage = await createPassage();
+    const { test, section } = await createSection();
+    await attachViaPart(section, passage.id);
+    await publish(test);
+
+    await patchPassage(passage.id, { status: PassageStatus.DRAFT }).expect(200);
+    await publish(test);
+
+    expect(await statusOf(passage.id)).toBe(PassageStatus.DRAFT);
   });
 });
