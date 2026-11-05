@@ -1,10 +1,12 @@
 import { Assessment } from '../src/entities/assessment.entity.js';
+import { Media } from '../src/entities/media.entity.js';
 import { QuestionGroup } from '../src/entities/question-group.entity.js';
 import { Question } from '../src/entities/question.entity.js';
 import { TestPart } from '../src/entities/test-part.entity.js';
 import { TestSection } from '../src/entities/test-section.entity.js';
 import { AttemptMode } from '../src/types/attempt.type.js';
 import { PermissionAction, PermissionSubject } from '../src/types/auth.type.js';
+import { MediaKind, MediaScope } from '../src/types/media.type.js';
 import { SkillType } from '../src/types/test.type.js';
 import { createTestApp, type TestApp } from './utils/app.js';
 import { createUser, loginBo, loginWeb } from './utils/fixtures.js';
@@ -131,7 +133,7 @@ describe('Grading', () => {
           WHERE attempt_id = $1 ORDER BY section_id`,
         [id],
       );
-    return { id, ids, attemptSections };
+    return { id, ids, attemptSections, testId: seeded.test.id };
   };
 
   const statusOf = async (id: string) =>
@@ -370,5 +372,366 @@ describe('Grading', () => {
     await grade(sectionId, { ...body, expectedRevision: -1 }).expect(400);
     await grade('00000000-0000-4000-8000-000000000000', body).expect(404);
     await grade(sectionId, withFeedback(5000)).expect(201);
+  });
+
+  describe('queue and review', () => {
+    const queue = (query = '', token = reader) =>
+      testApp
+        .http()
+        .get(`/api/grading/queue?take=100${query}`)
+        .auth(token, { type: 'bearer' });
+
+    const idsIn = (body: { data: Array<{ attemptSectionId: string }> }) =>
+      body.data.map((i) => i.attemptSectionId);
+
+    const startWriting = async (
+      essay: string | null,
+      examOverrides: object = {},
+    ) => {
+      const seeded = await seedExam(
+        testApp,
+        [SkillType.WRITING],
+        examOverrides,
+      );
+      const attempt = await studentCall('post', '')
+        .send({
+          testId: seeded.test.id,
+          mode: AttemptMode.SECTION,
+          sectionIds: [seeded.sections[SkillType.WRITING]!.id],
+        })
+        .expect(201);
+      if (essay !== null) {
+        await studentCall('put', `/${attempt.body.id}/answers`)
+          .send({
+            answers: [
+              {
+                questionId: seeded.questions[SkillType.WRITING]![1].id,
+                response: { text: essay },
+              },
+            ],
+          })
+          .expect(200);
+      }
+      const [row] = await testApp.dataSource.query(
+        'SELECT attempt_section_id AS id FROM attempt_sections WHERE attempt_id = $1',
+        [attempt.body.id],
+      );
+      return {
+        seeded,
+        attemptId: attempt.body.id as string,
+        sectionId: row.id,
+      };
+    };
+
+    it('lists pending sections, oldest first', async () => {
+      const a = await submittedWriting();
+      const b = await submittedWriting();
+
+      const res = await queue().expect(200);
+
+      const ids = idsIn(res.body);
+      expect(ids).toEqual(expect.arrayContaining([a.attemptSections[0].id]));
+      expect(ids.indexOf(a.attemptSections[0].id)).toBeLessThan(
+        ids.indexOf(b.attemptSections[0].id),
+      );
+      const times = res.body.data.map((i: { submittedAt: string }) =>
+        Date.parse(i.submittedAt),
+      );
+      expect(times).toEqual([...times].sort((x, y) => x - y));
+      const item = res.body.data.find(
+        (i: { attemptSectionId: string }) =>
+          i.attemptSectionId === a.attemptSections[0].id,
+      );
+      expect(item).toMatchObject({
+        attemptId: a.id,
+        gradingStatus: 'PENDING',
+        band: null,
+        grader: null,
+        skill: 'WRITING',
+        test: { id: a.testId, examType: 'IELTS_ACADEMIC' },
+      });
+      expect(item.student.id).toBeDefined();
+    });
+
+    it('filters by status, skill, test and search', async () => {
+      const a = await submittedWriting();
+      const b = await submittedWriting();
+      await grade(a.attemptSections[0].id, await writingBody(a.ids[0])).expect(
+        201,
+      );
+
+      const graded = await queue('&gradingStatus=GRADED').expect(200);
+      const item = graded.body.data.find(
+        (i: { attemptSectionId: string }) =>
+          i.attemptSectionId === a.attemptSections[0].id,
+      );
+      expect(item).toMatchObject({ gradingStatus: 'GRADED', band: 6.5 });
+      expect(item.grader.id).toBeDefined();
+      expect(idsIn(graded.body)).not.toContain(b.attemptSections[0].id);
+
+      const byTest = await queue(`&testId=${b.testId}`).expect(200);
+      expect(idsIn(byTest.body)).toEqual([b.attemptSections[0].id]);
+
+      const speaking = await queue(`&testId=${b.testId}&skill=SPEAKING`).expect(
+        200,
+      );
+      expect(speaking.body.data).toEqual([]);
+      const writing = await queue(`&testId=${b.testId}&skill=WRITING`).expect(
+        200,
+      );
+      expect(idsIn(writing.body)).toEqual([b.attemptSections[0].id]);
+
+      const email = item.student.email as string;
+      const found = await queue(
+        `&testId=${b.testId}&search=${encodeURIComponent(email.slice(1, 6))}`,
+      ).expect(200);
+      expect(idsIn(found.body)).toEqual([b.attemptSections[0].id]);
+      const none = await queue(
+        `&testId=${b.testId}&search=no-such-student-xyz`,
+      ).expect(200);
+      expect(none.body.data).toEqual([]);
+    });
+
+    it('rejects AUTO_GRADED as a queue filter', async () => {
+      await queue('&gradingStatus=AUTO_GRADED').expect(400);
+    });
+
+    it('keeps blank sections and Listening out of the queue', async () => {
+      const blank = await startWriting(null);
+      await studentCall('post', `/${blank.attemptId}/submit`).expect(201);
+      const listening = await seedExam(testApp, [SkillType.LISTENING]);
+      const attempt = await studentCall('post', '')
+        .send({
+          testId: listening.test.id,
+          mode: AttemptMode.SECTION,
+          sectionIds: [listening.sections[SkillType.LISTENING]!.id],
+        })
+        .expect(201);
+      await studentCall('post', `/${attempt.body.id}/submit`).expect(201);
+
+      const all = await queue().expect(200);
+      const done = await queue('&gradingStatus=GRADED').expect(200);
+
+      const [row] = await testApp.dataSource.query(
+        'SELECT attempt_section_id AS id FROM attempt_sections WHERE attempt_id = $1',
+        [attempt.body.id],
+      );
+      for (const body of [all.body, done.body]) {
+        expect(idsIn(body)).not.toContain(blank.sectionId);
+        expect(idsIn(body)).not.toContain(row.id);
+      }
+    });
+
+    it('still shows a timed-out attempt', async () => {
+      const { attemptId, sectionId } = await startWriting('essay');
+      await backdateOpenSections(testApp, attemptId);
+      await studentCall('get', `/${attemptId}`).expect(200);
+      expect(await statusOf(attemptId)).toBe('EXPIRED');
+
+      const res = await queue().expect(200);
+
+      expect(idsIn(res.body)).toContain(sectionId);
+    });
+
+    it('closes an abandoned attempt when the queue loads', async () => {
+      const { attemptId, sectionId } = await startWriting('essay');
+      await backdateOpenSections(testApp, attemptId);
+      expect(await statusOf(attemptId)).toBe('IN_PROGRESS');
+
+      const res = await queue().expect(200);
+
+      expect(idsIn(res.body)).toContain(sectionId);
+      expect(await statusOf(attemptId)).toBe('EXPIRED');
+    });
+
+    it('closes an abandoned blank attempt without listing it', async () => {
+      const { attemptId, sectionId } = await startWriting(null);
+      await backdateOpenSections(testApp, attemptId);
+
+      const res = await queue().expect(200);
+
+      expect(idsIn(res.body)).not.toContain(sectionId);
+      expect(await statusOf(attemptId)).toBe('EXPIRED');
+      const [row] = await testApp.dataSource.query(
+        'SELECT grading_status FROM attempt_sections WHERE attempt_section_id = $1',
+        [sectionId],
+      );
+      expect(row.grading_status).toBe('AUTO_GRADED');
+    });
+
+    it('leaves an attempt within its grace period open', async () => {
+      const { attemptId } = await startWriting('essay');
+      await testApp.dataSource.query(
+        `UPDATE attempt_sections SET deadline_at = now() - interval '10 seconds'
+          WHERE attempt_id = $1`,
+        [attemptId],
+      );
+      await testApp.dataSource.query(
+        `UPDATE attempts SET deadline_at = now() - interval '10 seconds'
+          WHERE attempt_id = $1`,
+        [attemptId],
+      );
+
+      await queue().expect(200);
+
+      expect(await statusOf(attemptId)).toBe('IN_PROGRESS');
+    });
+
+    it('keeps graded work after the test is unpublished or deleted', async () => {
+      const draft = await submittedWriting();
+      const deleted = await submittedWriting();
+      await testApp.dataSource.query(
+        `UPDATE tests SET status = 'DRAFT' WHERE test_id = $1`,
+        [draft.testId],
+      );
+      await testApp.dataSource.query(
+        `UPDATE tests SET status = 'DELETED' WHERE test_id = $1`,
+        [deleted.testId],
+      );
+
+      const res = await queue().expect(200);
+
+      for (const item of [draft, deleted]) {
+        const sectionId = item.attemptSections[0].id;
+        expect(idsIn(res.body)).toContain(sectionId);
+        await testApp
+          .http()
+          .get(`/api/grading/sections/${sectionId}`)
+          .auth(reader, { type: 'bearer' })
+          .expect(200);
+        await grade(sectionId, await writingBody(item.ids[0])).expect(201);
+      }
+    });
+
+    it('returns the grading screen', async () => {
+      const seeded = await seedExam(testApp, [SkillType.WRITING]);
+      const [task1, task2] = seeded.questions[SkillType.WRITING]!;
+      const image = await testApp.dataSource.getRepository(Media).save({
+        scope: MediaScope.TEST,
+        ownerId: String(seeded.test.id),
+        kind: MediaKind.IMAGE,
+        storageKey: `tests/${seeded.test.id}/image/chart.png`,
+      });
+      await testApp.dataSource
+        .getRepository(Question)
+        .update(task1.id, { imageMediaId: image.id });
+      const attempt = await studentCall('post', '')
+        .send({
+          testId: seeded.test.id,
+          mode: AttemptMode.SECTION,
+          sectionIds: [seeded.sections[SkillType.WRITING]!.id],
+        })
+        .expect(201);
+      await studentCall('put', `/${attempt.body.id}/answers`)
+        .send({
+          answers: [
+            {
+              questionId: task2.id,
+              response: { text: 'One two, three.\nFour' },
+            },
+          ],
+        })
+        .expect(200);
+      await studentCall('post', `/${attempt.body.id}/submit`).expect(201);
+      const [row] = await testApp.dataSource.query(
+        'SELECT attempt_section_id AS id FROM attempt_sections WHERE attempt_id = $1',
+        [attempt.body.id],
+      );
+
+      const res = await testApp
+        .http()
+        .get(`/api/grading/sections/${row.id}`)
+        .auth(reader, { type: 'bearer' })
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        attemptSectionId: row.id,
+        attemptId: attempt.body.id,
+        skill: 'WRITING',
+        gradingStatus: 'PENDING',
+        revision: 0,
+        assessment: null,
+        test: { id: seeded.test.id },
+      });
+      expect(
+        res.body.expectedEntries.map((e: { task: number }) => e.task),
+      ).toEqual([1, 2]);
+      expect(res.body.expectedEntries[0].criteria).toContain('TA');
+      expect(res.body.expectedEntries[1].criteria).toContain('TR');
+      const questions = res.body.parts.flatMap(
+        (p: { questions: object[] }) => p.questions,
+      );
+      expect(questions).toHaveLength(2);
+      expect(questions[0]).toMatchObject({
+        questionId: task1.id,
+        sample: 'Sample',
+        rubric: { TA: 'Band 7' },
+        response: null,
+        imageUrl: `http://storage.test/${image.storageKey}`,
+      });
+      expect(questions[1].response).toEqual({
+        text: 'One two, three.\nFour',
+        wordCount: 4,
+        audioUrl: null,
+      });
+    });
+
+    it('lists every revision, newest first, with the grader', async () => {
+      const { ids, attemptSections } = await submittedWriting();
+      const sectionId = attemptSections[0].id;
+      await grade(sectionId, await writingBody(ids[0])).expect(201);
+      await grade(sectionId, await writingBody(ids[0], 1, [5, 5])).expect(201);
+
+      const res = await testApp
+        .http()
+        .get(`/api/grading/sections/${sectionId}/assessments`)
+        .auth(reader, { type: 'bearer' })
+        .expect(200);
+
+      expect(res.body.map((a: { revision: number }) => a.revision)).toEqual([
+        2, 1,
+      ]);
+      expect(res.body[0].band).toBe(5.5);
+      expect(res.body[0].grader.id).toBeDefined();
+      const screen = await testApp
+        .http()
+        .get(`/api/grading/sections/${sectionId}`)
+        .auth(reader, { type: 'bearer' })
+        .expect(200);
+      expect(screen.body).toMatchObject({
+        revision: 2,
+        gradingStatus: 'GRADED',
+        assessment: { revision: 2, band: 5.5 },
+      });
+      await testApp
+        .http()
+        .get(
+          '/api/grading/sections/00000000-0000-4000-8000-000000000000/assessments',
+        )
+        .auth(reader, { type: 'bearer' })
+        .expect(404);
+    });
+
+    it('requires READ ASSESSMENT', async () => {
+      const { attemptSections } = await submittedWriting();
+      const nobody = (
+        await loginBo(testApp, await createUser(testApp, { permissions: [] }))
+      ).accessToken;
+      const id = attemptSections[0].id;
+
+      for (const path of [
+        '/queue',
+        `/sections/${id}`,
+        `/sections/${id}/assessments`,
+      ]) {
+        for (const token of [nobody, student]) {
+          await testApp
+            .http()
+            .get(`/api/grading${path}`)
+            .auth(token, { type: 'bearer' })
+            .expect(403);
+        }
+      }
+    });
   });
 });

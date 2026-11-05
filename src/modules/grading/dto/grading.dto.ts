@@ -4,6 +4,8 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsEnum,
+  IsIn,
   IsInt,
   IsObject,
   IsOptional,
@@ -12,6 +14,9 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+
+import { PageOptionsDto } from '../../../shared/dto/index.js';
+import { SkillType } from '../../../types/test.type.js';
 
 export class AssessmentEntryInputDto {
   @ApiPropertyOptional({
@@ -54,4 +59,40 @@ export class CreateAssessmentDto {
   @ValidateNested({ each: true })
   @Type(() => AssessmentEntryInputDto)
   readonly entries: AssessmentEntryInputDto[];
+}
+
+export enum GradingQueueStatus {
+  PENDING = 'PENDING',
+  GRADED = 'GRADED',
+}
+
+export class ListGradingQueueDto extends PageOptionsDto {
+  @ApiPropertyOptional({
+    enum: GradingQueueStatus,
+    enumName: 'GradingQueueStatus',
+    default: GradingQueueStatus.PENDING,
+  })
+  @IsOptional()
+  @IsEnum(GradingQueueStatus)
+  readonly gradingStatus: GradingQueueStatus = GradingQueueStatus.PENDING;
+
+  @ApiPropertyOptional({
+    enum: [SkillType.WRITING, SkillType.SPEAKING],
+    enumName: 'GradingSkill',
+  })
+  @IsOptional()
+  @IsIn([SkillType.WRITING, SkillType.SPEAKING])
+  readonly skill?: SkillType.WRITING | SkillType.SPEAKING;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  readonly testId?: number;
+
+  @ApiPropertyOptional({ description: 'Matches student email or name' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  readonly search?: string;
 }

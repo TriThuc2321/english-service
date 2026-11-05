@@ -145,6 +145,10 @@ export class MediaService {
     return this.withUrl(media);
   }
 
+  async getUrl(media: Pick<Media, 'scope' | 'storageKey'>): Promise<string> {
+    return this.storage.getPublicUrl(media.storageKey);
+  }
+
   private withUrl(media: Media) {
     return { ...media, url: this.storage.getPublicUrl(media.storageKey) };
   }

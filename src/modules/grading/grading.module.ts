@@ -6,12 +6,15 @@ import { AttemptSection } from '../../entities/attempt-section.entity.js';
 import { Attempt } from '../../entities/attempt.entity.js';
 import { TestPart } from '../../entities/test-part.entity.js';
 import { Test } from '../../entities/test.entity.js';
+import { MediaModule } from '../media/media.module.js';
+import { StudentAttemptsModule } from '../student-attempts/student-attempts.module.js';
+import { GradingQueryService } from './grading-query.service.js';
 import { GradingController } from './grading.controller.js';
 import { GradingService } from './grading.service.js';
 
 @Module({
   controllers: [GradingController],
-  providers: [GradingService],
+  providers: [GradingService, GradingQueryService],
   imports: [
     TypeOrmModule.forFeature([
       Assessment,
@@ -20,6 +23,8 @@ import { GradingService } from './grading.service.js';
       TestPart,
       Test,
     ]),
+    MediaModule,
+    StudentAttemptsModule,
   ],
 })
 export class GradingModule {}
