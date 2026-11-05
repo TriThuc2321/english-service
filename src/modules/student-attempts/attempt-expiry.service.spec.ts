@@ -56,6 +56,12 @@ describe('AttemptExpiryService', () => {
     expect(attempts.expireIfOverdue).toHaveBeenCalledWith('u2', 'b');
   });
 
+  it('resolves when the selection query fails', async () => {
+    getMany.mockRejectedValueOnce(new Error('db down'));
+    await expect(service.expireOverdue()).resolves.toBeUndefined();
+    expect(attempts.expireIfOverdue).not.toHaveBeenCalled();
+  });
+
   it('only looks at attempts older than the grace period', async () => {
     overdue([]);
     const now = new Date('2026-01-01T00:00:00Z');

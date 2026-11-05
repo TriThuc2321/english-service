@@ -21,20 +21,28 @@ export class AttemptExpiryService {
 
   async expireOverdue(now = new Date()): Promise<void> {
     const cutoff = new Date(now.getTime() - GRACE_MS);
-    const overdue = await this.attemptRepository
-      .createQueryBuilder('a')
-      .select(['a.id', 'a.userId'])
-      .where(
-        `a.status = :status AND (a.deadlineAt < :cutoff OR EXISTS (
+    let overdue: Attempt[];
+    try {
+      overdue = await this.attemptRepository
+        .createQueryBuilder('a')
+        .select(['a.id', 'a.userId'])
+        .where(
+          `a.status = :status AND (a.deadlineAt < :cutoff OR EXISTS (
           SELECT 1 FROM attempt_sections s
            WHERE s.attempt_id = a.attempt_id
              AND s.status = 'IN_PROGRESS'
              AND s.deadline_at < :cutoff))`,
-        { status: AttemptStatus.IN_PROGRESS, cutoff },
-      )
-      .orderBy('a.startedAt', 'ASC')
-      .limit(MAX_EXPIRED_PER_SWEEP)
-      .getMany();
+          { status: AttemptStatus.IN_PROGRESS, cutoff },
+        )
+        .orderBy('a.startedAt', 'ASC')
+        .limit(MAX_EXPIRED_PER_SWEEP)
+        .getMany();
+    } catch (error) {
+      this.logger.warn(
+        `Could not look up overdue attempts: ${(error as Error).message}`,
+      );
+      return;
+    }
 
     for (const { id, userId } of overdue) {
       try {
