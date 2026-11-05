@@ -358,11 +358,17 @@ describe('Grading', () => {
     const body = await writingBody(ids[0]);
     const sectionId = attemptSections[0].id;
 
-    await grade(sectionId, {
+    const withFeedback = (length: number) => ({
       ...body,
-      entries: [{ ...body.entries[0], feedback: 'x'.repeat(5001) }],
-    }).expect(400);
+      entries: [
+        { ...body.entries[0], feedback: 'x'.repeat(length) },
+        body.entries[1],
+      ],
+    });
+    const tooLong = await grade(sectionId, withFeedback(5001)).expect(400);
+    expect(JSON.stringify(tooLong.body.message)).toContain('feedback');
     await grade(sectionId, { ...body, expectedRevision: -1 }).expect(400);
     await grade('00000000-0000-4000-8000-000000000000', body).expect(404);
+    await grade(sectionId, withFeedback(5000)).expect(201);
   });
 });
