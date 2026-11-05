@@ -5,11 +5,17 @@ import type {
   IImportIssue,
   IImportPassage,
   IImportQuestion,
+  IImportSection,
   ITestImport,
 } from './test-import.type.js';
 
 import { MarkedBy } from '../../entities/passage.entity.js';
-import { EXAM_SKILLS, QuestionType } from '../../types/test.type.js';
+import {
+  EXAM_SKILLS,
+  ExamType,
+  QuestionType,
+  SkillType,
+} from '../../types/test.type.js';
 import { normalizeText } from '../questions/answer-text.js';
 import {
   assertAnswerFitsGroup,
@@ -31,6 +37,11 @@ const PROMPTED_TYPES = new Set([
   QuestionType.MATCHING_SENTENCE_ENDINGS,
   QuestionType.CLASSIFICATION,
   QuestionType.SHORT_ANSWER,
+  QuestionType.IELTS_WRITING_TASK_1,
+  QuestionType.IELTS_WRITING_TASK_2,
+  QuestionType.IELTS_SPEAKING_PART_1,
+  QuestionType.IELTS_SPEAKING_PART_2,
+  QuestionType.IELTS_SPEAKING_PART_3,
 ]);
 
 const PLACEHOLDER = /\{\{\s*(\d+)\s*\}\}/g;
@@ -99,6 +110,14 @@ export function validateTestImport(doc: ITestImport): IImportIssue[] {
       return;
     }
 
+    if (
+      section.skill === SkillType.WRITING &&
+      (doc.examType === ExamType.IELTS_ACADEMIC ||
+        doc.examType === ExamType.IELTS_GENERAL)
+    ) {
+      checkWritingSection(section, sectionPath);
+    }
+
     let next = 1;
     section.parts.forEach((part, p) => {
       const partPath = `${sectionPath}.parts[${p}]`;
@@ -144,6 +163,27 @@ export function validateTestImport(doc: ITestImport): IImportIssue[] {
   });
 
   return issues;
+
+  function checkWritingSection(section: IImportSection, path: string) {
+    const expected = [
+      QuestionType.IELTS_WRITING_TASK_1,
+      QuestionType.IELTS_WRITING_TASK_2,
+    ];
+    const types = section.parts.map((part) =>
+      part.groups?.length === 1 && part.groups[0].questions?.length === 1
+        ? part.groups[0].questionType
+        : null,
+    );
+    if (
+      types.length !== expected.length ||
+      types.some((type, i) => type !== expected[i])
+    ) {
+      error(
+        path,
+        'an IELTS Writing section needs exactly two parts, Task 1 then Task 2, with one question each',
+      );
+    }
+  }
 
   function checkPassage(passage: IImportPassage, path: string) {
     if (!passage.title?.trim()) {

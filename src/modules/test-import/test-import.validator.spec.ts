@@ -186,4 +186,98 @@ describe('validateTestImport', () => {
       'error: TOEIC_SW has no READING section',
     );
   });
+
+  describe('IELTS Writing section', () => {
+    const task = (type: QuestionType, number: number) => ({
+      groups: [
+        {
+          questionType: type,
+          questions: [
+            {
+              numberFrom: number,
+              prompt: 'Describe the chart.',
+              answer: { sample: 'A model answer.' },
+            },
+          ],
+        },
+      ],
+    });
+    const writing = (): ITestImport => ({
+      examType: ExamType.IELTS_ACADEMIC,
+      title: 'Writing',
+      sections: [
+        {
+          skill: SkillType.WRITING,
+          parts: [
+            task(QuestionType.IELTS_WRITING_TASK_1, 1),
+            task(QuestionType.IELTS_WRITING_TASK_2, 2),
+          ],
+        },
+      ],
+    });
+    const isError = (i: { severity: string }) => i.severity === 'error';
+    const dropPart = (index: number) => () => {
+      const doc = writing();
+      doc.sections[0].parts.splice(index, 1);
+      return doc;
+    };
+    const addPart = () => () => {
+      const doc = writing();
+      doc.sections[0].parts.push(task(QuestionType.IELTS_WRITING_TASK_2, 3));
+      return doc;
+    };
+    const swapType = (index: number, type: QuestionType) => () => {
+      const doc = writing();
+      doc.sections[0].parts[index].groups[0].questionType = type;
+      return doc;
+    };
+    const swapParts = () => () => {
+      const doc = writing();
+      doc.sections[0].parts.reverse();
+      return doc;
+    };
+    const addQuestion = (index: number) => () => {
+      const doc = writing();
+      doc.sections[0].parts[index].groups[0].questions.push({
+        numberFrom: 2,
+        prompt: 'Extra',
+        answer: { sample: 'x' },
+      });
+      return doc;
+    };
+
+    it('accepts an IELTS Writing section of Task 1 then Task 2', () => {
+      expect(validateTestImport(writing()).filter(isError)).toEqual([]);
+    });
+
+    it.each([
+      ['one part', dropPart(1)],
+      ['three parts', addPart()],
+      ['two Task 2 parts', swapType(0, QuestionType.IELTS_WRITING_TASK_2)],
+      ['tasks swapped', swapParts()],
+      ['two questions in a task', addQuestion(0)],
+    ])('rejects a Writing section with %s', (_, make) => {
+      expect(messages(make())).toContainEqual(
+        expect.stringContaining('Writing'),
+      );
+    });
+
+    it('requires a prompt on the new types', () => {
+      const doc = writing();
+      doc.sections[0].parts[0].groups[0].questions[0].prompt = ' ';
+
+      expect(messages(doc)).toContainEqual(
+        expect.stringContaining('needs a prompt'),
+      );
+    });
+
+    it('does not apply the Writing shape to TOEIC_SW', () => {
+      const doc = dropPart(1)();
+      doc.examType = ExamType.TOEIC_SW;
+
+      expect(messages(doc)).not.toContainEqual(
+        expect.stringContaining('Writing section'),
+      );
+    });
+  });
 });
