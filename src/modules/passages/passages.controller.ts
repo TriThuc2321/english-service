@@ -79,7 +79,8 @@ export class PassagesController {
 
   @Patch(':id')
   @ApiOperation({
-    summary: 'Update a passage; `paragraphs` replaces the whole list',
+    summary:
+      'Update a passage; `paragraphs` replaces the whole list. A passage used by a locked test accepts `status` only',
   })
   @ApiOkResponse({ type: PassageDetailDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })

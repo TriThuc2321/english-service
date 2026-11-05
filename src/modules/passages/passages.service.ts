@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   Brackets,
   DataSource,
+  type EntityManager,
   In,
   Not,
   type ObjectLiteral,
@@ -135,7 +136,12 @@ export class PassagesService {
     if (!passage) {
       throw new NotFoundException(`Passage with ID ${id} not found`);
     }
-    await this.assertNotLocked([id]);
+    const statusOnly = Object.entries(dto).every(
+      ([key, value]) => key === 'status' || value === undefined,
+    );
+    if (!statusOnly) {
+      await this.assertNotLocked([id]);
+    }
 
     const { paragraphs, ...rest } = dto;
 
@@ -172,6 +178,36 @@ export class PassagesService {
     );
 
     return { deleted: result.affected ?? 0 };
+  }
+
+  async publishByTest(testId: number, actorId: string, manager: EntityManager) {
+    const viaParts = await manager
+      .createQueryBuilder(TestPart, 'p')
+      .select('DISTINCT p.passageId', 'passageId')
+      .innerJoin('p.testSection', 's')
+      .where('s.testId = :testId', { testId })
+      .andWhere('p.passageId IS NOT NULL')
+      .getRawMany<{ passageId: number }>();
+    const viaGroups = await manager
+      .createQueryBuilder(GroupPassage, 'gp')
+      .select('DISTINCT gp.passageId', 'passageId')
+      .innerJoin('gp.questionGroup', 'g')
+      .innerJoin('g.testPart', 'p')
+      .innerJoin('p.testSection', 's')
+      .where('s.testId = :testId', { testId })
+      .getRawMany<{ passageId: number }>();
+
+    const ids = [...viaParts, ...viaGroups].map((r) => r.passageId);
+    if (!ids.length) return;
+
+    await manager.update(
+      Passage,
+      { id: In(ids), status: PassageStatus.DRAFT },
+      {
+        status: PassageStatus.PUBLISHED,
+        auditMetadata: { updatedAt: new Date(), updatedById: actorId },
+      },
+    );
   }
 
   async assertExist(ids: number[]) {

@@ -2471,7 +2471,7 @@
             "bearer": []
           }
         ],
-        "summary": "Update a passage; `paragraphs` replaces the whole list",
+        "summary": "Update a passage; `paragraphs` replaces the whole list. A passage used by a locked test accepts `status` only",
         "tags": ["Passages"]
       }
     },
