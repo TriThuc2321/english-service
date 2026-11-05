@@ -276,7 +276,7 @@ StudentMedia {
 
 ## 5. Taking a test
 
-Phase 1 covers **LISTENING and READING** sections only (Writing/Speaking are not gradable yet). Tests with no such section cannot be started.
+Attempts cover **LISTENING, READING and IELTS WRITING** sections. Writing is graded by a teacher and can only be started through `mode: "SECTION"`. Speaking is not available yet, and `TOEIC_SW` tests cannot be started. A test with no attemptable section cannot be started.
 
 ### Flow
 
@@ -284,7 +284,7 @@ Phase 1 covers **LISTENING and READING** sections only (Writing/Speaking are not
 2. While answering, `PUT /student/attempts/:id/answers` with batches of changed answers (autosave).
 3. Refresh or reopen: `GET /student/attempts/:id` returns the state to resume (sections, timers, saved answers).
 4. IELTS: `POST /student/attempts/:id/sections/:sectionId/submit` per section. TOEIC: all sections are open at once, so one `POST /student/attempts/:id/submit` is enough.
-5. After the last section is submitted the attempt is graded (`GRADED`). `GET /student/attempts/:id/result` returns scores and the full review.
+5. After the last section is submitted the attempt is graded (`GRADED`), unless a Writing section is waiting for a teacher: then it stays `SUBMITTED` until the teacher grades it. `GET /student/attempts/:id/result` returns scores and the full review.
 
 A student can have only one `IN_PROGRESS` attempt per test. Retakes are unlimited once it is closed.
 
@@ -298,7 +298,7 @@ All endpoints need a `web` token. Another user's attempt returns `404`, never `4
 { "testId": 12, "mode": "SECTION", "sectionIds": [30, 31] }   // sectionIds required for SECTION
 ```
 
-`mode: "FULL"` takes every Listening/Reading section; `SECTION` takes the given test section ids (each must belong to the test and be Listening or Reading; an empty list is `400`).
+`mode: "FULL"` takes every Listening/Reading section and never includes Writing; Writing is available only through `SECTION`, which takes the given test section ids (each must belong to the test and be Listening, Reading or Writing; an empty list is `400`). A Writing section must have exactly one Task 1 and one Task 2 question, otherwise `400`.
 
 **Response `201`**: `Attempt`
 
@@ -396,7 +396,7 @@ Attempt {
   startedAt: string
   deadlineAt: string | null          // TOEIC only, see "Timers"
   submittedAt: string | null
-  overallScore: number | null        // only for TOEIC_LR FULL attempts: Listening + Reading scaled scores
+  overallScore: number | null        // only for TOEIC_LR FULL attempts: Listening + Reading scaled scores. Always null for IELTS for now: a FULL attempt excludes Writing and Speaking, so there is no 4-skill overall
   serverNow: string
   sections: AttemptSection[]         // sorted by test section order
   answers: AttemptAnswerState[]      // only questions that have a stored row

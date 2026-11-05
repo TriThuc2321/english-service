@@ -292,7 +292,7 @@ Table attempts {
   started_at timestamptz [not null]
   deadline_at timestamptz [note: 'Hạn tổng (TOEIC LR). IELTS dùng deadline của attempt_sections']
   submitted_at timestamptz
-  overall_score numeric(5,1) [note: 'TOEIC = L + R. IELTS FULL = trung bình 4 band làm tròn 0.5, null cho đến khi mọi section có band']
+  overall_score numeric(5,1) [note: 'TOEIC = L + R. IELTS FULL = trung bình 4 band làm tròn 0.5, nhưng FULL hiện không gồm Writing/Speaking nên IELTS luôn null']
   created_at timestamp
 
   indexes {
