@@ -187,7 +187,7 @@ export class AttemptResultQuestionDto {
   @ApiProperty({
     type: 'object',
     additionalProperties: true,
-    description: '{ key } | { keys } | { accepted }',
+    description: '{ key } | { keys } | { accepted } | { sample, rubric? }',
   })
   answer: Record<string, unknown>;
 
@@ -206,6 +206,31 @@ export class AttemptTranscriptDto {
   transcript: string;
 }
 
+export class AttemptAssessmentEntryDto {
+  @ApiProperty({ type: Number, nullable: true })
+  partId: number | null;
+
+  @ApiProperty({ type: 'object', additionalProperties: { type: 'number' } })
+  criteria: Record<string, number>;
+
+  @ApiProperty()
+  band: number;
+
+  @ApiProperty({ type: String, nullable: true })
+  feedback: string | null;
+}
+
+export class AttemptAssessmentDto {
+  @ApiProperty({ description: 'attempt_sections id' })
+  attemptSectionId: string;
+
+  @ApiProperty()
+  band: number;
+
+  @ApiProperty({ type: [AttemptAssessmentEntryDto] })
+  entries: AttemptAssessmentEntryDto[];
+}
+
 export class AttemptResultDto {
   @ApiProperty({ type: AttemptListItemDto })
   attempt: AttemptListItemDto;
@@ -218,4 +243,10 @@ export class AttemptResultDto {
 
   @ApiProperty({ type: [AttemptTranscriptDto] })
   transcripts: AttemptTranscriptDto[];
+
+  @ApiProperty({
+    type: [AttemptAssessmentDto],
+    description: 'Latest teacher assessment of each graded section',
+  })
+  assessments: AttemptAssessmentDto[];
 }

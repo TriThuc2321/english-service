@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import type {
   AttemptEvidenceDto,
@@ -10,7 +10,12 @@ import type {
 import { AttemptAnswer } from '../../entities/attempt-answer.entity.js';
 import { Attempt } from '../../entities/attempt.entity.js';
 import { Media } from '../../entities/media.entity.js';
-import { AttemptErrorCode, AttemptStatus } from '../../types/attempt.type.js';
+import { findLatestAssessments } from '../../shared/scoring/latest-assessments.js';
+import {
+  AttemptErrorCode,
+  AttemptSectionGradingStatus,
+  AttemptStatus,
+} from '../../types/attempt.type.js';
 import { StudentTestsService } from '../student-tests/student-tests.service.js';
 import { maxScoreOf } from './attempt-grader.js';
 import { AttemptTreeService } from './attempt-tree.service.js';
@@ -28,6 +33,7 @@ export class AttemptResultService {
     private readonly answerRepository: Repository<AttemptAnswer>,
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
+    private readonly dataSource: DataSource,
     private readonly treeService: AttemptTreeService,
     private readonly studentTestsService: StudentTestsService,
   ) {}
@@ -88,14 +94,11 @@ export class AttemptResultService {
         'Attempt not found',
       );
     }
-    if (
-      attempt.status !== AttemptStatus.GRADED &&
-      attempt.status !== AttemptStatus.EXPIRED
-    ) {
+    if (attempt.status === AttemptStatus.IN_PROGRESS) {
       throw fail(
         HttpStatus.CONFLICT,
         AttemptErrorCode.ATTEMPT_NOT_GRADED,
-        'Attempt is not graded yet',
+        'Attempt is still in progress',
       );
     }
 
@@ -161,9 +164,21 @@ export class AttemptResultService {
           .getMany()
       : [];
 
+    const latest = await findLatestAssessments(
+      this.dataSource.manager,
+      attempt.attemptSections
+        .filter((s) => s.gradingStatus === AttemptSectionGradingStatus.GRADED)
+        .map((s) => s.id),
+    );
+
     return {
       attempt: toListItemDto(attempt),
       questions,
+      assessments: [...latest.values()].map((a) => ({
+        attemptSectionId: a.attemptSectionId,
+        band: a.band,
+        entries: a.details.entries,
+      })),
       transcripts: media.map((m) => ({
         mediaId: m.id,
         transcript: m.transcript ?? '',

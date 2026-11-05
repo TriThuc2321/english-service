@@ -224,4 +224,101 @@ describe('Student writing attempts', () => {
       res.body.sections.map((s: { gradingStatus: string }) => s.gradingStatus),
     ).toEqual(['AUTO_GRADED', 'AUTO_GRADED']);
   });
+
+  const result = (id: string) =>
+    testApp
+      .http()
+      .get(`/api/student/attempts/${id}/result`)
+      .auth(token, { type: 'bearer' });
+
+  it('returns the review of a pending attempt', async () => {
+    const { id, questions } = await startWriting();
+    await save(id, questions[SkillType.WRITING]![1].id, 'essay');
+    await submit(id);
+
+    const res = await result(id).expect(200);
+
+    expect(res.body.attempt.status).toBe('SUBMITTED');
+    expect(res.body.assessments).toEqual([]);
+    expect(res.body.questions).toHaveLength(2);
+    for (const q of res.body.questions) {
+      expect(q.answer.sample).toBe('Sample');
+      expect(q.isCorrect).toBeNull();
+    }
+  });
+
+  it('still returns 409 while in progress', async () => {
+    const { id } = await startWriting();
+
+    const res = await result(id).expect(409);
+
+    expect(res.body.code).toBe('ATTEMPT_NOT_GRADED');
+  });
+
+  it('shows gradingStatus in history', async () => {
+    const { id, questions } = await startWriting();
+    await save(id, questions[SkillType.WRITING]![1].id, 'essay');
+    await submit(id);
+
+    const res = await testApp
+      .http()
+      .get('/api/student/attempts')
+      .auth(token, { type: 'bearer' })
+      .expect(200);
+
+    const item = res.body.data.find((a: { id: string }) => a.id === id);
+    expect(item.sections[0].gradingStatus).toBe('PENDING');
+  });
+
+  it('returns the latest revision only, with no grader', async () => {
+    const { id } = await startWriting();
+    await submit(id);
+    const grader = await createUser(testApp);
+    const [section] = await testApp.dataSource.query(
+      'SELECT attempt_section_id AS id FROM attempt_sections WHERE attempt_id = $1',
+      [id],
+    );
+    await testApp.dataSource.query(
+      `UPDATE attempt_sections SET grading_status = 'GRADED' WHERE attempt_section_id = $1`,
+      [section.id],
+    );
+    for (const [revision, band] of [
+      [1, 5.5],
+      [2, 7],
+    ]) {
+      await testApp.dataSource.query(
+        `INSERT INTO assessments (attempt_section_id, revision, grader_id, band, details)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          section.id,
+          revision,
+          grader.id,
+          band,
+          JSON.stringify({
+            entries: [
+              {
+                partId: null,
+                criteria: { TA: band },
+                band,
+                feedback: `rev ${revision}`,
+              },
+            ],
+          }),
+        ],
+      );
+    }
+
+    const res = await result(id).expect(200);
+
+    expect(res.body.assessments).toEqual([
+      {
+        attemptSectionId: section.id,
+        band: 7,
+        entries: [
+          { partId: null, criteria: { TA: 7 }, band: 7, feedback: 'rev 2' },
+        ],
+      },
+    ]);
+    expect(JSON.stringify(res.body)).not.toContain('grader');
+  });
 });

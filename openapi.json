@@ -3752,7 +3752,7 @@
             }
           },
           "409": {
-            "description": "ATTEMPT_NOT_GRADED",
+            "description": "ATTEMPT_NOT_GRADED, only while in progress",
             "content": {
               "application/json": {
                 "schema": {
@@ -8551,7 +8551,7 @@
           "answer": {
             "type": "object",
             "additionalProperties": true,
-            "description": "{ key } | { keys } | { accepted }"
+            "description": "{ key } | { keys } | { accepted } | { sample, rubric? }"
           },
           "explanation": {
             "type": "string",
@@ -8594,6 +8594,48 @@
         },
         "required": ["mediaId", "transcript"]
       },
+      "AttemptAssessmentEntryDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number",
+            "nullable": true
+          },
+          "criteria": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "band": {
+            "type": "number"
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["partId", "criteria", "band", "feedback"]
+      },
+      "AttemptAssessmentDto": {
+        "type": "object",
+        "properties": {
+          "attemptSectionId": {
+            "type": "string",
+            "description": "attempt_sections id"
+          },
+          "band": {
+            "type": "number"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttemptAssessmentEntryDto"
+            }
+          }
+        },
+        "required": ["attemptSectionId", "band", "entries"]
+      },
       "AttemptResultDto": {
         "type": "object",
         "properties": {
@@ -8612,9 +8654,16 @@
             "items": {
               "$ref": "#/components/schemas/AttemptTranscriptDto"
             }
+          },
+          "assessments": {
+            "description": "Latest teacher assessment of each graded section",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttemptAssessmentDto"
+            }
           }
         },
-        "required": ["attempt", "questions", "transcripts"]
+        "required": ["attempt", "questions", "transcripts", "assessments"]
       },
       "StudentMediaDto": {
         "type": "object",

@@ -82,7 +82,7 @@ export class StudentAttemptsController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({
     type: ErrorResponseDto,
-    description: 'ATTEMPT_NOT_GRADED',
+    description: 'ATTEMPT_NOT_GRADED, only while in progress',
   })
   @CheckPermissions()
   async result(
