@@ -51,6 +51,11 @@ export const QUESTION_ANSWER_KINDS: Record<
   [QuestionType.WRITE_SENTENCE_PICTURE]: SAMPLE,
   [QuestionType.RESPOND_WRITTEN_REQUEST]: SAMPLE,
   [QuestionType.OPINION_ESSAY]: SAMPLE,
+  [QuestionType.IELTS_WRITING_TASK_1]: SAMPLE,
+  [QuestionType.IELTS_WRITING_TASK_2]: SAMPLE,
+  [QuestionType.IELTS_SPEAKING_PART_1]: SAMPLE,
+  [QuestionType.IELTS_SPEAKING_PART_2]: SAMPLE,
+  [QuestionType.IELTS_SPEAKING_PART_3]: SAMPLE,
 };
 
 const SHAPES: Record<AnswerKind, string> = {

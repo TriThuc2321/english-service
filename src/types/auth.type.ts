@@ -33,6 +33,7 @@ export enum PermissionSubject {
   PROGRAM = 'program',
   LEVEL = 'level',
   MEDIA = 'media',
+  ASSESSMENT = 'assessment',
 }
 
 export interface ITokenPayload {
