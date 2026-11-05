@@ -13,6 +13,7 @@ import { User } from '../../entities/user.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
 import { findLatestAssessments } from '../../shared/scoring/latest-assessments.js';
 import { AttemptSectionGradingStatus } from '../../types/attempt.type.js';
+import { MediaScope } from '../../types/media.type.js';
 import { MediaService } from '../media/media.service.js';
 import { countWords, normalizeText } from '../questions/answer-text.js';
 import { AttemptExpiryService } from '../student-attempts/attempt-expiry.service.js';
@@ -199,6 +200,14 @@ export class GradingQueryService {
         mediaUrls.set(media.id, await this.mediaService.getUrl(media));
       }
     }
+    const recordingUrls = await this.mediaService.getOwnedUrls(
+      MediaScope.ATTEMPT,
+      section.attemptId,
+      answers.flatMap((a) => {
+        const id = mediaIdOf(a.response);
+        return id === null ? [] : [id];
+      }),
+    );
     const urlOf = (mediaId?: number | null) =>
       (mediaId != null && mediaUrls.get(mediaId)) || null;
 
@@ -228,7 +237,7 @@ export class GradingQueryService {
               answer?.rubric && typeof answer.rubric === 'object'
                 ? (answer.rubric as Record<string, unknown>)
                 : null,
-            response: toResponse(answerOf.get(q.id)),
+            response: toResponse(answerOf.get(q.id), recordingUrls),
           };
         }),
       ),
@@ -286,7 +295,23 @@ export class GradingQueryService {
   }
 }
 
-function toResponse(answer?: AttemptAnswer): GradingResponseDto | null {
+const mediaIdOf = (response: unknown): number | null => {
+  const id = (response as { mediaId?: unknown } | null | undefined)?.mediaId;
+  return typeof id === 'number' ? id : null;
+};
+
+function toResponse(
+  answer: AttemptAnswer | undefined,
+  recordingUrls: ReadonlyMap<number, string>,
+): GradingResponseDto | null {
+  const mediaId = mediaIdOf(answer?.response);
+  if (mediaId !== null) {
+    return {
+      text: null,
+      wordCount: null,
+      audioUrl: recordingUrls.get(mediaId) ?? null,
+    };
+  }
   const text = (answer?.response as { text?: unknown } | null | undefined)
     ?.text;
   if (typeof text !== 'string') return null;

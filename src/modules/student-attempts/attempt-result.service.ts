@@ -16,10 +16,17 @@ import {
   AttemptSectionGradingStatus,
   AttemptStatus,
 } from '../../types/attempt.type.js';
+import { MediaScope } from '../../types/media.type.js';
+import { MediaService } from '../media/media.service.js';
 import { StudentTestsService } from '../student-tests/student-tests.service.js';
 import { maxScoreOf } from './attempt-grader.js';
 import { AttemptTreeService } from './attempt-tree.service.js';
 import { toListItemDto } from './attempt.mapper.js';
+
+const mediaIdOf = (response: unknown): number | null => {
+  const id = (response as { mediaId?: unknown } | null | undefined)?.mediaId;
+  return typeof id === 'number' ? id : null;
+};
 
 const fail = (status: HttpStatus, code: AttemptErrorCode, message: string) =>
   new HttpException({ message, code }, status);
@@ -36,6 +43,7 @@ export class AttemptResultService {
     private readonly dataSource: DataSource,
     private readonly treeService: AttemptTreeService,
     private readonly studentTestsService: StudentTestsService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async content(userId: string, id: string) {
@@ -125,6 +133,12 @@ export class AttemptResultService {
       .where('aa.attemptId = :id', { id })
       .getMany();
 
+    const recordingUrls = await this.mediaService.getOwnedUrls(
+      MediaScope.ATTEMPT,
+      id,
+      rows.flatMap((row) => mediaIdOf(row.response) ?? []),
+    );
+
     const questions = rows
       .flatMap((row) => {
         const sectionId = tree.questions.get(row.questionId)?.sectionId;
@@ -149,6 +163,7 @@ export class AttemptResultService {
         answer: row.question.answer,
         explanation: row.question.explanation ?? null,
         evidence: (row.question.evidence as AttemptEvidenceDto | null) ?? null,
+        audioUrl: recordingUrls.get(mediaIdOf(row.response) ?? -1) ?? null,
       }));
 
     const mediaIds = [
@@ -164,6 +179,10 @@ export class AttemptResultService {
           .getMany()
       : [];
 
+    const sectionRank = (attemptSectionId: string) => {
+      const s = attempt.attemptSections.find((x) => x.id === attemptSectionId);
+      return (s && sectionOrder.get(s.sectionId)) ?? 0;
+    };
     const latest = await findLatestAssessments(
       this.dataSource.manager,
       attempt.attemptSections
@@ -174,11 +193,16 @@ export class AttemptResultService {
     return {
       attempt: toListItemDto(attempt),
       questions,
-      assessments: [...latest.values()].map((a) => ({
-        attemptSectionId: a.attemptSectionId,
-        band: a.band,
-        entries: a.details.entries,
-      })),
+      assessments: [...latest.values()]
+        .sort(
+          (a, b) =>
+            sectionRank(a.attemptSectionId) - sectionRank(b.attemptSectionId),
+        )
+        .map((a) => ({
+          attemptSectionId: a.attemptSectionId,
+          band: a.band,
+          entries: a.details.entries,
+        })),
       transcripts: media.map((m) => ({
         mediaId: m.id,
         transcript: m.transcript ?? '',

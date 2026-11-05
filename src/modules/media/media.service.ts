@@ -7,11 +7,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { QueryFailedError, Repository } from 'typeorm';
+import { In, QueryFailedError, Repository } from 'typeorm';
 
 import { Media } from '../../entities/media.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
 import { StorageService } from '../../shared/storage/storage.service.js';
+import { MediaScope } from '../../types/media.type.js';
 import {
   CreateMediaDto,
   CreateUploadUrlDto,
@@ -156,6 +157,20 @@ export class MediaService {
     return this.policies.get(media.scope).privateRead
       ? this.storage.getDownloadUrl(media.storageKey)
       : this.storage.getPublicUrl(media.storageKey);
+  }
+
+  async getOwnedUrls(
+    scope: MediaScope,
+    ownerId: string,
+    ids: number[],
+  ): Promise<Map<number, string>> {
+    const urls = new Map<number, string>();
+    if (!ids.length) return urls;
+    const rows = await this.mediaRepository.find({
+      where: { id: In([...new Set(ids)]), scope, ownerId },
+    });
+    for (const media of rows) urls.set(media.id, await this.getUrl(media));
+    return urls;
   }
 
   private async withUrl(media: Media) {

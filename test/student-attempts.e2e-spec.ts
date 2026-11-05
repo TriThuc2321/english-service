@@ -661,6 +661,7 @@ describe('Student attempts', () => {
         answer: { key: 'B' },
         explanation: 'Said at 0:42',
         evidence: null,
+        audioUrl: null,
       },
       expect.objectContaining({
         questionId: form.id,

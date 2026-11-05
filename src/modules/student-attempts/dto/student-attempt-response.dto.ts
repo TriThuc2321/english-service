@@ -196,6 +196,14 @@ export class AttemptResultQuestionDto {
 
   @ApiProperty({ type: AttemptEvidenceDto, nullable: true })
   evidence: AttemptEvidenceDto | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Signed URL of the Speaking recording; null on other questions',
+  })
+  audioUrl: string | null;
 }
 
 export class AttemptTranscriptDto {

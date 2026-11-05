@@ -68,7 +68,7 @@ describe('Student writing attempts', () => {
     ]);
   });
 
-  it('keeps FULL on Listening and Reading', async () => {
+  it('opens every section in FULL', async () => {
     const { test } = await seedExam(testApp, [
       SkillType.LISTENING,
       SkillType.READING,
@@ -78,7 +78,7 @@ describe('Student writing attempts', () => {
     const res = await start(test.id).expect(201);
 
     expect(res.body.sections.map((s: { skill: SkillType }) => s.skill)).toEqual(
-      [SkillType.LISTENING, SkillType.READING],
+      [SkillType.LISTENING, SkillType.READING, SkillType.WRITING],
     );
   });
 

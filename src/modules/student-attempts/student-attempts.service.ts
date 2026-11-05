@@ -590,9 +590,7 @@ export class StudentAttemptsService {
         );
       }
     } else {
-      chosen = tree.sections.filter(
-        (s) => s.skill !== SkillType.WRITING && s.skill !== SkillType.SPEAKING,
-      );
+      chosen = tree.sections;
     }
     if (!chosen.length) {
       throw new BadRequestException(
