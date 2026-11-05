@@ -4053,6 +4053,214 @@
         "tags": ["Student Attempts"]
       }
     },
+    "/api/student/attempts/{id}/audio/upload-url": {
+      "post": {
+        "operationId": "StudentAttempts_createAudioUploadUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAttemptAudioUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SECTION_NOT_OPEN or ATTEMPT_CLOSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Presigned PUT URL to record a Speaking answer (audio, up to 20 MB)",
+        "tags": ["Student Attempts"]
+      }
+    },
+    "/api/student/attempts/{id}/audio": {
+      "post": {
+        "operationId": "StudentAttempts_confirmAudio",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAttemptAudioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptAnswerStateDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SECTION_NOT_OPEN or ATTEMPT_CLOSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm an uploaded recording as the answer to a Speaking question; replaces the previous one",
+        "tags": ["Student Attempts"]
+      }
+    },
     "/api/student/attempts/{id}/sections/{sectionId}/submit": {
       "post": {
         "operationId": "StudentAttempts_submitSection",
@@ -9473,7 +9681,7 @@
             "type": "object",
             "additionalProperties": true,
             "nullable": true,
-            "description": "{ key } | { keys } | { text } (an essay for Writing, up to 20,000 characters); null clears the answer"
+            "description": "{ key } | { keys } | { text } (an essay for Writing, up to 20,000 characters); null clears the answer. Speaking questions are refused: record through the audio endpoints"
           },
           "flagged": {
             "type": "boolean",
@@ -9507,6 +9715,37 @@
           }
         },
         "required": ["savedAt", "serverNow"]
+      },
+      "CreateAttemptAudioUploadDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "number",
+            "description": "A Speaking question of the open section"
+          },
+          "contentType": {
+            "type": "string",
+            "example": "audio/webm"
+          },
+          "size": {
+            "type": "number",
+            "description": "Bytes, at most 20 MB"
+          }
+        },
+        "required": ["questionId", "contentType", "size"]
+      },
+      "ConfirmAttemptAudioDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "number"
+          },
+          "storageKey": {
+            "type": "string",
+            "description": "The storageKey returned by upload-url"
+          }
+        },
+        "required": ["questionId", "storageKey"]
       },
       "StudentTestSectionDto": {
         "type": "object",

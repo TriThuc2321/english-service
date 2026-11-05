@@ -157,3 +157,17 @@ describe('parseResponse', () => {
     ).toThrow(/question 7/);
   });
 });
+
+describe('Speaking', () => {
+  const q = question({
+    questionType: QuestionType.IELTS_SPEAKING_PART_2,
+    keys: null,
+  });
+
+  it.each([[null], [{ text: 'x' }], [{ mediaId: 1 }]])(
+    'refuses %j through autosave',
+    (raw) => {
+      expect(() => parseResponse(q, raw)).toThrow('audio endpoint');
+    },
+  );
+});

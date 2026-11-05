@@ -16,6 +16,7 @@ import {
 
 import type { IAttemptTree, ITreeSection } from './attempt-tree.service.js';
 import type {
+  AttemptAnswerStateDto,
   AttemptDto,
   AttemptListItemDto,
   SaveAnswersResultDto,
@@ -34,10 +35,11 @@ import {
 } from '../../types/attempt.type.js';
 import { ExamType, SkillType, TestStatus } from '../../types/test.type.js';
 import {
+  isValidSpeakingSection,
   isValidWritingSection,
   resolveAttemptStatus,
 } from './attempt-grading-status.js';
-import { parseResponse } from './attempt-response.js';
+import { isSpeakingQuestion, parseResponse } from './attempt-response.js';
 import { AttemptScoringService } from './attempt-scoring.service.js';
 import {
   closeAll,
@@ -278,27 +280,14 @@ export class StudentAttemptsService {
     const now = new Date();
     return this.withAttempt(userId, id, now, true, async (ctx) => {
       const items = new Map(dto.answers.map((a) => [a.questionId, a]));
-      const statusBySection = new Map(
-        ctx.sections.map((s) => [s.sectionId, s.status]),
-      );
 
-      const parsed = [...items.values()].map((item) => {
-        const question = ctx.tree.questions.get(item.questionId);
-        const status = question && statusBySection.get(question.sectionId);
-        if (!question || !status) {
-          throw new BadRequestException(
-            `Question ${item.questionId} is not part of this attempt`,
-          );
-        }
-        if (status !== AttemptSectionStatus.IN_PROGRESS) {
-          throw fail(
-            HttpStatus.CONFLICT,
-            AttemptErrorCode.SECTION_NOT_OPEN,
-            `Question ${question.numberFrom} is in a section that is not open`,
-          );
-        }
-        return { item, response: parseResponse(question, item.response) };
-      });
+      const parsed = [...items.values()].map((item) => ({
+        item,
+        response: parseResponse(
+          this.openQuestion(ctx, item.questionId),
+          item.response,
+        ),
+      }));
 
       const stored = await ctx.m.find(AttemptAnswer, {
         where: { attemptId: ctx.attempt.id, questionId: In([...items.keys()]) },
@@ -319,6 +308,85 @@ export class StudentAttemptsService {
       );
 
       return { savedAt: now.toISOString(), serverNow: now.toISOString() };
+    });
+  }
+
+  private openQuestion(ctx: IAttemptContext, questionId: number) {
+    const question = ctx.tree.questions.get(questionId);
+    const status =
+      question &&
+      ctx.sections.find((s) => s.sectionId === question.sectionId)?.status;
+    if (!question || !status) {
+      throw new BadRequestException(
+        `Question ${questionId} is not part of this attempt`,
+      );
+    }
+    if (status !== AttemptSectionStatus.IN_PROGRESS) {
+      throw fail(
+        HttpStatus.CONFLICT,
+        AttemptErrorCode.SECTION_NOT_OPEN,
+        `Question ${question.numberFrom} is in a section that is not open`,
+      );
+    }
+    return question;
+  }
+
+  private openSpeakingQuestion(ctx: IAttemptContext, questionId: number) {
+    const question = this.openQuestion(ctx, questionId);
+    if (!isSpeakingQuestion(question.questionType)) {
+      throw new BadRequestException(
+        `Question ${question.numberFrom} is not a Speaking question`,
+      );
+    }
+  }
+
+  assertAudioQuestionOpen(
+    userId: string,
+    id: string,
+    questionId: number,
+  ): Promise<void> {
+    return this.withAttempt(userId, id, new Date(), true, async (ctx) => {
+      this.openSpeakingQuestion(ctx, questionId);
+    });
+  }
+
+  saveAudio(
+    userId: string,
+    id: string,
+    questionId: number,
+    mediaId: number,
+  ): Promise<{
+    answer: AttemptAnswerStateDto;
+    previousMediaId: number | null;
+  }> {
+    const now = new Date();
+    return this.withAttempt(userId, id, now, true, async (ctx) => {
+      this.openSpeakingQuestion(ctx, questionId);
+      const stored = await ctx.m.findOne(AttemptAnswer, {
+        where: { attemptId: ctx.attempt.id, questionId },
+        select: { questionId: true, flagged: true, response: true },
+      });
+      const previous = stored?.response?.mediaId;
+      await ctx.m.upsert(
+        AttemptAnswer,
+        {
+          attemptId: ctx.attempt.id,
+          questionId,
+          response: { mediaId },
+          flagged: stored?.flagged ?? false,
+          answeredAt: now,
+        },
+        ['attemptId', 'questionId'],
+      );
+      return {
+        answer: {
+          questionId,
+          response: { mediaId },
+          flagged: stored?.flagged ?? false,
+          answeredAt: now.toISOString(),
+        },
+        previousMediaId: typeof previous === 'number' ? previous : null,
+      };
     });
   }
 
@@ -521,7 +589,9 @@ export class StudentAttemptsService {
         );
       }
     } else {
-      chosen = tree.sections.filter((s) => s.skill !== SkillType.WRITING);
+      chosen = tree.sections.filter(
+        (s) => s.skill !== SkillType.WRITING && s.skill !== SkillType.SPEAKING,
+      );
     }
     if (!chosen.length) {
       throw new BadRequestException(
@@ -529,13 +599,20 @@ export class StudentAttemptsService {
       );
     }
     for (const s of chosen) {
-      if (s.skill !== SkillType.WRITING) continue;
       const questions = [...tree.questions.values()].filter(
         (q) => q.sectionId === s.sectionId,
       );
-      if (!isValidWritingSection(questions)) {
+      if (s.skill === SkillType.WRITING && !isValidWritingSection(questions)) {
         throw new BadRequestException(
           `Writing section ${s.sectionId} must have one Task 1 and one Task 2 question`,
+        );
+      }
+      if (
+        s.skill === SkillType.SPEAKING &&
+        !isValidSpeakingSection(questions)
+      ) {
+        throw new BadRequestException(
+          `Speaking section ${s.sectionId} must have IELTS Speaking questions only`,
         );
       }
     }

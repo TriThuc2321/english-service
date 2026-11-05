@@ -8,8 +8,11 @@ import { Media } from '../../entities/media.entity.js';
 import { Question } from '../../entities/question.entity.js';
 import { ScoreScale } from '../../entities/score-scale.entity.js';
 import { Test } from '../../entities/test.entity.js';
+import { MediaModule } from '../media/media.module.js';
 import { StudentTestsModule } from '../student-tests/student-tests.module.js';
+import { AttemptAudioService } from './attempt-audio.service.js';
 import { AttemptExpiryService } from './attempt-expiry.service.js';
+import { AttemptMediaPolicy } from './attempt-media.policy.js';
 import { AttemptResultService } from './attempt-result.service.js';
 import { AttemptScoringService } from './attempt-scoring.service.js';
 import { AttemptTreeService } from './attempt-tree.service.js';
@@ -26,6 +29,8 @@ import { StudentAttemptsService } from './student-attempts.service.js';
     AttemptResultService,
     StudentAttemptsService,
     AttemptExpiryService,
+    AttemptMediaPolicy,
+    AttemptAudioService,
   ],
   exports: [AttemptExpiryService],
   imports: [
@@ -39,6 +44,7 @@ import { StudentAttemptsService } from './student-attempts.service.js';
       Media,
     ]),
     StudentTestsModule,
+    MediaModule,
   ],
 })
 export class StudentAttemptsModule {}

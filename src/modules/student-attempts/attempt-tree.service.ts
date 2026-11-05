@@ -34,6 +34,7 @@ const IELTS_SKILLS = [
   SkillType.LISTENING,
   SkillType.READING,
   SkillType.WRITING,
+  SkillType.SPEAKING,
 ];
 // TOEIC_SW is out of scope, so its tests keep having no attemptable section
 const ATTEMPT_SKILLS: Record<ExamType, readonly SkillType[]> = {

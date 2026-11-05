@@ -22,6 +22,12 @@ const WRITING_TYPES: readonly QuestionType[] = [
   QuestionType.IELTS_WRITING_TASK_2,
 ];
 
+const SPEAKING_TYPES: readonly QuestionType[] = [
+  QuestionType.IELTS_SPEAKING_PART_1,
+  QuestionType.IELTS_SPEAKING_PART_2,
+  QuestionType.IELTS_SPEAKING_PART_3,
+];
+
 // A word-bank summary is answered with a key, a free-text one with text
 function responseField(q: ITreeQuestion): 'key' | 'keys' | 'text' | null {
   if (WRITING_TYPES.includes(q.questionType)) return 'text';
@@ -35,10 +41,19 @@ function responseField(q: ITreeQuestion): 'key' | 'keys' | 'text' | null {
   return null;
 }
 
+export const isSpeakingQuestion = (type: QuestionType): boolean =>
+  SPEAKING_TYPES.includes(type);
+
 export function parseResponse(
   q: ITreeQuestion,
   raw: unknown,
 ): AttemptResponse | null {
+  if (isSpeakingQuestion(q.questionType)) {
+    // A null here would erase the recording
+    throw new BadRequestException(
+      `Question ${q.numberFrom}: recordings are saved through the audio endpoint`,
+    );
+  }
   if (raw === null) {
     return null;
   }

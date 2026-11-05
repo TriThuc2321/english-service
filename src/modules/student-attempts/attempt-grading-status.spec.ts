@@ -5,6 +5,7 @@ import {
 import { QuestionType, SkillType } from '../../types/test.type.js';
 import {
   isTeacherGraded,
+  isValidSpeakingSection,
   isValidWritingSection,
   resolveAttemptStatus,
   resolveTeacherSection,
@@ -82,4 +83,18 @@ describe('resolveAttemptStatus', () => {
     expect(resolveAttemptStatus(false, [{ gradingStatus: AUTO_GRADED }])).toBe(
       AttemptStatus.GRADED,
     ));
+});
+
+describe('isValidSpeakingSection', () => {
+  it('requires Speaking questions only', () => {
+    expect(
+      isValidSpeakingSection([
+        { questionType: QuestionType.IELTS_SPEAKING_PART_1 },
+      ]),
+    ).toBe(true);
+    expect(isValidSpeakingSection([])).toBe(false);
+    expect(
+      isValidSpeakingSection([{ questionType: QuestionType.READ_ALOUD }]),
+    ).toBe(false);
+  });
 });

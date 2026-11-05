@@ -8,6 +8,7 @@ import {
 } from '../../types/attempt.type.js';
 import { QuestionType, SkillType } from '../../types/test.type.js';
 import { isBlankResponse } from './attempt-grader.js';
+import { isSpeakingQuestion } from './attempt-response.js';
 
 export const isTeacherGraded = (skill: SkillType): boolean =>
   skill === SkillType.WRITING || skill === SkillType.SPEAKING;
@@ -53,3 +54,9 @@ export function isValidWritingSection(
   );
   return !!task1 && !!task2 && task1.partId !== task2.partId;
 }
+
+export const isValidSpeakingSection = (
+  questions: readonly Pick<ITreeQuestion, 'questionType'>[],
+): boolean =>
+  questions.length > 0 &&
+  questions.every((q) => isSpeakingQuestion(q.questionType));

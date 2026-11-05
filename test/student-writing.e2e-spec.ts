@@ -109,17 +109,6 @@ describe('Student writing attempts', () => {
     ]).expect(400);
   });
 
-  it('keeps Speaking closed', async () => {
-    const { test, sections } = await seedExam(testApp, [
-      SkillType.LISTENING,
-      SkillType.SPEAKING,
-    ]);
-
-    await start(test.id, AttemptMode.SECTION, [
-      sections[SkillType.SPEAKING]!.id,
-    ]).expect(400);
-  });
-
   const save = (id: string, questionId: number, text: string) =>
     testApp
       .http()

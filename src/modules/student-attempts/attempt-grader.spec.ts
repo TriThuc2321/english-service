@@ -169,3 +169,9 @@ it.each([
 ])('isBlankResponse(%j) is %s', (response, blank) =>
   expect(isBlankResponse(response)).toBe(blank),
 );
+
+describe('isBlankResponse with a recording', () => {
+  it('treats a recording as an answer', () => {
+    expect(isBlankResponse({ mediaId: 5 })).toBe(false);
+  });
+});
