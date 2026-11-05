@@ -354,7 +354,7 @@ Submits the whole attempt: every remaining section is closed (unanswered questio
 
 ### `GET /student/attempts/:id/result`
 
-Available once the attempt is `GRADED` or `EXPIRED`; otherwise `409 ATTEMPT_NOT_GRADED`. This is the only endpoint that returns answers, explanations, evidence and transcripts.
+Available once the attempt has left `IN_PROGRESS` (`SUBMITTED`, `GRADED` or `EXPIRED`); only an `IN_PROGRESS` attempt returns `409 ATTEMPT_NOT_GRADED`. This is the only endpoint that returns answers, explanations, evidence and transcripts. A `SUBMITTED` attempt still has IELTS Writing sections waiting for a teacher: those sections have `gradingStatus = 'PENDING'` and no `assessments` entry yet, so poll or reopen the result later.
 
 **Response `200`**: `AttemptResult`
 
@@ -366,10 +366,11 @@ The shape depends on the question type; the server validates it on save (`400` o
 { "key": "B" }          // one option: multiple choice, TRUE/FALSE/NOT GIVEN, YES/NO/NOT GIVEN, matching, labelling, TOEIC, SUMMARY_COMPLETION with a word bank
 { "keys": ["A", "D"] }  // MULTIPLE_CHOICE_MULTI: unique, 1 to numberTo − numberFrom + 1 items
 { "text": "colour" }    // completion, short answer, diagram labelling, SUMMARY_COMPLETION without a word bank: string, max 255 characters
+{ "text": "Dear Sir..." } // IELTS_WRITING_TASK_1 / IELTS_WRITING_TASK_2: the essay, string, max 20000 characters
 ```
 
 - `key` and every item of `keys` must be an option `key` from the test content. `TRUE_FALSE_NOT_GIVEN` takes exactly `TRUE`, `FALSE` or `NOT GIVEN`, and `YES_NO_NOT_GIVEN` takes `YES`, `NO` or `NOT GIVEN` (upper case, with the space).
-- Do not send other fields. Questions that cannot be graded automatically (Speaking/Writing) are rejected.
+- Do not send other fields. IELTS Writing tasks accept `text`; the other Speaking/Writing types (including IELTS Speaking) are rejected for now.
 - Text is compared after normalising case, quotes, punctuation and whitespace. If the group has a `wordLimit`, an answer with more words is wrong.
 - Multi-answer questions: `score` is the number of correct keys, so partial credit is possible.
 
@@ -380,7 +381,7 @@ The shape depends on the question type; the server validates it on save (`400` o
 - A `null` deadline means no time limit.
 - **Remaining time** is `deadlineAt − serverNow`. Use `serverNow` (returned by `Attempt` and by autosave) rather than the device clock, and re-sync on every response.
 - **Grace:** answers that arrive up to **30 seconds** after a deadline are still accepted (network latency).
-- **Expiry:** there is no background job. The first request after deadline + grace closes the attempt: open sections become `EXPIRED`, the attempt is graded and becomes `EXPIRED` with scores. For IELTS, expired sections cascade, and the next sections expire too if their time has also passed. `submittedAt` is the deadline, not the time the server noticed.
+- **Expiry:** there is no background job. The first request after deadline + grace closes the attempt: open sections become `EXPIRED`, the attempt is graded and becomes `EXPIRED` with scores (Writing sections with an answer stay `PENDING` until a teacher grades them). The teachers' grading queue also closes overdue attempts, so an abandoned attempt reaches a teacher without the student coming back. For IELTS, expired sections cascade, and the next sections expire too if their time has also passed. `submittedAt` is the deadline, not the time the server noticed.
 - A **write** (autosave or submit) on an attempt that is already `GRADED` or `EXPIRED`, including one that has just expired, returns `409 ATTEMPT_CLOSED`. Navigate to the result page. `GET /:id` and `/result` never return this error.
 
 ### Types
@@ -412,8 +413,14 @@ AttemptSection {
   submittedAt: string | null
   rawScore: number | null            // null until graded
   maxScore: number | null
-  scaledScore: number | null         // IELTS band or TOEIC section score; null if no score scale exists
+  scaledScore: number | null         // IELTS band or TOEIC section score; null if no score scale exists, and for a Writing section until a teacher grades it
+  gradingStatus: AttemptSectionGradingStatus | null  // null until the attempt is finished
 }
+
+type AttemptSectionGradingStatus =
+  | 'AUTO_GRADED'                    // scored by the server (Listening/Reading, or a Writing section left completely blank: band 0)
+  | 'PENDING'                        // waiting for a teacher (IELTS Writing)
+  | 'GRADED'                         // a teacher has graded it; scaledScore is the band
 
 AttemptAnswerState {
   questionId: number
@@ -437,6 +444,18 @@ AttemptResult {
   attempt: AttemptListItem
   questions: AttemptResultQuestion[]   // sorted by section order, then numberFrom
   transcripts: { mediaId: number; transcript: string }[]
+  assessments: AttemptAssessment[]     // latest teacher assessment of each GRADED section
+}
+
+AttemptAssessment {
+  attemptSectionId: string             // AttemptSection.id
+  band: number                         // section band, same as the section's scaledScore
+  entries: {
+    partId: number | null              // the Writing task's part; null for Speaking
+    criteria: Record<string, number>   // Task 1: TA, CC, LR, GRA; Task 2: TR, CC, LR, GRA
+    band: number                       // mean of the criteria, rounded to the nearest 0.5 (half rounds up)
+    feedback: string | null
+  }[]
 }
 
 AttemptResultQuestion {
@@ -456,6 +475,8 @@ AttemptResultQuestion {
 ```
 
 The result does not repeat the test content. Join it with the `GET /student/tests/:slug` response (which you already have) on `questionId`. `evidence.paragraphId` is a `paragraphs[].id` in that content, so you can highlight the paragraph. `transcripts[].mediaId` matches `StudentMedia.id`; media without a transcript is left out. Every question of the attempt's sections is present, including unanswered ones.
+
+For Writing questions `response` is `{ text }` and `answer` is the model answer (`{ sample, rubric? }`). **Clients must ignore `score`/`maxScore`/`isCorrect` of Writing questions**: they are not graded per question. Read the band from `AttemptSection.scaledScore` and the criteria and feedback from `assessments`. The student never sees who graded it or earlier revisions.
 
 ---
 
@@ -482,6 +503,8 @@ The result does not repeat the test content. Join it with the `GET /student/test
 | `TEXT_COMPLETION` (TOEIC Part 6)                                                        | — (passage is in `group.passages`)                                 | **choices**                                                     | pick one option                                    |
 | `RESPOND_USING_INFO`                                                                    | **info**                                                           | timing, optional                                                | speak                                              |
 | `READ_ALOUD`, `DESCRIBE_PICTURE`, `RESPOND_TO_QUESTIONS`, `EXPRESS_OPINION`             | —                                                                  | timing, optional                                                | speak                                              |
+| `IELTS_WRITING_TASK_1`, `IELTS_WRITING_TASK_2`                                          | —                                                                  | timing, optional                                                | write                                              |
+| `IELTS_SPEAKING_PART_1`, `IELTS_SPEAKING_PART_2`, `IELTS_SPEAKING_PART_3`               | —                                                                  | timing, optional                                                | speak                                              |
 | `WRITE_SENTENCE_PICTURE`, `RESPOND_WRITTEN_REQUEST`, `OPINION_ESSAY`                    | —                                                                  | timing, optional                                                | write                                              |
 
 **Bold** means the content is always present for that type.
@@ -548,7 +571,8 @@ type MediaKind = 'AUDIO' | 'IMAGE';
 
 type AttemptMode = 'FULL' | 'SECTION';
 
-// EXPIRED: time ran out; the attempt is graded and has scores, like GRADED
+// SUBMITTED: finished, but a Writing section is still waiting for a teacher (GRADED once all are graded)
+// EXPIRED: time ran out; the attempt is closed and scored, like GRADED (Writing may still be PENDING)
 type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'EXPIRED';
 
 type AttemptSectionStatus =
@@ -587,7 +611,13 @@ type QuestionType =
   | 'EXPRESS_OPINION'
   | 'WRITE_SENTENCE_PICTURE'
   | 'RESPOND_WRITTEN_REQUEST'
-  | 'OPINION_ESSAY';
+  | 'OPINION_ESSAY'
+  // IELTS Writing & Speaking
+  | 'IELTS_WRITING_TASK_1'
+  | 'IELTS_WRITING_TASK_2'
+  | 'IELTS_SPEAKING_PART_1'
+  | 'IELTS_SPEAKING_PART_2'
+  | 'IELTS_SPEAKING_PART_3';
 ```
 
 Exam types and their skills:

@@ -36,6 +36,8 @@ Quy tắc chung:
 | TEXT_COMPLETION (TOEIC Part 6)                                  | — (passage gắn qua `group_passages`)                  | **options** (có text)    | `key`                                         |
 | RESPOND_USING_INFO                                              | **info**                                              | timing (tuỳ chọn)        | `sample`                                      |
 | 7 dạng Speaking/Writing còn lại                                 | —                                                     | timing (tuỳ chọn)        | `sample`                                      |
+| IELTS_WRITING_TASK_1, IELTS_WRITING_TASK_2                      | —                                                     | timing (tuỳ chọn)        | `sample`                                      |
+| IELTS_SPEAKING_PART_1 / 2 / 3                                   | —                                                     | timing (tuỳ chọn)        | `sample`                                      |
 
 **In đậm** = bắt buộc.
 
