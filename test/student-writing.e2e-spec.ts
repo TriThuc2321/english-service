@@ -3,7 +3,7 @@ import { AttemptMode } from '../src/types/attempt.type.js';
 import { ExamType, SkillType } from '../src/types/test.type.js';
 import { createTestApp, type TestApp } from './utils/app.js';
 import { createUser, loginWeb } from './utils/fixtures.js';
-import { seedExam } from './utils/grading.js';
+import { backdateOpenSections, seedExam } from './utils/grading.js';
 
 describe('Student writing attempts', () => {
   let testApp: TestApp;
@@ -118,5 +118,110 @@ describe('Student writing attempts', () => {
     await start(test.id, AttemptMode.SECTION, [
       sections[SkillType.SPEAKING]!.id,
     ]).expect(400);
+  });
+
+  const save = (id: string, questionId: number, text: string) =>
+    testApp
+      .http()
+      .put(`/api/student/attempts/${id}/answers`)
+      .auth(token, { type: 'bearer' })
+      .send({ answers: [{ questionId, response: { text } }] })
+      .expect(200);
+
+  const submit = (id: string) =>
+    testApp
+      .http()
+      .post(`/api/student/attempts/${id}/submit`)
+      .auth(token, { type: 'bearer' })
+      .expect(201);
+
+  const startWriting = async () => {
+    const seeded = await seedExam(testApp, [SkillType.WRITING]);
+    const attempt = await start(seeded.test.id, AttemptMode.SECTION, [
+      seeded.sections[SkillType.WRITING]!.id,
+    ]).expect(201);
+    return { ...seeded, id: attempt.body.id as string };
+  };
+
+  it('leaves a Writing section pending', async () => {
+    const { id, questions } = await startWriting();
+    const [task1, task2] = questions[SkillType.WRITING]!;
+    await save(id, task1.id, 'report');
+    await save(id, task2.id, 'essay');
+
+    const res = await submit(id);
+
+    expect(res.body.status).toBe('SUBMITTED');
+    expect(res.body.sections[0]).toMatchObject({
+      gradingStatus: 'PENDING',
+      rawScore: null,
+      maxScore: null,
+      scaledScore: null,
+    });
+    const rows = await testApp.dataSource.query(
+      'SELECT is_correct, score FROM attempt_answers WHERE attempt_id = $1',
+      [id],
+    );
+    expect(rows).toEqual([
+      { is_correct: null, score: null },
+      { is_correct: null, score: null },
+    ]);
+  });
+
+  it('scores a blank Writing section 0', async () => {
+    const { id } = await startWriting();
+
+    const res = await submit(id);
+
+    expect(res.body.status).toBe('GRADED');
+    expect(res.body.sections[0]).toMatchObject({
+      gradingStatus: 'AUTO_GRADED',
+      rawScore: null,
+      maxScore: null,
+      scaledScore: 0,
+    });
+  });
+
+  it('treats a whitespace-only essay as blank', async () => {
+    const { id, questions } = await startWriting();
+    await save(id, questions[SkillType.WRITING]![1].id, ' \n\t ');
+
+    const res = await submit(id);
+
+    expect(res.body.status).toBe('GRADED');
+    expect(res.body.sections[0]).toMatchObject({
+      gradingStatus: 'AUTO_GRADED',
+      scaledScore: 0,
+    });
+  });
+
+  it('keeps an overdue attempt EXPIRED with its section pending', async () => {
+    const { id, questions } = await startWriting();
+    await save(id, questions[SkillType.WRITING]![1].id, 'essay');
+    await backdateOpenSections(testApp, id);
+
+    const res = await testApp
+      .http()
+      .get(`/api/student/attempts/${id}`)
+      .auth(token, { type: 'bearer' })
+      .expect(200);
+
+    expect(res.body.status).toBe('EXPIRED');
+    expect(res.body.sections[0].gradingStatus).toBe('PENDING');
+  });
+
+  it('marks Listening and Reading AUTO_GRADED', async () => {
+    const { test } = await seedExam(testApp, [
+      SkillType.LISTENING,
+      SkillType.READING,
+    ]);
+    const attempt = await start(test.id).expect(201);
+
+    const res = await submit(attempt.body.id);
+
+    expect(res.body.status).toBe('GRADED');
+    expect(
+      res.body.sections.map((s: { gradingStatus: string }) => s.gradingStatus),
+    ).toEqual(['AUTO_GRADED', 'AUTO_GRADED']);
   });
 });

@@ -8195,6 +8195,10 @@
         "type": "string",
         "enum": ["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "EXPIRED"]
       },
+      "AttemptSectionGradingStatus": {
+        "type": "string",
+        "enum": ["AUTO_GRADED", "PENDING", "GRADED"]
+      },
       "AttemptSectionDto": {
         "type": "object",
         "properties": {
@@ -8238,6 +8242,14 @@
             "format": "date-time",
             "nullable": true
           },
+          "gradingStatus": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttemptSectionGradingStatus"
+              }
+            ]
+          },
           "rawScore": {
             "type": "number",
             "nullable": true
@@ -8260,6 +8272,7 @@
           "startedAt",
           "deadlineAt",
           "submittedAt",
+          "gradingStatus",
           "rawScore",
           "maxScore",
           "scaledScore"

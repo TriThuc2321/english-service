@@ -33,7 +33,10 @@ import {
   AttemptStatus,
 } from '../../types/attempt.type.js';
 import { ExamType, SkillType, TestStatus } from '../../types/test.type.js';
-import { isValidWritingSection } from './attempt-grading-status.js';
+import {
+  isValidWritingSection,
+  resolveAttemptStatus,
+} from './attempt-grading-status.js';
 import { parseResponse } from './attempt-response.js';
 import { AttemptScoringService } from './attempt-scoring.service.js';
 import {
@@ -339,7 +342,7 @@ export class StudentAttemptsService {
         closeSection(ctx.test.examType, ctx.timeline, sectionId, now),
       );
       if (isFinished(ctx.timeline)) {
-        await this.finish(ctx, AttemptStatus.GRADED, now);
+        await this.finish(ctx, false, now);
       }
       return this.toDto(ctx);
     });
@@ -349,7 +352,7 @@ export class StudentAttemptsService {
     const now = new Date();
     return this.withAttempt(userId, id, now, true, async (ctx) => {
       await this.applyTimeline(ctx, closeAll(ctx.timeline, now));
-      await this.finish(ctx, AttemptStatus.GRADED, now);
+      await this.finish(ctx, false, now);
       return this.toDto(ctx);
     });
   }
@@ -432,7 +435,7 @@ export class StudentAttemptsService {
       const { timeline, expired } = reconcile(test.examType, ctx.timeline, now);
       if (timeline !== ctx.timeline) await this.applyTimeline(ctx, timeline);
       if (expired) {
-        await this.finish(ctx, AttemptStatus.EXPIRED, this.expiredAt(ctx));
+        await this.finish(ctx, true, this.expiredAt(ctx));
       }
     }
     return ctx;
@@ -473,7 +476,7 @@ export class StudentAttemptsService {
 
   private async finish(
     ctx: IAttemptContext,
-    status: AttemptStatus,
+    expired: boolean,
     submittedAt: Date,
   ) {
     await this.scoringService.grade(
@@ -482,14 +485,15 @@ export class StudentAttemptsService {
       ctx.tree,
       ctx.test.examType,
     );
-    ctx.attempt.status = status;
-    ctx.attempt.submittedAt = submittedAt;
-    await ctx.m.update(Attempt, ctx.attempt.id, { status, submittedAt });
     ctx.sections = await this.loadSections(
       ctx.m,
       ctx.attempt.id,
       ctx.sectionMeta,
     );
+    const status = resolveAttemptStatus(expired, ctx.sections);
+    ctx.attempt.status = status;
+    ctx.attempt.submittedAt = submittedAt;
+    await ctx.m.update(Attempt, ctx.attempt.id, { status, submittedAt });
   }
 
   private async toDto(ctx: IAttemptContext): Promise<AttemptDto> {

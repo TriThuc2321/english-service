@@ -3,6 +3,7 @@ import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../shared/dto/index.js';
 import {
   AttemptMode,
+  AttemptSectionGradingStatus,
   AttemptSectionStatus,
   AttemptStatus,
 } from '../../../types/attempt.type.js';
@@ -35,6 +36,13 @@ export class AttemptSectionDto {
 
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   submittedAt: string | null;
+
+  @ApiProperty({
+    enum: AttemptSectionGradingStatus,
+    enumName: 'AttemptSectionGradingStatus',
+    nullable: true,
+  })
+  gradingStatus: AttemptSectionGradingStatus | null;
 
   @ApiProperty({ type: Number, nullable: true })
   rawScore: number | null;

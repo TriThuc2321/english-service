@@ -27,6 +27,7 @@ export const toSectionDto = (
   startedAt: iso(s.startedAt),
   deadlineAt: iso(s.deadlineAt),
   submittedAt: iso(s.submittedAt),
+  gradingStatus: s.gradingStatus ?? null,
   rawScore: s.rawScore ?? null,
   maxScore: s.maxScore ?? null,
   scaledScore: s.scaledScore ?? null,
