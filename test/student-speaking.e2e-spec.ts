@@ -193,13 +193,22 @@ describe('Student speaking attempts', () => {
   });
 
   it('rejects a key from another attempt', async () => {
-    const { id, question } = await startSpeaking();
+    const mine = await startSpeaking();
+    const other = await startSpeaking();
+    const foreign = await uploadUrl(other.id, other.question.id).expect(201);
+    testApp.storage.head.mockResolvedValueOnce({
+      size: 21 * 1024 * 1024,
+      contentType: 'image/png',
+    });
 
-    await confirm(
-      id,
-      question.id,
-      `attempts/${randomUUID()}/audio/${randomUUID()}.webm`,
-    ).expect(400);
+    await confirm(mine.id, mine.question.id, foreign.body.storageKey).expect(
+      400,
+    );
+
+    expect(testApp.storage.head).not.toHaveBeenCalled();
+    expect(testApp.storage.delete).not.toHaveBeenCalled();
+    expect(await mediaRows(mine.id)).toEqual([]);
+    expect(await mediaRows(other.id)).toEqual([]);
   });
 
   it('rejects audio for a section that is not open', async () => {
