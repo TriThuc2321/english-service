@@ -32,7 +32,8 @@ import {
   AttemptSectionStatus,
   AttemptStatus,
 } from '../../types/attempt.type.js';
-import { ExamType, TestStatus } from '../../types/test.type.js';
+import { ExamType, SkillType, TestStatus } from '../../types/test.type.js';
+import { isValidWritingSection } from './attempt-grading-status.js';
 import { parseResponse } from './attempt-response.js';
 import { AttemptScoringService } from './attempt-scoring.service.js';
 import {
@@ -506,20 +507,33 @@ export class StudentAttemptsService {
   }
 
   private pickSections(tree: IAttemptTree, dto: StartAttemptDto) {
-    let chosen = tree.sections;
+    let chosen: ITreeSection[];
     if (dto.mode === AttemptMode.SECTION) {
       const ids = new Set(dto.sectionIds);
       chosen = tree.sections.filter((s) => ids.has(s.sectionId));
       if (chosen.length !== ids.size) {
         throw new BadRequestException(
-          'sectionIds must be listening or reading sections of this test',
+          'sectionIds must be sections of this test that can be attempted',
         );
       }
+    } else {
+      chosen = tree.sections.filter((s) => s.skill !== SkillType.WRITING);
     }
     if (!chosen.length) {
       throw new BadRequestException(
-        'The test has no listening or reading section',
+        'The test has no section that can be attempted',
       );
+    }
+    for (const s of chosen) {
+      if (s.skill !== SkillType.WRITING) continue;
+      const questions = [...tree.questions.values()].filter(
+        (q) => q.sectionId === s.sectionId,
+      );
+      if (!isValidWritingSection(questions)) {
+        throw new BadRequestException(
+          `Writing section ${s.sectionId} must have one Task 1 and one Task 2 question`,
+        );
+      }
     }
     return chosen;
   }

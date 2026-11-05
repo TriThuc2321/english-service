@@ -2,12 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 
 import { Test } from '../../entities/test.entity.js';
-import { QuestionType, SkillType } from '../../types/test.type.js';
+import { ExamType, QuestionType, SkillType } from '../../types/test.type.js';
 import { answerKeysOf } from '../questions/answer-text.js';
 
 export interface ITreeQuestion {
   id: number;
   sectionId: number;
+  partId: number;
   questionType: QuestionType;
   wordLimit: number | null;
   numberFrom: number;
@@ -29,7 +30,18 @@ export interface IAttemptTree {
   mediaIds: ReadonlyMap<number, number[]>;
 }
 
-const GRADED_SKILLS = [SkillType.LISTENING, SkillType.READING];
+const IELTS_SKILLS = [
+  SkillType.LISTENING,
+  SkillType.READING,
+  SkillType.WRITING,
+];
+// TOEIC_SW is out of scope, so its tests keep having no attemptable section
+const ATTEMPT_SKILLS: Record<ExamType, readonly SkillType[]> = {
+  [ExamType.IELTS_ACADEMIC]: IELTS_SKILLS,
+  [ExamType.IELTS_GENERAL]: IELTS_SKILLS,
+  [ExamType.TOEIC_LR]: [SkillType.LISTENING, SkillType.READING],
+  [ExamType.TOEIC_SW]: [],
+};
 
 @Injectable()
 export class AttemptTreeService {
@@ -46,15 +58,14 @@ export class AttemptTreeService {
 
     const test = await (manager ?? this.dataSource.manager)
       .createQueryBuilder(Test, 't')
-      .leftJoin('t.testSections', 's', 's.skill IN (:...skills)', {
-        skills: GRADED_SKILLS,
-      })
+      .leftJoin('t.testSections', 's')
       .leftJoin('s.testParts', 'p')
       .leftJoin('p.questionGroups', 'g')
       .leftJoin('g.questions', 'q')
       .select([
         't.id',
         't.lockedAt',
+        't.examType',
         's.id',
         's.skill',
         's.order',
@@ -90,7 +101,9 @@ export class AttemptTreeService {
     const mediaIds = new Map<number, number[]>();
     const sections: ITreeSection[] = [];
 
+    const skills = ATTEMPT_SKILLS[test.examType];
     for (const s of test.testSections) {
+      if (!skills.includes(s.skill)) continue;
       sections.push({
         sectionId: s.id,
         skill: s.skill,
@@ -113,6 +126,7 @@ export class AttemptTreeService {
             questions.set(q.id, {
               id: q.id,
               sectionId: s.id,
+              partId: p.id,
               questionType: g.questionType,
               wordLimit: g.wordLimit ?? null,
               numberFrom: q.numberFrom,

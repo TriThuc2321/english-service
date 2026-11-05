@@ -65,6 +65,12 @@ export function gradeAnswer(
   return BLANK;
 }
 
+export function isBlankResponse(
+  response: AttemptResponse | null | undefined,
+): boolean {
+  return !response || isBlank(response);
+}
+
 function isBlank(response: AttemptResponse): boolean {
   if ('key' in response) return !response.key.trim();
   if ('keys' in response) return !response.keys.length;

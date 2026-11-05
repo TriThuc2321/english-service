@@ -62,7 +62,8 @@ export class SaveAnswerItemDto {
     type: 'object',
     additionalProperties: true,
     nullable: true,
-    description: '{ key } | { keys } | { text }; null clears the answer',
+    description:
+      '{ key } | { keys } | { text } (an essay for Writing, up to 20,000 characters); null clears the answer',
   })
   @ValidateIf((_, value) => value !== null)
   @IsObject()
