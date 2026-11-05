@@ -52,6 +52,7 @@
 ## Task 1: Schema
 
 **Files:**
+
 - Modify: `src/types/test.type.ts`, `src/types/attempt.type.ts`, `src/types/auth.type.ts`
 - Modify: `src/modules/questions/question-answer.ts`, `src/modules/questions/question-content.ts`
 - Create: `src/entities/assessment.entity.ts`
@@ -60,6 +61,7 @@
 - Test: `test/migrations.e2e-spec.ts`, `src/modules/questions/question-answer.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `QuestionType.IELTS_WRITING_TASK_1 | IELTS_WRITING_TASK_2 | IELTS_SPEAKING_PART_1 | IELTS_SPEAKING_PART_2 | IELTS_SPEAKING_PART_3`
   - `PermissionSubject.ASSESSMENT = 'assessment'`. `PermissionsService.onModuleInit` seeds its rows at boot, so the migration needs no insert.
@@ -134,10 +136,12 @@ git commit -m "feat: add grading schema and IELTS Writing/Speaking question type
 ## Task 2: Import rules for IELTS Writing
 
 **Files:**
+
 - Modify: `src/modules/test-import/test-import.validator.ts`
 - Test: `src/modules/test-import/test-import.validator.spec.ts`
 
 **Interfaces:**
+
 - Consumes: the new `QuestionType` values (Task 1)
 
 - [ ] **Step 1: Write the failing tests**
@@ -193,10 +197,12 @@ git commit -m "feat: validate IELTS Writing sections on import"
 ## Task 3: Band calculation
 
 **Files:**
+
 - Create: `src/shared/scoring/ielts-band.ts`
 - Test: `src/shared/scoring/ielts-band.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `roundBand(value: number): number`
   - `criteriaBand(scores: readonly number[]): number`, the mean of the scores, rounded; used for a task and for Speaking
@@ -207,7 +213,13 @@ git commit -m "feat: validate IELTS Writing sections on import"
 
 ```ts
 it.each([
-  [6.25, 6.5], [6.75, 7], [6.125, 6], [6.375, 6.5], [6.6, 6.5], [9, 9], [0, 0],
+  [6.25, 6.5],
+  [6.75, 7],
+  [6.125, 6],
+  [6.375, 6.5],
+  [6.6, 6.5],
+  [9, 9],
+  [0, 0],
 ])('rounds %d to %d', (value, band) => expect(roundBand(value)).toBe(band));
 
 it('averages criteria', () => {
@@ -222,30 +234,53 @@ it('weights Task 2 double', () => {
   expect(writingBand(5, 8)).toBe(7);
 });
 
-const skills = (l, r, w, s) => new Map([
-  [SkillType.LISTENING, l], [SkillType.READING, r],
-  [SkillType.WRITING, w], [SkillType.SPEAKING, s],
-]);
+const skills = (l, r, w, s) =>
+  new Map([
+    [SkillType.LISTENING, l],
+    [SkillType.READING, r],
+    [SkillType.WRITING, w],
+    [SkillType.SPEAKING, s],
+  ]);
 const ielts = { examType: ExamType.IELTS_ACADEMIC, mode: AttemptMode.FULL };
 
 it('averages four skills for a FULL IELTS attempt', () => {
-  expect(overallScoreOf({ ...ielts, scaledBySkill: skills(7, 6, 6, 6) })).toBe(6.5);
-  expect(overallScoreOf({ ...ielts, scaledBySkill: skills(7, 7, 7, 6) })).toBe(7);
+  expect(overallScoreOf({ ...ielts, scaledBySkill: skills(7, 6, 6, 6) })).toBe(
+    6.5,
+  );
+  expect(overallScoreOf({ ...ielts, scaledBySkill: skills(7, 7, 7, 6) })).toBe(
+    7,
+  );
 });
 it('counts a blank skill as 0', () => {
-  expect(overallScoreOf({ ...ielts, scaledBySkill: skills(8, 8, 0, 8) })).toBe(6);
+  expect(overallScoreOf({ ...ielts, scaledBySkill: skills(8, 8, 0, 8) })).toBe(
+    6,
+  );
 });
 it('stays null until all four exist', () => {
-  expect(overallScoreOf({ ...ielts, scaledBySkill: skills(7, 7, 7, null) })).toBeNull();
+  expect(
+    overallScoreOf({ ...ielts, scaledBySkill: skills(7, 7, 7, null) }),
+  ).toBeNull();
 });
 it('stays null in SECTION mode', () => {
-  expect(overallScoreOf({ ...ielts, mode: AttemptMode.SECTION, scaledBySkill: skills(7, 7, 7, 7) })).toBeNull();
+  expect(
+    overallScoreOf({
+      ...ielts,
+      mode: AttemptMode.SECTION,
+      scaledBySkill: skills(7, 7, 7, 7),
+    }),
+  ).toBeNull();
 });
 it('keeps TOEIC as L + R', () => {
-  expect(overallScoreOf({
-    examType: ExamType.TOEIC_LR, mode: AttemptMode.FULL,
-    scaledBySkill: new Map([[SkillType.LISTENING, 300], [SkillType.READING, 250]]),
-  })).toBe(550);
+  expect(
+    overallScoreOf({
+      examType: ExamType.TOEIC_LR,
+      mode: AttemptMode.FULL,
+      scaledBySkill: new Map([
+        [SkillType.LISTENING, 300],
+        [SkillType.READING, 250],
+      ]),
+    }),
+  ).toBe(550);
 });
 ```
 
@@ -273,12 +308,14 @@ git commit -m "feat: add IELTS band calculation"
 ## Task 4: Students can answer Writing
 
 **Files:**
+
 - Modify: `src/modules/student-attempts/attempt-grader.ts`, `attempt-response.ts`, `attempt-tree.service.ts`, `student-attempts.service.ts:508-525`, `dto/student-attempts.dto.ts`
 - Create: `src/modules/student-attempts/attempt-grading-status.ts` (grows in Task 5)
 - Create: `test/utils/grading.ts`, `test/student-writing.e2e-spec.ts`
 - Test: `attempt-response.spec.ts`, `attempt-grader.spec.ts`, `attempt-grading-status.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `QuestionType.IELTS_WRITING_TASK_*`
 - Produces:
   - `AttemptResponse` keeps `{ key } | { keys } | { text }`
@@ -292,40 +329,63 @@ git commit -m "feat: add IELTS band calculation"
 
 ```ts
 describe('IELTS_WRITING_TASK_2', () => {
-  const q = question({ questionType: QuestionType.IELTS_WRITING_TASK_2, keys: null });
+  const q = question({
+    questionType: QuestionType.IELTS_WRITING_TASK_2,
+    keys: null,
+  });
   it('accepts an essay of 20,000 characters', () => {
     const text = 'a'.repeat(20_000);
     expect(parseResponse(q, { text })).toEqual({ text });
   });
   it('rejects 20,001 characters', () => {
-    expect(() => parseResponse(q, { text: 'a'.repeat(20_001) })).toThrow(BadRequestException);
+    expect(() => parseResponse(q, { text: 'a'.repeat(20_001) })).toThrow(
+      BadRequestException,
+    );
   });
   it('ignores the word limit', () => {
     const long = question({ ...q, wordLimit: 2 });
-    expect(parseResponse(long, { text: 'one two three' })).toEqual({ text: 'one two three' });
+    expect(parseResponse(long, { text: 'one two three' })).toEqual({
+      text: 'one two three',
+    });
   });
 });
 
 it('still refuses TOEIC_SW types', () => {
-  expect(() => parseResponse(question({ questionType: QuestionType.OPINION_ESSAY }), { text: 'x' }))
-    .toThrow('cannot be answered automatically');
+  expect(() =>
+    parseResponse(question({ questionType: QuestionType.OPINION_ESSAY }), {
+      text: 'x',
+    }),
+  ).toThrow('cannot be answered automatically');
 });
 
 // attempt-grader.spec.ts
-it.each([[null, true], [{ text: '  \n ' }, true], [{ keys: [] }, true], [{ text: 'x' }, false], [{ key: 'A' }, false]])(
-  'isBlankResponse(%j) is %s', (response, blank) => expect(isBlankResponse(response)).toBe(blank));
+it.each([
+  [null, true],
+  [{ text: '  \n ' }, true],
+  [{ keys: [] }, true],
+  [{ text: 'x' }, false],
+  [{ key: 'A' }, false],
+])('isBlankResponse(%j) is %s', (response, blank) =>
+  expect(isBlankResponse(response)).toBe(blank),
+);
 
 // attempt-grading-status.spec.ts
 const task = (questionType, partId) => ({ questionType, partId });
-const T1 = QuestionType.IELTS_WRITING_TASK_1, T2 = QuestionType.IELTS_WRITING_TASK_2;
+const T1 = QuestionType.IELTS_WRITING_TASK_1,
+  T2 = QuestionType.IELTS_WRITING_TASK_2;
 it('accepts Task 1 and Task 2 in separate parts', () =>
   expect(isValidWritingSection([task(T1, 1), task(T2, 2)])).toBe(true));
 it.each([
   ['Task 2 only', [task(T2, 2)]],
   ['two Task 2', [task(T2, 1), task(T2, 2)]],
   ['one shared part', [task(T1, 1), task(T2, 1)]],
-  ['a foreign type', [task(T1, 1), task(T2, 2), task(QuestionType.OPINION_ESSAY, 3)]],
-])('rejects %s', (_, questions) => expect(isValidWritingSection(questions)).toBe(false));
+  [
+    'a foreign type',
+    [task(T1, 1), task(T2, 2), task(QuestionType.OPINION_ESSAY, 3)],
+  ],
+])('rejects %s', (_, questions) =>
+  expect(isValidWritingSection(questions)).toBe(false),
+);
 ```
 
 - [ ] **Step 2: Run them and confirm they fail**
@@ -344,7 +404,11 @@ In `attempt-grader.ts`, export `isBlankResponse`, built from the private `isBlan
 In `attempt-tree.service.ts`, replace `GRADED_SKILLS` with:
 
 ```ts
-const IELTS_SKILLS = [SkillType.LISTENING, SkillType.READING, SkillType.WRITING];
+const IELTS_SKILLS = [
+  SkillType.LISTENING,
+  SkillType.READING,
+  SkillType.WRITING,
+];
 // TOEIC_SW is out of scope, so its tests keep having no attemptable section
 const ATTEMPT_SKILLS: Record<ExamType, readonly SkillType[]> = {
   [ExamType.IELTS_ACADEMIC]: IELTS_SKILLS,
@@ -357,6 +421,7 @@ const ATTEMPT_SKILLS: Record<ExamType, readonly SkillType[]> = {
 Remove the skill condition from the `s` join, select `t.examType`, and skip other skills in the `test.testSections` loop. Set `partId: p.id` on each question.
 
 In `pickSections`:
+
 - `FULL` picks only `LISTENING`/`READING` sections. PR 2 removes this: a `FULL` IELTS attempt runs in order and could not get past Speaking yet.
 - `SECTION` error: `sectionIds must be sections of this test that can be attempted`.
 - Empty result: `The test has no section that can be attempted`.
@@ -389,10 +454,12 @@ git commit -m "feat: let students answer IELTS Writing"
 ## Task 5: Resolve grading status at finish
 
 **Files:**
+
 - Modify: `src/modules/student-attempts/attempt-grading-status.ts`, `attempt-scoring.service.ts`, `student-attempts.service.ts:341,351,434,473-492`
 - Test: `attempt-grading-status.spec.ts`, `test/student-writing.e2e-spec.ts`
 
 **Interfaces:**
+
 - Consumes: `isBlankResponse`, `overallScoreOf`
 - Produces:
   - `isTeacherGraded(skill: SkillType): boolean`
@@ -406,19 +473,34 @@ git commit -m "feat: let students answer IELTS Writing"
 const { AUTO_GRADED, PENDING } = AttemptSectionGradingStatus;
 
 it('sends a section with any response to the teacher', () =>
-  expect(resolveTeacherSection([null, { text: 'essay' }]))
-    .toEqual({ gradingStatus: PENDING, scaledScore: null }));
+  expect(resolveTeacherSection([null, { text: 'essay' }])).toEqual({
+    gradingStatus: PENDING,
+    scaledScore: null,
+  }));
 it.each([[[]], [[null, undefined]], [[{ text: '   ' }, { text: '\n' }]]])(
-  'scores a blank section 0: %j', (responses) =>
-    expect(resolveTeacherSection(responses)).toEqual({ gradingStatus: AUTO_GRADED, scaledScore: 0 }));
+  'scores a blank section 0: %j',
+  (responses) =>
+    expect(resolveTeacherSection(responses)).toEqual({
+      gradingStatus: AUTO_GRADED,
+      scaledScore: 0,
+    }),
+);
 
 it('keeps EXPIRED even with work pending', () =>
-  expect(resolveAttemptStatus(true, [{ gradingStatus: PENDING }])).toBe(AttemptStatus.EXPIRED));
+  expect(resolveAttemptStatus(true, [{ gradingStatus: PENDING }])).toBe(
+    AttemptStatus.EXPIRED,
+  ));
 it('waits for the teacher', () =>
-  expect(resolveAttemptStatus(false, [{ gradingStatus: AUTO_GRADED }, { gradingStatus: PENDING }]))
-    .toBe(AttemptStatus.SUBMITTED));
+  expect(
+    resolveAttemptStatus(false, [
+      { gradingStatus: AUTO_GRADED },
+      { gradingStatus: PENDING },
+    ]),
+  ).toBe(AttemptStatus.SUBMITTED));
 it('is GRADED when nothing is pending', () =>
-  expect(resolveAttemptStatus(false, [{ gradingStatus: AUTO_GRADED }])).toBe(AttemptStatus.GRADED));
+  expect(resolveAttemptStatus(false, [{ gradingStatus: AUTO_GRADED }])).toBe(
+    AttemptStatus.GRADED,
+  ));
 ```
 
 Add to the e2e file:
@@ -466,11 +548,13 @@ git commit -m "feat: hold Writing sections for teacher grading at finish"
 ## Task 6: `/result` during grading
 
 **Files:**
+
 - Create: `src/shared/scoring/latest-assessments.ts`
 - Modify: `attempt-result.service.ts`, `attempt.mapper.ts`, `dto/student-attempt-response.dto.ts`, `student-attempts.controller.ts:82-86`
 - Test: `test/student-writing.e2e-spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `findLatestAssessments(manager: EntityManager, attemptSectionIds: string[]): Promise<Map<string, Assessment>>`, using `DISTINCT ON (attempt_section_id) ... ORDER BY attempt_section_id, revision DESC`; an empty list returns an empty map without a query
   - `AttemptSectionDto.gradingStatus: AttemptSectionGradingStatus | null`
@@ -507,12 +591,14 @@ git commit -m "feat: show grading progress in attempt results"
 ## Task 7: Submit an assessment
 
 **Files:**
+
 - Create: `src/modules/grading/grading-entries.ts`, `grading.service.ts`, `grading.controller.ts`, `grading.module.ts`, `dto/grading.dto.ts`, `dto/grading-response.dto.ts`
 - Modify: `src/app.module.ts`
 - Create: `test/grading.e2e-spec.ts`
 - Test: `src/modules/grading/grading-entries.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `criteriaBand`, `writingBand`, `overallScoreOf`, `Assessment`, `seedExam`
 - Produces:
   - `IExpectedEntry { partId: number | null; task: 1 | 2 | null; criteria: readonly string[] }`
@@ -527,9 +613,11 @@ git commit -m "feat: show grading progress in attempt results"
 - [ ] **Step 1: Write the failing unit tests**
 
 ```ts
-const T1 = QuestionType.IELTS_WRITING_TASK_1, T2 = QuestionType.IELTS_WRITING_TASK_2;
+const T1 = QuestionType.IELTS_WRITING_TASK_1,
+  T2 = QuestionType.IELTS_WRITING_TASK_2;
 const writing = expectedEntriesOf(SkillType.WRITING, [
-  { partId: 11, questionType: T1 }, { partId: 12, questionType: T2 },
+  { partId: 11, questionType: T1 },
+  { partId: 12, questionType: T2 },
 ]);
 const speaking = expectedEntriesOf(SkillType.SPEAKING, [
   { partId: 21, questionType: QuestionType.IELTS_SPEAKING_PART_1 },
@@ -543,20 +631,32 @@ it('derives criteria codes', () => {
     { partId: 11, task: 1, criteria: ['TA', 'CC', 'LR', 'GRA'] },
     { partId: 12, task: 2, criteria: ['TR', 'CC', 'LR', 'GRA'] },
   ]);
-  expect(speaking).toEqual([{ partId: null, task: null, criteria: ['FC', 'LR', 'GRA', 'P'] }]);
+  expect(speaking).toEqual([
+    { partId: null, task: null, criteria: ['FC', 'LR', 'GRA', 'P'] },
+  ]);
 });
 
 it('computes task and section bands for Writing', () => {
-  const { band, details } = computeAssessment(SkillType.WRITING, writing, [task1, task2]);
+  const { band, details } = computeAssessment(SkillType.WRITING, writing, [
+    task1,
+    task2,
+  ]);
   expect(band).toBe(6.5);
   expect(details.entries.map((e) => e.band)).toEqual([7, 6.5]);
   expect(details.entries[0].feedback).toBeNull();
 });
 
 it('computes the Speaking band', () => {
-  const entry = { partId: null, criteria: { FC: 7, LR: 6, GRA: 6, P: 7 }, feedback: 'Good' };
-  expect(computeAssessment(SkillType.SPEAKING, speaking, [entry])).toMatchObject({
-    band: 6.5, details: { entries: [{ band: 6.5, feedback: 'Good' }] },
+  const entry = {
+    partId: null,
+    criteria: { FC: 7, LR: 6, GRA: 6, P: 7 },
+    feedback: 'Good',
+  };
+  expect(
+    computeAssessment(SkillType.SPEAKING, speaking, [entry]),
+  ).toMatchObject({
+    band: 6.5,
+    details: { entries: [{ band: 6.5, feedback: 'Good' }] },
   });
 });
 
@@ -564,20 +664,50 @@ it.each([
   ['a missing task', [task1], 'part 12'],
   ['a duplicate task', [task1, task1], 'part 11'],
   ['an unknown part', [task1, { ...task2, partId: 99 }], 'part 99'],
-  ['a missing criterion', [task1, { partId: 12, criteria: { TR: 6, CC: 7, LR: 6 } }], 'part 12'],
-  ['Task 1 codes on Task 2', [task1, { partId: 12, criteria: task1.criteria }], 'part 12'],
-  ['a score above 9', [task1, { partId: 12, criteria: { ...task2.criteria, TR: 9.5 } }], 'part 12'],
-  ['a score below 0', [task1, { partId: 12, criteria: { ...task2.criteria, TR: -0.5 } }], 'part 12'],
-  ['a score off the 0.5 step', [task1, { partId: 12, criteria: { ...task2.criteria, TR: 6.3 } }], 'part 12'],
-  ['a non-number', [task1, { partId: 12, criteria: { ...task2.criteria, TR: '6' } }], 'part 12'],
+  [
+    'a missing criterion',
+    [task1, { partId: 12, criteria: { TR: 6, CC: 7, LR: 6 } }],
+    'part 12',
+  ],
+  [
+    'Task 1 codes on Task 2',
+    [task1, { partId: 12, criteria: task1.criteria }],
+    'part 12',
+  ],
+  [
+    'a score above 9',
+    [task1, { partId: 12, criteria: { ...task2.criteria, TR: 9.5 } }],
+    'part 12',
+  ],
+  [
+    'a score below 0',
+    [task1, { partId: 12, criteria: { ...task2.criteria, TR: -0.5 } }],
+    'part 12',
+  ],
+  [
+    'a score off the 0.5 step',
+    [task1, { partId: 12, criteria: { ...task2.criteria, TR: 6.3 } }],
+    'part 12',
+  ],
+  [
+    'a non-number',
+    [task1, { partId: 12, criteria: { ...task2.criteria, TR: '6' } }],
+    'part 12',
+  ],
 ])('rejects %s and names the entry', (_, entries, name) => {
-  expect(() => computeAssessment(SkillType.WRITING, writing, entries)).toThrow(BadRequestException);
-  expect(() => computeAssessment(SkillType.WRITING, writing, entries)).toThrow(name);
+  expect(() => computeAssessment(SkillType.WRITING, writing, entries)).toThrow(
+    BadRequestException,
+  );
+  expect(() => computeAssessment(SkillType.WRITING, writing, entries)).toThrow(
+    name,
+  );
 });
 
 it('rejects a partId on Speaking', () => {
   const entry = { partId: 21, criteria: { FC: 7, LR: 6, GRA: 6, P: 7 } };
-  expect(() => computeAssessment(SkillType.SPEAKING, speaking, [entry])).toThrow(BadRequestException);
+  expect(() =>
+    computeAssessment(SkillType.SPEAKING, speaking, [entry]),
+  ).toThrow(BadRequestException);
 });
 ```
 
@@ -636,12 +766,14 @@ git commit -m "feat: let teachers submit and correct assessments"
 ## Task 8: Queue, grading screen and revisions
 
 **Files:**
+
 - Create: `src/modules/grading/grading-query.service.ts`
 - Create: `src/modules/student-attempts/attempt-expiry.service.ts`
 - Modify: `grading.controller.ts`, `grading.module.ts`, `dto/grading.dto.ts`, `dto/grading-response.dto.ts`, `student-attempts.module.ts`
 - Test: `test/grading.e2e-spec.ts`, `src/modules/student-attempts/attempt-expiry.service.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `findLatestAssessments`, `expectedEntriesOf`, `MediaService` (imports `MediaModule`), `StudentAttemptsService.expireIfOverdue(userId, id)`
 - Produces:
   - `AttemptExpiryService.expireOverdue(now?: Date): Promise<void>`, the only export of `StudentAttemptsModule`; `GradingModule` imports that module, never the reverse
@@ -672,7 +804,10 @@ Add `attempt-expiry.service.spec.ts`, with a fake repository and a fake `Student
 
 ```ts
 it('keeps going when one attempt fails', async () => {
-  overdue([{ id: 'a', userId: 'u1' }, { id: 'b', userId: 'u2' }]);
+  overdue([
+    { id: 'a', userId: 'u1' },
+    { id: 'b', userId: 'u2' },
+  ]);
   attempts.expireIfOverdue.mockRejectedValueOnce(new Error('boom'));
   await expect(service.expireOverdue()).resolves.toBeUndefined();
   expect(attempts.expireIfOverdue).toHaveBeenCalledWith('u2', 'b');
@@ -715,6 +850,7 @@ git commit -m "feat: add grading queue and section review"
 ## Task 9: PR 1 documentation and contract
 
 **Files:**
+
 - Modify: `CLAUDE.md`, `docs/test-schema.dbml`, `docs/question-formats.md`, `docs/student-tests-api.md`, `openapi.json`
 
 - [ ] **Step 1: Update the docs**
@@ -752,6 +888,7 @@ Branch `feat/teacher-grading-speaking` from PR 1 before Task 10.
 ## Task 10: Private media
 
 **Files:**
+
 - Modify: `src/types/media.type.ts`, `src/shared/storage/storage.service.ts`, `src/configs/storage.config.ts`, `src/configs/env.validation.ts`, `.env.example`
 - Modify: `src/modules/media/media-policy.ts`, `media.service.ts`, `dto/media.dto.ts`
 - Modify: `test/utils/app.ts`
@@ -759,6 +896,7 @@ Branch `feat/teacher-grading-speaking` from PR 1 before Task 10.
 - Test: `src/modules/media/media.service.spec.ts`, `test/migrations.e2e-spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `MediaScope.ATTEMPT = 'ATTEMPT'`
   - `IMediaOwnerPolicy.privateRead?: boolean`
@@ -773,20 +911,35 @@ Branch `feat/teacher-grading-speaking` from PR 1 before Task 10.
 
 ```ts
 it('signs a URL for a privateRead scope', async () => {
-  await expect(service.getUrl({ scope: MediaScope.ATTEMPT, storageKey: 'attempts/a/audio/k.webm' }))
-    .resolves.toBe('http://signed.test/attempts/a/audio/k.webm');
+  await expect(
+    service.getUrl({
+      scope: MediaScope.ATTEMPT,
+      storageKey: 'attempts/a/audio/k.webm',
+    }),
+  ).resolves.toBe('http://signed.test/attempts/a/audio/k.webm');
   expect(storage.getPublicUrl).not.toHaveBeenCalled();
 });
 it('keeps public URLs for other scopes', async () => {
-  await expect(service.getUrl({ scope: MediaScope.TEST, storageKey: 'tests/1/audio/k.mp3' }))
-    .resolves.toBe('http://storage.test/tests/1/audio/k.mp3');
+  await expect(
+    service.getUrl({
+      scope: MediaScope.TEST,
+      storageKey: 'tests/1/audio/k.mp3',
+    }),
+  ).resolves.toBe('http://storage.test/tests/1/audio/k.mp3');
 });
 it('uploads private scopes with Cache-Control: private', async () => {
   const res = await service.createUploadUrl({
-    scope: MediaScope.ATTEMPT, ownerId: ATTEMPT_ID, kind: MediaKind.AUDIO, contentType: 'audio/webm',
+    scope: MediaScope.ATTEMPT,
+    ownerId: ATTEMPT_ID,
+    kind: MediaKind.AUDIO,
+    contentType: 'audio/webm',
   });
   expect(res.headers['Cache-Control']).toBe('private');
-  expect(storage.getUploadUrl).toHaveBeenCalledWith(res.storageKey, 'audio/webm', 'private');
+  expect(storage.getUploadUrl).toHaveBeenCalledWith(
+    res.storageKey,
+    'audio/webm',
+    'private',
+  );
 });
 ```
 
@@ -822,12 +975,14 @@ git commit -m "feat: serve private media through presigned URLs"
 ## Task 11: Speaking answers and audio endpoints
 
 **Files:**
+
 - Create: `src/modules/student-attempts/attempt-media.policy.ts`, `attempt-audio.service.ts`
 - Modify: `attempt-grader.ts`, `attempt-response.ts`, `attempt-tree.service.ts`, `attempt-grading-status.ts`, `student-attempts.service.ts`, `student-attempts.controller.ts`, `student-attempts.module.ts`, `dto/student-attempts.dto.ts`
 - Create: `test/student-speaking.e2e-spec.ts`
 - Test: `attempt-response.spec.ts`, `attempt-grader.spec.ts`, `attempt-grading-status.spec.ts`, `attempt-media.policy.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `MediaScope.ATTEMPT`, `MediaService.createUploadUrl`, `create`, `deleteQuietly`
 - Produces:
   - `AttemptResponse` gains `{ mediaId: number }`
@@ -910,11 +1065,14 @@ const media = await this.media.create(
   { scope: MediaScope.ATTEMPT, ownerId: id, kind: MediaKind.AUDIO, storageKey },
   userId,
 );
-const saved = await this.attempts.saveAudio(userId, id, questionId, media.id).catch(async (error) => {
-  await this.media.deleteQuietly(media.id);
-  throw error;
-});
-if (saved.previousMediaId) await this.media.deleteQuietly(saved.previousMediaId);
+const saved = await this.attempts
+  .saveAudio(userId, id, questionId, media.id)
+  .catch(async (error) => {
+    await this.media.deleteQuietly(media.id);
+    throw error;
+  });
+if (saved.previousMediaId)
+  await this.media.deleteQuietly(saved.previousMediaId);
 return saved.answer;
 ```
 
@@ -937,10 +1095,12 @@ git commit -m "feat: record IELTS Speaking answers"
 ## Task 12: Per-section grace period
 
 **Files:**
+
 - Modify: `src/modules/student-attempts/attempt-timeline.ts`, `student-attempts.service.ts:415-428`
 - Test: `attempt-timeline.spec.ts`
 
 **Interfaces:**
+
 - Produces: `SPEAKING_GRACE_MS = 120_000`; `ITimelineSection.skill: SkillType` (required)
 
 - [ ] **Step 1: Write the failing tests**
@@ -948,18 +1108,36 @@ git commit -m "feat: record IELTS Speaking answers"
 Add `skill: SkillType.LISTENING` to the existing fixtures.
 
 ```ts
-const ielts = (skill: SkillType) => openTimeline({
-  examType: ExamType.IELTS_ACADEMIC, mode: AttemptMode.FULL, testDurationMinutes: null,
-  sections: [{ sectionId: 1, order: 1, durationMinutes: 10, skill }],
-}, now);
+const ielts = (skill: SkillType) =>
+  openTimeline(
+    {
+      examType: ExamType.IELTS_ACADEMIC,
+      mode: AttemptMode.FULL,
+      testDurationMinutes: null,
+      sections: [{ sectionId: 1, order: 1, durationMinutes: 10, skill }],
+    },
+    now,
+  );
 
 it('gives Speaking two minutes of grace', () => {
   const t = ielts(SkillType.SPEAKING);
-  expect(reconcile(ExamType.IELTS_ACADEMIC, t, at(min(10) + SPEAKING_GRACE_MS)).expired).toBe(false);
-  expect(reconcile(ExamType.IELTS_ACADEMIC, t, at(min(10) + SPEAKING_GRACE_MS + 1)).expired).toBe(true);
+  expect(
+    reconcile(ExamType.IELTS_ACADEMIC, t, at(min(10) + SPEAKING_GRACE_MS))
+      .expired,
+  ).toBe(false);
+  expect(
+    reconcile(ExamType.IELTS_ACADEMIC, t, at(min(10) + SPEAKING_GRACE_MS + 1))
+      .expired,
+  ).toBe(true);
 });
 it('keeps GRACE_MS for Writing', () => {
-  expect(reconcile(ExamType.IELTS_ACADEMIC, ielts(SkillType.WRITING), at(min(10) + GRACE_MS + 1)).expired).toBe(true);
+  expect(
+    reconcile(
+      ExamType.IELTS_ACADEMIC,
+      ielts(SkillType.WRITING),
+      at(min(10) + GRACE_MS + 1),
+    ).expired,
+  ).toBe(true);
 });
 ```
 
@@ -987,10 +1165,12 @@ git commit -m "feat: extend the grace period for Speaking uploads"
 ## Task 13: Open FULL and serve recordings
 
 **Files:**
+
 - Modify: `student-attempts.service.ts` (`pickSections`), `attempt-result.service.ts`, `dto/student-attempt-response.dto.ts`, `src/modules/grading/grading-query.service.ts`
 - Test: `test/grading-full.e2e-spec.ts`
 
 **Interfaces:**
+
 - Consumes: `MediaService.getUrl`, `seedExam`
 - Produces:
   - `AttemptResultQuestionDto.audioUrl: string | null`
@@ -1034,6 +1214,7 @@ git commit -m "feat: open Writing and Speaking in full attempts"
 ## Task 14: PR 2 documentation and contract
 
 **Files:**
+
 - Modify: `CLAUDE.md`, `docs/deployment.md`, `docs/test-schema.dbml`, `docs/question-formats.md`, `docs/student-tests-api.md`, `openapi.json`
 
 - [ ] **Step 1: Update the docs**
