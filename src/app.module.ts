@@ -12,6 +12,7 @@ import { storageConfig } from './configs/storage.config.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { JwtAuthGuard } from './modules/auth/guards/jwt.guard.js';
 import { PermissionGuard } from './modules/auth/guards/permission.guard.js';
+import { GradingModule } from './modules/grading/grading.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { ParagraphsModule } from './modules/paragraphs/paragraphs.module.js';
 import { PassagesModule } from './modules/passages/passages.module.js';
@@ -55,6 +56,7 @@ import { ThrottleGuard } from './shared/throttle/throttle.guard.js';
     ParagraphsModule,
     TestsModule,
     StudentAttemptsModule,
+    GradingModule,
     StudentTestsModule,
     TestSectionsModule,
     TestPartsModule,

@@ -4449,6 +4449,110 @@
         "tags": ["Student Tests"]
       }
     },
+    "/api/grading/sections/{id}/assessments": {
+      "post": {
+        "operationId": "Grading_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssessmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ASSESSMENT_REVISION_CONFLICT or SECTION_NOT_GRADABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Grade a Writing or Speaking section, or correct an earlier grade",
+        "tags": ["Grading"]
+      }
+    },
     "/api/test-sections": {
       "get": {
         "operationId": "TestSections_findAll",
@@ -9170,6 +9274,115 @@
           "publishedAt",
           "testSections"
         ]
+      },
+      "AssessmentEntryInputDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number",
+            "nullable": true,
+            "description": "test_parts id of the Writing task; omit for Speaking"
+          },
+          "criteria": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Criterion code to band, 0 to 9 in steps of 0.5 (Task 1: TA CC LR GRA, Task 2: TR CC LR GRA, Speaking: FC LR GRA P)"
+          },
+          "feedback": {
+            "type": "string"
+          }
+        },
+        "required": ["criteria"]
+      },
+      "CreateAssessmentDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number",
+            "description": "Latest revision the teacher saw; 0 for the first grade"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentEntryInputDto"
+            }
+          }
+        },
+        "required": ["expectedRevision", "entries"]
+      },
+      "AssessmentEntryDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number",
+            "nullable": true
+          },
+          "criteria": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "band": {
+            "type": "number"
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["partId", "criteria", "band", "feedback"]
+      },
+      "GradingUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["id", "email", "firstName", "lastName"]
+      },
+      "AssessmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "band": {
+            "type": "number"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentEntryDto"
+            }
+          },
+          "grader": {
+            "$ref": "#/components/schemas/GradingUserDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "revision", "band", "entries", "grader", "createdAt"]
       },
       "CreateTestSectionDto": {
         "type": "object",
