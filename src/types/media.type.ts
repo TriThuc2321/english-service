@@ -7,4 +7,5 @@ export enum MediaScope {
   TEST = 'TEST',
   AVATAR = 'AVATAR',
   LIBRARY = 'LIBRARY',
+  ATTEMPT = 'ATTEMPT',
 }

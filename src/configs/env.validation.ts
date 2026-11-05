@@ -94,6 +94,10 @@ class EnvironmentVariables {
   @IsNumberString()
   STORAGE_UPLOAD_URL_TTL?: string;
 
+  @IsOptional()
+  @IsNumberString()
+  STORAGE_DOWNLOAD_URL_TTL?: string;
+
   @IsUrl({ require_tld: false, require_protocol: true })
   STORAGE_PUBLIC_URL: string;
 }

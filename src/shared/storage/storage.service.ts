@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -15,6 +16,8 @@ import {
 
 // Keys are never overwritten (each upload gets a fresh uuid), so clients may cache forever
 const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
+const PRIVATE_CACHE_CONTROL = 'private';
 
 export interface IStoredObject {
   size: number;
@@ -50,16 +53,24 @@ export class StorageService {
     return IMMUTABLE_CACHE_CONTROL;
   }
 
+  get privateCacheControl() {
+    return PRIVATE_CACHE_CONTROL;
+  }
+
   // The presigner only signs `host` by default; forcing these headers into the
   // signature makes R2 reject an upload whose Content-Type differs from the one requested
-  getUploadUrl(key: string, contentType: string) {
+  getUploadUrl(
+    key: string,
+    contentType: string,
+    cacheControl = IMMUTABLE_CACHE_CONTROL,
+  ) {
     return getSignedUrl(
       this.client,
       new PutObjectCommand({
         Bucket: this.config.bucket,
         Key: key,
         ContentType: contentType,
-        CacheControl: IMMUTABLE_CACHE_CONTROL,
+        CacheControl: cacheControl,
       }),
       {
         expiresIn: this.config.uploadUrlTtl,
@@ -72,6 +83,14 @@ export class StorageService {
   // keys are unguessable uuids, access control happens at the API level
   getPublicUrl(key: string) {
     return `${this.config.publicUrl}/${key}`;
+  }
+
+  getDownloadUrl(key: string) {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
+      { expiresIn: this.config.downloadUrlTtl },
+    );
   }
 
   async head(key: string): Promise<IStoredObject | null> {

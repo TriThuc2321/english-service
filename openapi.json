@@ -7709,7 +7709,7 @@
       },
       "MediaScope": {
         "type": "string",
-        "enum": ["TEST", "AVATAR", "LIBRARY"]
+        "enum": ["TEST", "AVATAR", "LIBRARY", "ATTEMPT"]
       },
       "MediaKind": {
         "type": "string",
@@ -7727,7 +7727,7 @@
           },
           "ownerId": {
             "type": "string",
-            "description": "Test id for TEST, user id for AVATAR; omit for LIBRARY"
+            "description": "Test id for TEST, user id for AVATAR, attempt id for ATTEMPT; omit for LIBRARY"
           },
           "kind": {
             "allOf": [
@@ -7770,7 +7770,7 @@
           "ownerId": {
             "type": "string",
             "nullable": true,
-            "description": "Test id for TEST, user id for AVATAR, null for LIBRARY"
+            "description": "Test id for TEST, user id for AVATAR, attempt id for ATTEMPT, null for LIBRARY"
           },
           "kind": {
             "allOf": [
@@ -7805,7 +7805,7 @@
           },
           "url": {
             "type": "string",
-            "description": "Public CDN URL built from storageKey"
+            "description": "Public CDN URL built from storageKey, or a time-limited signed URL for private scopes such as ATTEMPT"
           }
         },
         "required": [
@@ -7840,7 +7840,7 @@
           },
           "ownerId": {
             "type": "string",
-            "description": "Test id for TEST, user id for AVATAR; omit for LIBRARY"
+            "description": "Test id for TEST, user id for AVATAR, attempt id for ATTEMPT; omit for LIBRARY"
           },
           "kind": {
             "allOf": [

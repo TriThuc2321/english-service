@@ -24,7 +24,8 @@ export class CreateUploadUrlDto {
   scope: MediaScope;
 
   @ApiPropertyOptional({
-    description: 'Test id for TEST, user id for AVATAR; omit for LIBRARY',
+    description:
+      'Test id for TEST, user id for AVATAR, attempt id for ATTEMPT; omit for LIBRARY',
   })
   @IsOptional()
   @IsString()
@@ -60,7 +61,8 @@ export class CreateMediaDto extends UpdateMediaDto {
   scope: MediaScope;
 
   @ApiPropertyOptional({
-    description: 'Test id for TEST, user id for AVATAR; omit for LIBRARY',
+    description:
+      'Test id for TEST, user id for AVATAR, attempt id for ATTEMPT; omit for LIBRARY',
   })
   @IsOptional()
   @IsString()
@@ -127,7 +129,8 @@ export class MediaDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Test id for TEST, user id for AVATAR, null for LIBRARY',
+    description:
+      'Test id for TEST, user id for AVATAR, attempt id for ATTEMPT, null for LIBRARY',
   })
   ownerId: string | null;
 
@@ -157,6 +160,9 @@ export class MediaDto {
   @ApiProperty({ type: AuditMetadataWithActorsDto })
   auditMetadata: AuditMetadataWithActorsDto;
 
-  @ApiProperty({ description: 'Public CDN URL built from storageKey' })
+  @ApiProperty({
+    description:
+      'Public CDN URL built from storageKey, or a time-limited signed URL for private scopes such as ATTEMPT',
+  })
   url: string;
 }
