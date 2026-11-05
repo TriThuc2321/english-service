@@ -91,6 +91,8 @@ Quy tắc chung:
 { "sample": "...", "rubric": { "TA": "..." } } // Speaking/Writing: bài mẫu + tiêu chí (rubric tuỳ chọn)
 ```
 
+`sample`/`rubric` chỉ dành cho giáo viên và hiện trong `/result`. Với IELTS Speaking, câu trả lời của học sinh là bản ghi âm (không phải `response` gửi qua autosave); `timing` chỉ để hiển thị, server không ép thời lượng ghi âm.
+
 Chỉ `keys` được dùng một dải số (`number_to > number_from`). Các shape khác phải có `number_to = number_from`.
 
 Đáp án còn được đối chiếu với content của câu/group (khi tạo/sửa câu, và khi sửa `question_type`/`content`/`word_limit` của group):

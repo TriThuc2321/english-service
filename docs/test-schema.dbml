@@ -13,8 +13,8 @@ Enum exam_type_enum {
 Enum skill_enum {
   LISTENING
   READING
-  WRITING  [note: 'phase 2']
-  SPEAKING [note: 'phase 2']
+  WRITING  [note: 'IELTS: giáo viên chấm; TOEIC_SW chưa mở']
+  SPEAKING [note: 'IELTS: học sinh ghi âm, giáo viên chấm; TOEIC_SW chưa mở']
 }
 
 Enum marked_by_enum {
@@ -82,6 +82,7 @@ Enum media_scope_enum {
   TEST
   AVATAR
   LIBRARY
+  ATTEMPT [note: 'Bản ghi âm Speaking của học sinh; owner_id = attempt uuid, đọc qua URL ký sẵn (không public)']
 }
 
 Enum attempt_mode_enum {
@@ -266,9 +267,9 @@ Table questions {
 Table media {
   media_id int [pk, increment]
   scope media_scope_enum [not null]
-  owner_id varchar(64) [note: 'Owner đa hình (test id, user uuid...), không có FK; LIBRARY không có owner']
+  owner_id varchar(64) [note: 'Owner đa hình (test id, user uuid, attempt uuid...), không có FK; LIBRARY không có owner']
   kind media_kind_enum [not null]
-  storage_key varchar(500) [not null, unique, note: 'Key trong storage; URL public build lúc trả về']
+  storage_key varchar(500) [not null, unique, note: 'Key trong storage; URL build lúc trả về: public, hoặc URL ký sẵn cho scope ATTEMPT']
   mime_type varchar(100)
   size_bytes bigint
   duration_ms int
@@ -292,7 +293,7 @@ Table attempts {
   started_at timestamptz [not null]
   deadline_at timestamptz [note: 'Hạn tổng (TOEIC LR). IELTS dùng deadline của attempt_sections']
   submitted_at timestamptz
-  overall_score numeric(5,1) [note: 'TOEIC = L + R. IELTS FULL = trung bình 4 band làm tròn 0.5, nhưng FULL hiện không gồm Writing/Speaking nên IELTS luôn null']
+  overall_score numeric(5,1) [note: 'TOEIC = L + R. IELTS FULL = trung bình 4 band làm tròn 0.5; null cho tới khi giáo viên chấm xong Writing và Speaking (SECTION luôn null)']
   created_at timestamp
 
   indexes {
@@ -337,7 +338,7 @@ Table attempt_sections {
 Table attempt_answers {
   attempt_id uuid [not null]
   question_id int [not null]
-  response jsonb [note: 'Đáp án user; phase 2 chứa essay / audio storage_key']
+  response jsonb [note: 'Đáp án user; Writing: {"text"}, Speaking: {"mediaId"} (bản ghi âm trong media, scope ATTEMPT)']
   is_correct boolean [note: 'Chấm và ghi lúc nộp; null nếu bỏ trống']
   score int [note: '0..(number_to - number_from + 1); Choose TWO chấm từng key, không xét thứ tự']
   flagged boolean [not null, default: false]
@@ -364,7 +365,7 @@ Table score_scales {
   Note: '''
   Mỗi raw score một dòng (IELTS 0..40 -> band, TOEIC 0..100 -> 5..495), tra bằng một lookup, không chồng range.
   Lookup: ưu tiên dòng có test_id, fallback thang mặc định.
-  IELTS overall (phase 2): trung bình 4 kỹ năng, .25 làm tròn lên .5, .75 làm tròn lên số nguyên.
+  IELTS overall: trung bình 4 kỹ năng, .25 làm tròn lên .5, .75 làm tròn lên số nguyên.
   '''
 }
 
