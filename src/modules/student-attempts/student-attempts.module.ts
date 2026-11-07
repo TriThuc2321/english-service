@@ -32,7 +32,7 @@ import { StudentAttemptsService } from './student-attempts.service.js';
     AttemptMediaPolicy,
     AttemptAudioService,
   ],
-  exports: [AttemptExpiryService],
+  exports: [AttemptExpiryService, StudentAttemptsService, AttemptResultService],
   imports: [
     TypeOrmModule.forFeature([
       Attempt,
