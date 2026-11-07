@@ -3,7 +3,8 @@ import { countWords, normalizeText } from '../questions/answer-text.js';
 export type AttemptResponse =
   | { key: string }
   | { keys: string[] }
-  | { text: string };
+  | { text: string }
+  | { mediaId: number };
 
 export interface IGradable {
   answer: Record<string, unknown>;
@@ -65,8 +66,15 @@ export function gradeAnswer(
   return BLANK;
 }
 
+export function isBlankResponse(
+  response: AttemptResponse | null | undefined,
+): boolean {
+  return !response || isBlank(response);
+}
+
 function isBlank(response: AttemptResponse): boolean {
   if ('key' in response) return !response.key.trim();
   if ('keys' in response) return !response.keys.length;
+  if ('mediaId' in response) return false;
   return !response.text.trim();
 }

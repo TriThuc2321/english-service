@@ -8,6 +8,7 @@ import { type ITreeQuestion, parseResponse } from './attempt-response.js';
 const question = (overrides: Partial<ITreeQuestion>): ITreeQuestion => ({
   id: 1,
   sectionId: 1,
+  partId: 1,
   questionType: QuestionType.MULTIPLE_CHOICE,
   wordLimit: null,
   numberFrom: 1,
@@ -121,8 +122,33 @@ describe('parseResponse', () => {
   it('rejects questions that are not auto-gradable', () => {
     const q = question({ questionType: QuestionType.OPINION_ESSAY });
     expect(() => parseResponse(q, { text: 'essay' })).toThrow(
-      BadRequestException,
+      'cannot be answered automatically',
     );
+  });
+
+  describe('IELTS_WRITING_TASK_2', () => {
+    const q = question({
+      questionType: QuestionType.IELTS_WRITING_TASK_2,
+      keys: null,
+    });
+
+    it('accepts an essay of 20,000 characters', () => {
+      const text = 'a'.repeat(20_000);
+      expect(parseResponse(q, { text })).toEqual({ text });
+    });
+
+    it('rejects 20,001 characters', () => {
+      expect(() => parseResponse(q, { text: 'a'.repeat(20_001) })).toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('ignores the word limit', () => {
+      const long = question({ ...q, wordLimit: 2 });
+      expect(parseResponse(long, { text: 'one two three' })).toEqual({
+        text: 'one two three',
+      });
+    });
   });
 
   it('names the question in the error', () => {
@@ -130,4 +156,18 @@ describe('parseResponse', () => {
       parseResponse(question({ numberFrom: 7 }), { key: 'Z' }),
     ).toThrow(/question 7/);
   });
+});
+
+describe('Speaking', () => {
+  const q = question({
+    questionType: QuestionType.IELTS_SPEAKING_PART_2,
+    keys: null,
+  });
+
+  it.each([[null], [{ text: 'x' }], [{ mediaId: 1 }]])(
+    'refuses %j through autosave',
+    (raw) => {
+      expect(() => parseResponse(q, raw)).toThrow('audio endpoint');
+    },
+  );
 });

@@ -276,7 +276,7 @@ StudentMedia {
 
 ## 5. Taking a test
 
-Phase 1 covers **LISTENING and READING** sections only (Writing/Speaking are not gradable yet). Tests with no such section cannot be started.
+Attempts cover **LISTENING, READING, IELTS WRITING and IELTS SPEAKING** sections. Writing and Speaking are graded by a teacher. `TOEIC_SW` tests cannot be started. A test with no attemptable section cannot be started.
 
 ### Flow
 
@@ -284,7 +284,7 @@ Phase 1 covers **LISTENING and READING** sections only (Writing/Speaking are not
 2. While answering, `PUT /student/attempts/:id/answers` with batches of changed answers (autosave).
 3. Refresh or reopen: `GET /student/attempts/:id` returns the state to resume (sections, timers, saved answers).
 4. IELTS: `POST /student/attempts/:id/sections/:sectionId/submit` per section. TOEIC: all sections are open at once, so one `POST /student/attempts/:id/submit` is enough.
-5. After the last section is submitted the attempt is graded (`GRADED`). `GET /student/attempts/:id/result` returns scores and the full review.
+5. After the last section is submitted the attempt is graded (`GRADED`), unless a Writing or Speaking section is waiting for a teacher: then it stays `SUBMITTED` until the teacher grades it. `GET /student/attempts/:id/result` returns scores and the full review.
 
 A student can have only one `IN_PROGRESS` attempt per test. Retakes are unlimited once it is closed.
 
@@ -298,15 +298,15 @@ All endpoints need a `web` token. Another user's attempt returns `404`, never `4
 { "testId": 12, "mode": "SECTION", "sectionIds": [30, 31] }   // sectionIds required for SECTION
 ```
 
-`mode: "FULL"` takes every Listening/Reading section; `SECTION` takes the given test section ids (each must belong to the test and be Listening or Reading; an empty list is `400`).
+`mode: "FULL"` takes every section of the test and opens them in order (an IELTS test: Listening, Reading, Writing, Speaking). `mode: "SECTION"` takes the given test section ids (each must belong to the test and be Listening, Reading, Writing or Speaking; an empty list is `400`). A Writing section must have exactly one Task 1 and one Task 2 question, and a Speaking section only IELTS Speaking questions, otherwise `400`.
 
 **Response `201`**: `Attempt`
 
-| Status | `code`                | When                                                                                          |
-| ------ | --------------------- | --------------------------------------------------------------------------------------------- |
-| 400    |                       | Invalid body, section not in the test, not Listening/Reading, or the test has no such section |
-| 404    | `TEST_NOT_FOUND`      | Test does not exist or is not published                                                       |
-| 409    | `ATTEMPT_IN_PROGRESS` | An attempt on this test is still open. The body includes `attemptId`: resume that one         |
+| Status | `code`                | When                                                                                                                         |
+| ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 400    |                       | Invalid body, section not in the test, a section that cannot be attempted (e.g. `TOEIC_SW`), or the test has no such section |
+| 404    | `TEST_NOT_FOUND`      | Test does not exist or is not published                                                                                      |
+| 409    | `ATTEMPT_IN_PROGRESS` | An attempt on this test is still open. The body includes `attemptId`: resume that one                                        |
 
 ### `GET /student/attempts` — history
 
@@ -354,7 +354,7 @@ Submits the whole attempt: every remaining section is closed (unanswered questio
 
 ### `GET /student/attempts/:id/result`
 
-Available once the attempt is `GRADED` or `EXPIRED`; otherwise `409 ATTEMPT_NOT_GRADED`. This is the only endpoint that returns answers, explanations, evidence and transcripts.
+Available once the attempt has left `IN_PROGRESS` (`SUBMITTED`, `GRADED` or `EXPIRED`); only an `IN_PROGRESS` attempt returns `409 ATTEMPT_NOT_GRADED`. This is the only endpoint that returns answers, explanations, evidence and transcripts. A `SUBMITTED` attempt still has IELTS Writing or Speaking sections waiting for a teacher: those sections have `gradingStatus = 'PENDING'` and no `assessments` entry yet, so poll or reopen the result later.
 
 **Response `200`**: `AttemptResult`
 
@@ -366,12 +366,25 @@ The shape depends on the question type; the server validates it on save (`400` o
 { "key": "B" }          // one option: multiple choice, TRUE/FALSE/NOT GIVEN, YES/NO/NOT GIVEN, matching, labelling, TOEIC, SUMMARY_COMPLETION with a word bank
 { "keys": ["A", "D"] }  // MULTIPLE_CHOICE_MULTI: unique, 1 to numberTo − numberFrom + 1 items
 { "text": "colour" }    // completion, short answer, diagram labelling, SUMMARY_COMPLETION without a word bank: string, max 255 characters
+{ "text": "Dear Sir..." } // IELTS_WRITING_TASK_1 / IELTS_WRITING_TASK_2: the essay, string, max 20000 characters
 ```
 
 - `key` and every item of `keys` must be an option `key` from the test content. `TRUE_FALSE_NOT_GIVEN` takes exactly `TRUE`, `FALSE` or `NOT GIVEN`, and `YES_NO_NOT_GIVEN` takes `YES`, `NO` or `NOT GIVEN` (upper case, with the space).
-- Do not send other fields. Questions that cannot be graded automatically (Speaking/Writing) are rejected.
+- Do not send other fields. IELTS Writing tasks accept `text`. Speaking questions never go through `PUT /answers`: any item for one, even `response: null`, is `400` (a null would erase the recording), so a Speaking question cannot be flagged. Record them with the audio endpoints below. The other TOEIC Speaking/Writing types are rejected.
 - Text is compared after normalising case, quotes, punctuation and whitespace. If the group has a `wordLimit`, an answer with more words is wrong.
 - Multi-answer questions: `score` is the number of correct keys, so partial credit is possible.
+
+### Speaking recordings
+
+Each Speaking answer is a recording uploaded straight to storage. Record and upload **after each question**, not all at the end, so a lost connection costs one answer only. Both calls need the Speaking section to be `IN_PROGRESS` and the question to belong to it.
+
+1. `POST /student/attempts/:id/audio/upload-url` with `{ questionId, contentType, size }` → `201 { storageKey, uploadUrl, headers, expiresIn }`. `contentType` must be a bare type from the list (`audio/webm`, `audio/mp4`, `audio/ogg`, `audio/mpeg`, `audio/wav`), **not** `audio/webm;codecs=opus`: strip the parameters from `MediaRecorder.mimeType`. `size` is in bytes, at most 20 MB.
+2. `PUT` the file to `uploadUrl` with exactly the returned `headers` (the origin of the web app is allowed by the bucket CORS rule). The file is private.
+3. `POST /student/attempts/:id/audio` with `{ questionId, storageKey }` → `201 AttemptAnswerState` with `response: { mediaId }`. The server checks the object really exists with the right type and size. A new recording for the same question replaces the previous one.
+
+Errors on both: `404 ATTEMPT_NOT_FOUND`, `409 SECTION_NOT_OPEN`, `409 ATTEMPT_CLOSED`, `400` (not a Speaking question of the attempt, bad type or size, key that does not belong to this attempt).
+
+**Retrying step 3:** if the confirm request is repeated for a `storageKey` that was already confirmed (for example the response was lost), the server answers `409` with **no `code`** (message `Storage key is already registered`) even though the answer was saved. Do not treat that as a failure: re-read the attempt (`GET /student/attempts/:id`) and check the answer for that question. If it has no `mediaId`, upload again with a fresh `upload-url`.
 
 ### Timers
 
@@ -379,8 +392,8 @@ The shape depends on the question type; the server validates it on save (`400` o
 - **IELTS:** sequential. Only the first section is `IN_PROGRESS` at start; each section has its own `sections[].deadlineAt`, and `attempt.deadlineAt` is `null`. The next section opens when the previous one is submitted or runs out. Its clock starts when the previous one ended, so leaving the page is not a free pause.
 - A `null` deadline means no time limit.
 - **Remaining time** is `deadlineAt − serverNow`. Use `serverNow` (returned by `Attempt` and by autosave) rather than the device clock, and re-sync on every response.
-- **Grace:** answers that arrive up to **30 seconds** after a deadline are still accepted (network latency).
-- **Expiry:** there is no background job. The first request after deadline + grace closes the attempt: open sections become `EXPIRED`, the attempt is graded and becomes `EXPIRED` with scores. For IELTS, expired sections cascade, and the next sections expire too if their time has also passed. `submittedAt` is the deadline, not the time the server noticed.
+- **Grace:** answers that arrive up to **30 seconds** after a deadline are still accepted (network latency). A Speaking section gets **2 minutes**, so a recording being uploaded when the time runs out can still be confirmed.
+- **Expiry:** there is no background job. The first request after deadline + grace closes the attempt: open sections become `EXPIRED`, the attempt is graded and becomes `EXPIRED` with scores (Writing and Speaking sections with an answer stay `PENDING` until a teacher grades them). The teachers' grading queue also closes overdue attempts, so an abandoned attempt reaches a teacher without the student coming back. For IELTS, expired sections cascade, and the next sections expire too if their time has also passed. `submittedAt` is the deadline, not the time the server noticed.
 - A **write** (autosave or submit) on an attempt that is already `GRADED` or `EXPIRED`, including one that has just expired, returns `409 ATTEMPT_CLOSED`. Navigate to the result page. `GET /:id` and `/result` never return this error.
 
 ### Types
@@ -395,7 +408,7 @@ Attempt {
   startedAt: string
   deadlineAt: string | null          // TOEIC only, see "Timers"
   submittedAt: string | null
-  overallScore: number | null        // only for TOEIC_LR FULL attempts: Listening + Reading scaled scores
+  overallScore: number | null        // only for TOEIC_LR FULL attempts: Listening + Reading scaled scores. IELTS FULL attempts: the 4-skill average (half-band rounding), null until the teacher has graded Writing and Speaking. Always null for `SECTION` attempts
   serverNow: string
   sections: AttemptSection[]         // sorted by test section order
   answers: AttemptAnswerState[]      // only questions that have a stored row
@@ -412,8 +425,14 @@ AttemptSection {
   submittedAt: string | null
   rawScore: number | null            // null until graded
   maxScore: number | null
-  scaledScore: number | null         // IELTS band or TOEIC section score; null if no score scale exists
+  scaledScore: number | null         // IELTS band or TOEIC section score; null if no score scale exists, and for a Writing section until a teacher grades it
+  gradingStatus: AttemptSectionGradingStatus | null  // null until the attempt is finished
 }
+
+type AttemptSectionGradingStatus =
+  | 'AUTO_GRADED'                    // scored by the server (Listening/Reading, or a Writing/Speaking section left completely blank: band 0)
+  | 'PENDING'                        // waiting for a teacher (IELTS Writing or Speaking)
+  | 'GRADED'                         // a teacher has graded it; scaledScore is the band
 
 AttemptAnswerState {
   questionId: number
@@ -437,6 +456,18 @@ AttemptResult {
   attempt: AttemptListItem
   questions: AttemptResultQuestion[]   // sorted by section order, then numberFrom
   transcripts: { mediaId: number; transcript: string }[]
+  assessments: AttemptAssessment[]     // latest teacher assessment of each GRADED section
+}
+
+AttemptAssessment {
+  attemptSectionId: string             // AttemptSection.id
+  band: number                         // section band, same as the section's scaledScore
+  entries: {
+    partId: number | null              // the Writing task's part; null for Speaking (one entry per section)
+    criteria: Record<string, number>   // Task 1: TA, CC, LR, GRA; Task 2: TR, CC, LR, GRA; Speaking: FC, LR, GRA, P
+    band: number                       // mean of the criteria, rounded to the nearest 0.5 (half rounds up)
+    feedback: string | null
+  }[]
 }
 
 AttemptResultQuestion {
@@ -452,10 +483,17 @@ AttemptResultQuestion {
   answer: object                       // { key } | { keys } | { accepted: string[] }
   explanation: string | null
   evidence: { paragraphId?: number; quote?: string } | null
+  audioUrl: string | null              // signed URL of the student's Speaking recording; null on every other question and when nothing was recorded
 }
 ```
 
 The result does not repeat the test content. Join it with the `GET /student/tests/:slug` response (which you already have) on `questionId`. `evidence.paragraphId` is a `paragraphs[].id` in that content, so you can highlight the paragraph. `transcripts[].mediaId` matches `StudentMedia.id`; media without a transcript is left out. Every question of the attempt's sections is present, including unanswered ones.
+
+`audioUrl` expires after `STORAGE_DOWNLOAD_URL_TTL` (1 hour by default), so refetch `/result` instead of caching the URL; do not rely on the URL staying the same between calls.
+
+For Speaking questions `response` is `{ mediaId }` (or `null`) and `answer` is the sample answer; **ignore `score`/`maxScore`/`isCorrect` here too** and read the band and criteria from `AttemptSection.scaledScore` and `assessments`.
+
+For Writing questions `response` is `{ text }` and `answer` is the model answer (`{ sample, rubric? }`). **Clients must ignore `score`/`maxScore`/`isCorrect` of Writing questions**: they are not graded per question. Read the band from `AttemptSection.scaledScore` and the criteria and feedback from `assessments`. The student never sees who graded it or earlier revisions.
 
 ---
 
@@ -482,6 +520,8 @@ The result does not repeat the test content. Join it with the `GET /student/test
 | `TEXT_COMPLETION` (TOEIC Part 6)                                                        | — (passage is in `group.passages`)                                 | **choices**                                                     | pick one option                                    |
 | `RESPOND_USING_INFO`                                                                    | **info**                                                           | timing, optional                                                | speak                                              |
 | `READ_ALOUD`, `DESCRIBE_PICTURE`, `RESPOND_TO_QUESTIONS`, `EXPRESS_OPINION`             | —                                                                  | timing, optional                                                | speak                                              |
+| `IELTS_WRITING_TASK_1`, `IELTS_WRITING_TASK_2`                                          | —                                                                  | timing, optional                                                | write                                              |
+| `IELTS_SPEAKING_PART_1`, `IELTS_SPEAKING_PART_2`, `IELTS_SPEAKING_PART_3`               | —                                                                  | timing, optional                                                | speak                                              |
 | `WRITE_SENTENCE_PICTURE`, `RESPOND_WRITTEN_REQUEST`, `OPINION_ESSAY`                    | —                                                                  | timing, optional                                                | write                                              |
 
 **Bold** means the content is always present for that type.
@@ -548,7 +588,8 @@ type MediaKind = 'AUDIO' | 'IMAGE';
 
 type AttemptMode = 'FULL' | 'SECTION';
 
-// EXPIRED: time ran out; the attempt is graded and has scores, like GRADED
+// SUBMITTED: finished, but a Writing section is still waiting for a teacher (GRADED once all are graded)
+// EXPIRED: time ran out; the attempt is closed and scored, like GRADED (Writing and Speaking may still be PENDING)
 type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'EXPIRED';
 
 type AttemptSectionStatus =
@@ -587,7 +628,13 @@ type QuestionType =
   | 'EXPRESS_OPINION'
   | 'WRITE_SENTENCE_PICTURE'
   | 'RESPOND_WRITTEN_REQUEST'
-  | 'OPINION_ESSAY';
+  | 'OPINION_ESSAY'
+  // IELTS Writing & Speaking
+  | 'IELTS_WRITING_TASK_1'
+  | 'IELTS_WRITING_TASK_2'
+  | 'IELTS_SPEAKING_PART_1'
+  | 'IELTS_SPEAKING_PART_2'
+  | 'IELTS_SPEAKING_PART_3';
 ```
 
 Exam types and their skills:

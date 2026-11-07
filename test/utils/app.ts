@@ -44,9 +44,13 @@ for (const file of readdirSync(migrationsDir)) {
 const createFakeStorage = () => ({
   uploadUrlTtl: 600,
   cacheControl: 'public, max-age=31536000, immutable',
+  privateCacheControl: 'private',
   getUploadUrl: vi.fn(async (key: string) => `http://storage.test/${key}`),
+  getDownloadUrl: vi.fn(async (key: string) => `http://signed.test/${key}`),
   getPublicUrl: vi.fn((key: string) => `http://storage.test/${key}`),
-  head: vi.fn(async () => null),
+  head: vi.fn(
+    async (): Promise<{ size: number; contentType?: string } | null> => null,
+  ),
   delete: vi.fn(async () => {}),
 });
 

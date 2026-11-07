@@ -3752,7 +3752,7 @@
             }
           },
           "409": {
-            "description": "ATTEMPT_NOT_GRADED",
+            "description": "ATTEMPT_NOT_GRADED, only while in progress",
             "content": {
               "application/json": {
                 "schema": {
@@ -4050,6 +4050,214 @@
           }
         ],
         "summary": "Autosave a batch of answers",
+        "tags": ["Student Attempts"]
+      }
+    },
+    "/api/student/attempts/{id}/audio/upload-url": {
+      "post": {
+        "operationId": "StudentAttempts_createAudioUploadUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAttemptAudioUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SECTION_NOT_OPEN or ATTEMPT_CLOSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Presigned PUT URL to record a Speaking answer (audio, up to 20 MB)",
+        "tags": ["Student Attempts"]
+      }
+    },
+    "/api/student/attempts/{id}/audio": {
+      "post": {
+        "operationId": "StudentAttempts_confirmAudio",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAttemptAudioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptAnswerStateDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SECTION_NOT_OPEN or ATTEMPT_CLOSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm an uploaded recording as the answer to a Speaking question; replaces the previous one",
         "tags": ["Student Attempts"]
       }
     },
@@ -4447,6 +4655,416 @@
         ],
         "summary": "Get a published test with all its content, without answers",
         "tags": ["Student Tests"]
+      }
+    },
+    "/api/grading/queue": {
+      "get": {
+        "operationId": "Grading_findQueue",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "gradingStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "PENDING",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/GradingQueueStatus"
+                }
+              ]
+            }
+          },
+          {
+            "name": "skill",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/GradingSkill"
+            }
+          },
+          {
+            "name": "testId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches student email or name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GradingQueueItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Writing and Speaking sections waiting for or finished with grading",
+        "tags": ["Grading"]
+      }
+    },
+    "/api/grading/sections/{id}": {
+      "get": {
+        "operationId": "Grading_findSection",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradingSectionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The grading screen of one section",
+        "tags": ["Grading"]
+      }
+    },
+    "/api/grading/sections/{id}/assessments": {
+      "get": {
+        "operationId": "Grading_findAssessments",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssessmentDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Every revision of a section, newest first",
+        "tags": ["Grading"]
+      },
+      "post": {
+        "operationId": "Grading_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssessmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ASSESSMENT_REVISION_CONFLICT or SECTION_NOT_GRADABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Grade a Writing or Speaking section, or correct an earlier grade",
+        "tags": ["Grading"]
       }
     },
     "/api/test-sections": {
@@ -6723,7 +7341,8 @@
           "campus",
           "program",
           "level",
-          "media"
+          "media",
+          "assessment"
         ]
       },
       "PermissionDto": {
@@ -7298,7 +7917,7 @@
       },
       "MediaScope": {
         "type": "string",
-        "enum": ["TEST", "AVATAR", "LIBRARY"]
+        "enum": ["TEST", "AVATAR", "LIBRARY", "ATTEMPT"]
       },
       "MediaKind": {
         "type": "string",
@@ -7316,7 +7935,7 @@
           },
           "ownerId": {
             "type": "string",
-            "description": "Test id for TEST, user id for AVATAR; omit for LIBRARY"
+            "description": "Test id for TEST, user id for AVATAR, attempt id for ATTEMPT; omit for LIBRARY"
           },
           "kind": {
             "allOf": [
@@ -7359,7 +7978,7 @@
           "ownerId": {
             "type": "string",
             "nullable": true,
-            "description": "Test id for TEST, user id for AVATAR, null for LIBRARY"
+            "description": "Test id for TEST, user id for AVATAR, attempt id for ATTEMPT, null for LIBRARY"
           },
           "kind": {
             "allOf": [
@@ -7394,7 +8013,7 @@
           },
           "url": {
             "type": "string",
-            "description": "Public CDN URL built from storageKey"
+            "description": "Public CDN URL built from storageKey, or a time-limited signed URL for private scopes such as ATTEMPT"
           }
         },
         "required": [
@@ -7429,7 +8048,7 @@
           },
           "ownerId": {
             "type": "string",
-            "description": "Test id for TEST, user id for AVATAR; omit for LIBRARY"
+            "description": "Test id for TEST, user id for AVATAR, attempt id for ATTEMPT; omit for LIBRARY"
           },
           "kind": {
             "allOf": [
@@ -8194,6 +8813,10 @@
         "type": "string",
         "enum": ["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "EXPIRED"]
       },
+      "AttemptSectionGradingStatus": {
+        "type": "string",
+        "enum": ["AUTO_GRADED", "PENDING", "GRADED"]
+      },
       "AttemptSectionDto": {
         "type": "object",
         "properties": {
@@ -8237,6 +8860,14 @@
             "format": "date-time",
             "nullable": true
           },
+          "gradingStatus": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttemptSectionGradingStatus"
+              }
+            ]
+          },
           "rawScore": {
             "type": "number",
             "nullable": true
@@ -8259,6 +8890,7 @@
           "startedAt",
           "deadlineAt",
           "submittedAt",
+          "gradingStatus",
           "rawScore",
           "maxScore",
           "scaledScore"
@@ -8537,7 +9169,7 @@
           "answer": {
             "type": "object",
             "additionalProperties": true,
-            "description": "{ key } | { keys } | { accepted }"
+            "description": "{ key } | { keys } | { accepted } | { sample, rubric? }"
           },
           "explanation": {
             "type": "string",
@@ -8551,6 +9183,11 @@
                 "$ref": "#/components/schemas/AttemptEvidenceDto"
               }
             ]
+          },
+          "audioUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Signed URL of the Speaking recording; null on other questions"
           }
         },
         "required": [
@@ -8565,7 +9202,8 @@
           "flagged",
           "answer",
           "explanation",
-          "evidence"
+          "evidence",
+          "audioUrl"
         ]
       },
       "AttemptTranscriptDto": {
@@ -8579,6 +9217,48 @@
           }
         },
         "required": ["mediaId", "transcript"]
+      },
+      "AttemptAssessmentEntryDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number",
+            "nullable": true
+          },
+          "criteria": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "band": {
+            "type": "number"
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["partId", "criteria", "band", "feedback"]
+      },
+      "AttemptAssessmentDto": {
+        "type": "object",
+        "properties": {
+          "attemptSectionId": {
+            "type": "string",
+            "description": "attempt_sections id"
+          },
+          "band": {
+            "type": "number"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttemptAssessmentEntryDto"
+            }
+          }
+        },
+        "required": ["attemptSectionId", "band", "entries"]
       },
       "AttemptResultDto": {
         "type": "object",
@@ -8598,9 +9278,16 @@
             "items": {
               "$ref": "#/components/schemas/AttemptTranscriptDto"
             }
+          },
+          "assessments": {
+            "description": "Latest teacher assessment of each graded section",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttemptAssessmentDto"
+            }
           }
         },
-        "required": ["attempt", "questions", "transcripts"]
+        "required": ["attempt", "questions", "transcripts", "assessments"]
       },
       "StudentMediaDto": {
         "type": "object",
@@ -8705,7 +9392,12 @@
           "EXPRESS_OPINION",
           "WRITE_SENTENCE_PICTURE",
           "RESPOND_WRITTEN_REQUEST",
-          "OPINION_ESSAY"
+          "OPINION_ESSAY",
+          "IELTS_WRITING_TASK_1",
+          "IELTS_WRITING_TASK_2",
+          "IELTS_SPEAKING_PART_1",
+          "IELTS_SPEAKING_PART_2",
+          "IELTS_SPEAKING_PART_3"
         ]
       },
       "StudentQuestionDto": {
@@ -8995,7 +9687,7 @@
             "type": "object",
             "additionalProperties": true,
             "nullable": true,
-            "description": "{ key } | { keys } | { text }; null clears the answer"
+            "description": "{ key } | { keys } | { text } (an essay for Writing, up to 20,000 characters); null clears the answer. Speaking questions are refused: record through the audio endpoints"
           },
           "flagged": {
             "type": "boolean",
@@ -9029,6 +9721,37 @@
           }
         },
         "required": ["savedAt", "serverNow"]
+      },
+      "CreateAttemptAudioUploadDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "number",
+            "description": "A Speaking question of the open section"
+          },
+          "contentType": {
+            "type": "string",
+            "example": "audio/webm"
+          },
+          "size": {
+            "type": "number",
+            "description": "Bytes, at most 20 MB"
+          }
+        },
+        "required": ["questionId", "contentType", "size"]
+      },
+      "ConfirmAttemptAudioDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "number"
+          },
+          "storageKey": {
+            "type": "string",
+            "description": "The storageKey returned by upload-url"
+          }
+        },
+        "required": ["questionId", "storageKey"]
       },
       "StudentTestSectionDto": {
         "type": "object",
@@ -9102,6 +9825,411 @@
           "publishedAt",
           "testSections"
         ]
+      },
+      "GradingUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["id", "email", "firstName", "lastName"]
+      },
+      "GradingTestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "examType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExamType"
+              }
+            ]
+          }
+        },
+        "required": ["id", "title", "examType"]
+      },
+      "GradingQueueItemDto": {
+        "type": "object",
+        "properties": {
+          "attemptSectionId": {
+            "type": "string"
+          },
+          "attemptId": {
+            "type": "string"
+          },
+          "student": {
+            "$ref": "#/components/schemas/GradingUserDto"
+          },
+          "test": {
+            "$ref": "#/components/schemas/GradingTestDto"
+          },
+          "skill": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "gradingStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttemptSectionGradingStatus"
+              }
+            ]
+          },
+          "band": {
+            "type": "number",
+            "nullable": true
+          },
+          "grader": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GradingUserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "attemptSectionId",
+          "attemptId",
+          "student",
+          "test",
+          "skill",
+          "submittedAt",
+          "gradingStatus",
+          "band",
+          "grader"
+        ]
+      },
+      "GradingQueueStatus": {
+        "type": "string",
+        "enum": ["PENDING", "GRADED"]
+      },
+      "GradingSkill": {
+        "type": "string",
+        "enum": ["WRITING", "SPEAKING"]
+      },
+      "AssessmentEntryDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number",
+            "nullable": true
+          },
+          "criteria": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "band": {
+            "type": "number"
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["partId", "criteria", "band", "feedback"]
+      },
+      "AssessmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "band": {
+            "type": "number"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentEntryDto"
+            }
+          },
+          "grader": {
+            "$ref": "#/components/schemas/GradingUserDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "revision", "band", "entries", "grader", "createdAt"]
+      },
+      "GradingExpectedEntryDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number",
+            "nullable": true
+          },
+          "task": {
+            "type": "number",
+            "nullable": true,
+            "enum": [1, 2]
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["partId", "task", "criteria"]
+      },
+      "GradingResponseDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "wordCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "audioUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["text", "wordCount", "audioUrl"]
+      },
+      "GradingQuestionDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "number"
+          },
+          "numberFrom": {
+            "type": "number"
+          },
+          "questionType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuestionType"
+              }
+            ]
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "prompt": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "audioUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "sample": {
+            "type": "string",
+            "nullable": true
+          },
+          "rubric": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "response": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GradingResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "questionId",
+          "numberFrom",
+          "questionType",
+          "instruction",
+          "prompt",
+          "content",
+          "imageUrl",
+          "audioUrl",
+          "sample",
+          "rubric",
+          "response"
+        ]
+      },
+      "GradingPartDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "instruction": {
+            "type": "string",
+            "nullable": true
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradingQuestionDto"
+            }
+          }
+        },
+        "required": ["partId", "order", "title", "instruction", "questions"]
+      },
+      "GradingSectionDto": {
+        "type": "object",
+        "properties": {
+          "attemptSectionId": {
+            "type": "string"
+          },
+          "attemptId": {
+            "type": "string"
+          },
+          "student": {
+            "$ref": "#/components/schemas/GradingUserDto"
+          },
+          "test": {
+            "$ref": "#/components/schemas/GradingTestDto"
+          },
+          "skill": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SkillType"
+              }
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "gradingStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttemptSectionGradingStatus"
+              }
+            ]
+          },
+          "revision": {
+            "type": "number",
+            "description": "Latest revision; 0 when not graded yet"
+          },
+          "assessment": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentDto"
+              }
+            ]
+          },
+          "expectedEntries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradingExpectedEntryDto"
+            }
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradingPartDto"
+            }
+          }
+        },
+        "required": [
+          "attemptSectionId",
+          "attemptId",
+          "student",
+          "test",
+          "skill",
+          "submittedAt",
+          "gradingStatus",
+          "revision",
+          "assessment",
+          "expectedEntries",
+          "parts"
+        ]
+      },
+      "AssessmentEntryInputDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "number",
+            "nullable": true,
+            "description": "test_parts id of the Writing task; omit for Speaking"
+          },
+          "criteria": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Criterion code to band, 0 to 9 in steps of 0.5 (Task 1: TA CC LR GRA, Task 2: TR CC LR GRA, Speaking: FC LR GRA P)"
+          },
+          "feedback": {
+            "type": "string"
+          }
+        },
+        "required": ["criteria"]
+      },
+      "CreateAssessmentDto": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "number",
+            "description": "Latest revision the teacher saw; 0 for the first grade"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentEntryInputDto"
+            }
+          }
+        },
+        "required": ["expectedRevision", "entries"]
       },
       "CreateTestSectionDto": {
         "type": "object",

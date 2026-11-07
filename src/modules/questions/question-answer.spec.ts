@@ -30,6 +30,11 @@ describe('assertValidAnswer', () => {
     [QuestionType.TRUE_FALSE_NOT_GIVEN, single({ key: 'NOT GIVEN' })],
     [QuestionType.YES_NO_NOT_GIVEN, single({ key: 'YES' })],
     [QuestionType.OPINION_ESSAY, single({ sample: 'An essay' })],
+    [QuestionType.IELTS_WRITING_TASK_1, single({ sample: 'An essay' })],
+    [QuestionType.IELTS_WRITING_TASK_2, single({ sample: 'An essay' })],
+    [QuestionType.IELTS_SPEAKING_PART_1, single({ sample: 'An essay' })],
+    [QuestionType.IELTS_SPEAKING_PART_2, single({ sample: 'An essay' })],
+    [QuestionType.IELTS_SPEAKING_PART_3, single({ sample: 'An essay' })],
     [
       QuestionType.READ_ALOUD,
       single({ sample: 'Text', rubric: { fluency: 'clear' } }),
@@ -39,6 +44,12 @@ describe('assertValidAnswer', () => {
   });
 
   it.each<[string, QuestionType, IAnswerTarget, RegExp]>([
+    [
+      'a key on a teacher-graded type',
+      QuestionType.IELTS_WRITING_TASK_1,
+      single({ key: 'A' }),
+      /unsupported shape/,
+    ],
     [
       'numberTo before numberFrom',
       QuestionType.MULTIPLE_CHOICE,

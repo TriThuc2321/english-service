@@ -7,9 +7,13 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsObject,
   IsOptional,
+  IsString,
+  Matches,
+  Max,
   Min,
   ValidateIf,
   ValidateNested,
@@ -17,6 +21,12 @@ import {
 
 import { PageOptionsDto } from '../../../shared/dto/index.js';
 import { AttemptMode, AttemptStatus } from '../../../types/attempt.type.js';
+import { MediaKind } from '../../../types/media.type.js';
+import {
+  MEDIA_KEY_PATTERN,
+  MEDIA_MIME_EXTENSIONS,
+} from '../../media/media.constant.js';
+import { ATTEMPT_AUDIO_MAX_BYTES } from '../attempt-media.policy.js';
 
 export class StartAttemptDto {
   @ApiProperty()
@@ -62,7 +72,8 @@ export class SaveAnswerItemDto {
     type: 'object',
     additionalProperties: true,
     nullable: true,
-    description: '{ key } | { keys } | { text }; null clears the answer',
+    description:
+      '{ key } | { keys } | { text } (an essay for Writing, up to 20,000 characters); null clears the answer. Speaking questions are refused: record through the audio endpoints',
   })
   @ValidateIf((_, value) => value !== null)
   @IsObject()
@@ -82,4 +93,31 @@ export class SaveAnswersDto {
   @ValidateNested({ each: true })
   @Type(() => SaveAnswerItemDto)
   readonly answers: SaveAnswerItemDto[];
+}
+
+export class CreateAttemptAudioUploadDto {
+  @ApiProperty({ description: 'A Speaking question of the open section' })
+  @IsInt()
+  readonly questionId: number;
+
+  @ApiProperty({ example: 'audio/webm' })
+  @IsIn(Object.keys(MEDIA_MIME_EXTENSIONS[MediaKind.AUDIO]))
+  readonly contentType: string;
+
+  @ApiProperty({ description: 'Bytes, at most 20 MB' })
+  @IsInt()
+  @Min(1)
+  @Max(ATTEMPT_AUDIO_MAX_BYTES)
+  readonly size: number;
+}
+
+export class ConfirmAttemptAudioDto {
+  @ApiProperty()
+  @IsInt()
+  readonly questionId: number;
+
+  @ApiProperty({ description: 'The storageKey returned by upload-url' })
+  @IsString()
+  @Matches(MEDIA_KEY_PATTERN)
+  readonly storageKey: string;
 }

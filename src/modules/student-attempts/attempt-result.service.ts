@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import type {
   AttemptEvidenceDto,
@@ -10,11 +10,23 @@ import type {
 import { AttemptAnswer } from '../../entities/attempt-answer.entity.js';
 import { Attempt } from '../../entities/attempt.entity.js';
 import { Media } from '../../entities/media.entity.js';
-import { AttemptErrorCode, AttemptStatus } from '../../types/attempt.type.js';
+import { findLatestAssessments } from '../../shared/scoring/latest-assessments.js';
+import {
+  AttemptErrorCode,
+  AttemptSectionGradingStatus,
+  AttemptStatus,
+} from '../../types/attempt.type.js';
+import { MediaScope } from '../../types/media.type.js';
+import { MediaService } from '../media/media.service.js';
 import { StudentTestsService } from '../student-tests/student-tests.service.js';
 import { maxScoreOf } from './attempt-grader.js';
 import { AttemptTreeService } from './attempt-tree.service.js';
 import { toListItemDto } from './attempt.mapper.js';
+
+const mediaIdOf = (response: unknown): number | null => {
+  const id = (response as { mediaId?: unknown } | null | undefined)?.mediaId;
+  return typeof id === 'number' ? id : null;
+};
 
 const fail = (status: HttpStatus, code: AttemptErrorCode, message: string) =>
   new HttpException({ message, code }, status);
@@ -28,8 +40,10 @@ export class AttemptResultService {
     private readonly answerRepository: Repository<AttemptAnswer>,
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
+    private readonly dataSource: DataSource,
     private readonly treeService: AttemptTreeService,
     private readonly studentTestsService: StudentTestsService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async content(userId: string, id: string) {
@@ -88,14 +102,11 @@ export class AttemptResultService {
         'Attempt not found',
       );
     }
-    if (
-      attempt.status !== AttemptStatus.GRADED &&
-      attempt.status !== AttemptStatus.EXPIRED
-    ) {
+    if (attempt.status === AttemptStatus.IN_PROGRESS) {
       throw fail(
         HttpStatus.CONFLICT,
         AttemptErrorCode.ATTEMPT_NOT_GRADED,
-        'Attempt is not graded yet',
+        'Attempt is still in progress',
       );
     }
 
@@ -122,6 +133,12 @@ export class AttemptResultService {
       .where('aa.attemptId = :id', { id })
       .getMany();
 
+    const recordingUrls = await this.mediaService.getOwnedUrls(
+      MediaScope.ATTEMPT,
+      id,
+      rows.flatMap((row) => mediaIdOf(row.response) ?? []),
+    );
+
     const questions = rows
       .flatMap((row) => {
         const sectionId = tree.questions.get(row.questionId)?.sectionId;
@@ -146,6 +163,7 @@ export class AttemptResultService {
         answer: row.question.answer,
         explanation: row.question.explanation ?? null,
         evidence: (row.question.evidence as AttemptEvidenceDto | null) ?? null,
+        audioUrl: recordingUrls.get(mediaIdOf(row.response) ?? -1) ?? null,
       }));
 
     const mediaIds = [
@@ -161,9 +179,30 @@ export class AttemptResultService {
           .getMany()
       : [];
 
+    const sectionRank = (attemptSectionId: string) => {
+      const s = attempt.attemptSections.find((x) => x.id === attemptSectionId);
+      return (s && sectionOrder.get(s.sectionId)) ?? 0;
+    };
+    const latest = await findLatestAssessments(
+      this.dataSource.manager,
+      attempt.attemptSections
+        .filter((s) => s.gradingStatus === AttemptSectionGradingStatus.GRADED)
+        .map((s) => s.id),
+    );
+
     return {
       attempt: toListItemDto(attempt),
       questions,
+      assessments: [...latest.values()]
+        .sort(
+          (a, b) =>
+            sectionRank(a.attemptSectionId) - sectionRank(b.attemptSectionId),
+        )
+        .map((a) => ({
+          attemptSectionId: a.attemptSectionId,
+          band: a.band,
+          entries: a.details.entries,
+        })),
       transcripts: media.map((m) => ({
         mediaId: m.id,
         transcript: m.transcript ?? '',

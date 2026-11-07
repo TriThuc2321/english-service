@@ -1,5 +1,5 @@
 import { countWords, normalizeText } from '../questions/answer-text.js';
-import { gradeAnswer, maxScoreOf } from './attempt-grader.js';
+import { gradeAnswer, isBlankResponse, maxScoreOf } from './attempt-grader.js';
 
 const single = { numberFrom: 1, numberTo: 1 };
 const multi = { numberFrom: 21, numberTo: 22 };
@@ -157,5 +157,21 @@ describe('helpers', () => {
 
   it('derives the max score from the number range', () => {
     expect(maxScoreOf(multi)).toBe(2);
+  });
+});
+
+it.each([
+  [null, true],
+  [{ text: '  \n ' }, true],
+  [{ keys: [] }, true],
+  [{ text: 'x' }, false],
+  [{ key: 'A' }, false],
+])('isBlankResponse(%j) is %s', (response, blank) =>
+  expect(isBlankResponse(response)).toBe(blank),
+);
+
+describe('isBlankResponse with a recording', () => {
+  it('treats a recording as an answer', () => {
+    expect(isBlankResponse({ mediaId: 5 })).toBe(false);
   });
 });

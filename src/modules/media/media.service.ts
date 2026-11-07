@@ -7,11 +7,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { QueryFailedError, Repository } from 'typeorm';
+import { In, QueryFailedError, Repository } from 'typeorm';
 
 import { Media } from '../../entities/media.entity.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
 import { StorageService } from '../../shared/storage/storage.service.js';
+import { MediaScope } from '../../types/media.type.js';
 import {
   CreateMediaDto,
   CreateUploadUrlDto,
@@ -66,13 +67,20 @@ export class MediaService {
     await policy.assertOwnerWritable(ownerId);
 
     const storageKey = `${mediaKeyPrefix(policy.prefix, ownerId, kind)}${randomUUID()}.${ext}`;
+    const cacheControl = policy.privateRead
+      ? this.storage.privateCacheControl
+      : this.storage.cacheControl;
 
     return {
       storageKey,
-      uploadUrl: await this.storage.getUploadUrl(storageKey, contentType),
+      uploadUrl: await this.storage.getUploadUrl(
+        storageKey,
+        contentType,
+        cacheControl,
+      ),
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': this.storage.cacheControl,
+        'Cache-Control': cacheControl,
       },
       expiresIn: this.storage.uploadUrlTtl,
     };
@@ -106,7 +114,7 @@ export class MediaService {
       .getManyAndCount();
 
     return new PaginationDto(
-      data.map((media) => this.withUrl(media)),
+      await Promise.all(data.map((media) => this.withUrl(media))),
       new PageMetaDto({ page, take, totalCount }),
     );
   }
@@ -117,7 +125,7 @@ export class MediaService {
       throw new NotFoundException(`Media with ID ${id} not found`);
     }
 
-    return this.withUrl(media);
+    return await this.withUrl(media);
   }
 
   async findOwned(
@@ -142,11 +150,31 @@ export class MediaService {
       );
     }
 
-    return this.withUrl(media);
+    return await this.withUrl(media);
   }
 
-  private withUrl(media: Media) {
-    return { ...media, url: this.storage.getPublicUrl(media.storageKey) };
+  async getUrl(media: Pick<Media, 'scope' | 'storageKey'>): Promise<string> {
+    return this.policies.get(media.scope).privateRead
+      ? this.storage.getDownloadUrl(media.storageKey)
+      : this.storage.getPublicUrl(media.storageKey);
+  }
+
+  async getOwnedUrls(
+    scope: MediaScope,
+    ownerId: string,
+    ids: number[],
+  ): Promise<Map<number, string>> {
+    const urls = new Map<number, string>();
+    if (!ids.length) return urls;
+    const rows = await this.mediaRepository.find({
+      where: { id: In([...new Set(ids)]), scope, ownerId },
+    });
+    for (const media of rows) urls.set(media.id, await this.getUrl(media));
+    return urls;
+  }
+
+  private async withUrl(media: Media) {
+    return { ...media, url: await this.getUrl(media) };
   }
 
   async create(dto: CreateMediaDto, actorId: string) {

@@ -15,9 +15,22 @@ import { QUESTION_ANSWER_KINDS } from '../questions/question-answer.js';
 export type { ITreeQuestion } from './attempt-tree.service.js';
 
 const MAX_TEXT_LENGTH = 255;
+const MAX_ESSAY_LENGTH = 20_000;
+
+const WRITING_TYPES: readonly QuestionType[] = [
+  QuestionType.IELTS_WRITING_TASK_1,
+  QuestionType.IELTS_WRITING_TASK_2,
+];
+
+const SPEAKING_TYPES: readonly QuestionType[] = [
+  QuestionType.IELTS_SPEAKING_PART_1,
+  QuestionType.IELTS_SPEAKING_PART_2,
+  QuestionType.IELTS_SPEAKING_PART_3,
+];
 
 // A word-bank summary is answered with a key, a free-text one with text
 function responseField(q: ITreeQuestion): 'key' | 'keys' | 'text' | null {
+  if (WRITING_TYPES.includes(q.questionType)) return 'text';
   const kinds = QUESTION_ANSWER_KINDS[q.questionType];
   if (kinds.includes('keys')) return 'keys';
   if (q.questionType === QuestionType.SUMMARY_COMPLETION) {
@@ -28,10 +41,19 @@ function responseField(q: ITreeQuestion): 'key' | 'keys' | 'text' | null {
   return null;
 }
 
+export const isSpeakingQuestion = (type: QuestionType): boolean =>
+  SPEAKING_TYPES.includes(type);
+
 export function parseResponse(
   q: ITreeQuestion,
   raw: unknown,
 ): AttemptResponse | null {
+  if (isSpeakingQuestion(q.questionType)) {
+    // A null here would erase the recording
+    throw new BadRequestException(
+      `Question ${q.numberFrom}: recordings are saved through the audio endpoint`,
+    );
+  }
   if (raw === null) {
     return null;
   }
@@ -79,8 +101,11 @@ export function parseResponse(
     return { keys: value };
   }
 
-  if (typeof value !== 'string' || value.length > MAX_TEXT_LENGTH) {
-    fail(`text must be a string up to ${MAX_TEXT_LENGTH} characters`);
+  const maxLength = WRITING_TYPES.includes(q.questionType)
+    ? MAX_ESSAY_LENGTH
+    : MAX_TEXT_LENGTH;
+  if (typeof value !== 'string' || value.length > maxLength) {
+    fail(`text must be a string up to ${maxLength} characters`);
   }
   return { text: value };
 }

@@ -16,6 +16,7 @@ import {
 
 import type { IAttemptTree, ITreeSection } from './attempt-tree.service.js';
 import type {
+  AttemptAnswerStateDto,
   AttemptDto,
   AttemptListItemDto,
   SaveAnswersResultDto,
@@ -32,8 +33,13 @@ import {
   AttemptSectionStatus,
   AttemptStatus,
 } from '../../types/attempt.type.js';
-import { ExamType, TestStatus } from '../../types/test.type.js';
-import { parseResponse } from './attempt-response.js';
+import { ExamType, SkillType, TestStatus } from '../../types/test.type.js';
+import {
+  isValidSpeakingSection,
+  isValidWritingSection,
+  resolveAttemptStatus,
+} from './attempt-grading-status.js';
+import { isSpeakingQuestion, parseResponse } from './attempt-response.js';
 import { AttemptScoringService } from './attempt-scoring.service.js';
 import {
   closeAll,
@@ -274,27 +280,14 @@ export class StudentAttemptsService {
     const now = new Date();
     return this.withAttempt(userId, id, now, true, async (ctx) => {
       const items = new Map(dto.answers.map((a) => [a.questionId, a]));
-      const statusBySection = new Map(
-        ctx.sections.map((s) => [s.sectionId, s.status]),
-      );
 
-      const parsed = [...items.values()].map((item) => {
-        const question = ctx.tree.questions.get(item.questionId);
-        const status = question && statusBySection.get(question.sectionId);
-        if (!question || !status) {
-          throw new BadRequestException(
-            `Question ${item.questionId} is not part of this attempt`,
-          );
-        }
-        if (status !== AttemptSectionStatus.IN_PROGRESS) {
-          throw fail(
-            HttpStatus.CONFLICT,
-            AttemptErrorCode.SECTION_NOT_OPEN,
-            `Question ${question.numberFrom} is in a section that is not open`,
-          );
-        }
-        return { item, response: parseResponse(question, item.response) };
-      });
+      const parsed = [...items.values()].map((item) => ({
+        item,
+        response: parseResponse(
+          this.openQuestion(ctx, item.questionId),
+          item.response,
+        ),
+      }));
 
       const stored = await ctx.m.find(AttemptAnswer, {
         where: { attemptId: ctx.attempt.id, questionId: In([...items.keys()]) },
@@ -318,6 +311,85 @@ export class StudentAttemptsService {
     });
   }
 
+  private openQuestion(ctx: IAttemptContext, questionId: number) {
+    const question = ctx.tree.questions.get(questionId);
+    const status =
+      question &&
+      ctx.sections.find((s) => s.sectionId === question.sectionId)?.status;
+    if (!question || !status) {
+      throw new BadRequestException(
+        `Question ${questionId} is not part of this attempt`,
+      );
+    }
+    if (status !== AttemptSectionStatus.IN_PROGRESS) {
+      throw fail(
+        HttpStatus.CONFLICT,
+        AttemptErrorCode.SECTION_NOT_OPEN,
+        `Question ${question.numberFrom} is in a section that is not open`,
+      );
+    }
+    return question;
+  }
+
+  private openSpeakingQuestion(ctx: IAttemptContext, questionId: number) {
+    const question = this.openQuestion(ctx, questionId);
+    if (!isSpeakingQuestion(question.questionType)) {
+      throw new BadRequestException(
+        `Question ${question.numberFrom} is not a Speaking question`,
+      );
+    }
+  }
+
+  assertAudioQuestionOpen(
+    userId: string,
+    id: string,
+    questionId: number,
+  ): Promise<void> {
+    return this.withAttempt(userId, id, new Date(), true, async (ctx) => {
+      this.openSpeakingQuestion(ctx, questionId);
+    });
+  }
+
+  saveAudio(
+    userId: string,
+    id: string,
+    questionId: number,
+    mediaId: number,
+  ): Promise<{
+    answer: AttemptAnswerStateDto;
+    previousMediaId: number | null;
+  }> {
+    const now = new Date();
+    return this.withAttempt(userId, id, now, true, async (ctx) => {
+      this.openSpeakingQuestion(ctx, questionId);
+      const stored = await ctx.m.findOne(AttemptAnswer, {
+        where: { attemptId: ctx.attempt.id, questionId },
+        select: { questionId: true, flagged: true, response: true },
+      });
+      const previous = stored?.response?.mediaId;
+      await ctx.m.upsert(
+        AttemptAnswer,
+        {
+          attemptId: ctx.attempt.id,
+          questionId,
+          response: { mediaId },
+          flagged: stored?.flagged ?? false,
+          answeredAt: now,
+        },
+        ['attemptId', 'questionId'],
+      );
+      return {
+        answer: {
+          questionId,
+          response: { mediaId },
+          flagged: stored?.flagged ?? false,
+          answeredAt: now.toISOString(),
+        },
+        previousMediaId: typeof previous === 'number' ? previous : null,
+      };
+    });
+  }
+
   submitSection(
     userId: string,
     id: string,
@@ -338,7 +410,7 @@ export class StudentAttemptsService {
         closeSection(ctx.test.examType, ctx.timeline, sectionId, now),
       );
       if (isFinished(ctx.timeline)) {
-        await this.finish(ctx, AttemptStatus.GRADED, now);
+        await this.finish(ctx, false, now);
       }
       return this.toDto(ctx);
     });
@@ -348,7 +420,7 @@ export class StudentAttemptsService {
     const now = new Date();
     return this.withAttempt(userId, id, now, true, async (ctx) => {
       await this.applyTimeline(ctx, closeAll(ctx.timeline, now));
-      await this.finish(ctx, AttemptStatus.GRADED, now);
+      await this.finish(ctx, false, now);
       return this.toDto(ctx);
     });
   }
@@ -416,6 +488,7 @@ export class StudentAttemptsService {
         deadlineAt: attempt.deadlineAt ?? null,
         sections: sections.map((s) => ({
           sectionId: s.sectionId,
+          skill: sectionMeta.get(s.sectionId)?.skill ?? SkillType.LISTENING,
           order: sectionMeta.get(s.sectionId)?.order ?? 0,
           durationMinutes:
             sectionMeta.get(s.sectionId)?.durationMinutes ?? null,
@@ -431,7 +504,7 @@ export class StudentAttemptsService {
       const { timeline, expired } = reconcile(test.examType, ctx.timeline, now);
       if (timeline !== ctx.timeline) await this.applyTimeline(ctx, timeline);
       if (expired) {
-        await this.finish(ctx, AttemptStatus.EXPIRED, this.expiredAt(ctx));
+        await this.finish(ctx, true, this.expiredAt(ctx));
       }
     }
     return ctx;
@@ -472,7 +545,7 @@ export class StudentAttemptsService {
 
   private async finish(
     ctx: IAttemptContext,
-    status: AttemptStatus,
+    expired: boolean,
     submittedAt: Date,
   ) {
     await this.scoringService.grade(
@@ -481,14 +554,15 @@ export class StudentAttemptsService {
       ctx.tree,
       ctx.test.examType,
     );
-    ctx.attempt.status = status;
-    ctx.attempt.submittedAt = submittedAt;
-    await ctx.m.update(Attempt, ctx.attempt.id, { status, submittedAt });
     ctx.sections = await this.loadSections(
       ctx.m,
       ctx.attempt.id,
       ctx.sectionMeta,
     );
+    const status = resolveAttemptStatus(expired, ctx.sections);
+    ctx.attempt.status = status;
+    ctx.attempt.submittedAt = submittedAt;
+    await ctx.m.update(Attempt, ctx.attempt.id, { status, submittedAt });
   }
 
   private async toDto(ctx: IAttemptContext): Promise<AttemptDto> {
@@ -506,20 +580,40 @@ export class StudentAttemptsService {
   }
 
   private pickSections(tree: IAttemptTree, dto: StartAttemptDto) {
-    let chosen = tree.sections;
+    let chosen: ITreeSection[];
     if (dto.mode === AttemptMode.SECTION) {
       const ids = new Set(dto.sectionIds);
       chosen = tree.sections.filter((s) => ids.has(s.sectionId));
       if (chosen.length !== ids.size) {
         throw new BadRequestException(
-          'sectionIds must be listening or reading sections of this test',
+          'sectionIds must be sections of this test that can be attempted',
         );
       }
+    } else {
+      chosen = tree.sections;
     }
     if (!chosen.length) {
       throw new BadRequestException(
-        'The test has no listening or reading section',
+        'The test has no section that can be attempted',
       );
+    }
+    for (const s of chosen) {
+      const questions = [...tree.questions.values()].filter(
+        (q) => q.sectionId === s.sectionId,
+      );
+      if (s.skill === SkillType.WRITING && !isValidWritingSection(questions)) {
+        throw new BadRequestException(
+          `Writing section ${s.sectionId} must have one Task 1 and one Task 2 question`,
+        );
+      }
+      if (
+        s.skill === SkillType.SPEAKING &&
+        !isValidSpeakingSection(questions)
+      ) {
+        throw new BadRequestException(
+          `Speaking section ${s.sectionId} must have IELTS Speaking questions only`,
+        );
+      }
     }
     return chosen;
   }

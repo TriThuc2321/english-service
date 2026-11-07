@@ -229,6 +229,11 @@ const GROUP_CONTENT_RULES: Record<QuestionType, IContentRule | null> = {
   [QuestionType.WRITE_SENTENCE_PICTURE]: null,
   [QuestionType.RESPOND_WRITTEN_REQUEST]: null,
   [QuestionType.OPINION_ESSAY]: null,
+  [QuestionType.IELTS_WRITING_TASK_1]: null,
+  [QuestionType.IELTS_WRITING_TASK_2]: null,
+  [QuestionType.IELTS_SPEAKING_PART_1]: null,
+  [QuestionType.IELTS_SPEAKING_PART_2]: null,
+  [QuestionType.IELTS_SPEAKING_PART_3]: null,
 };
 
 const QUESTION_CONTENT_RULES: Record<QuestionType, IContentRule | null> = {
@@ -263,6 +268,11 @@ const QUESTION_CONTENT_RULES: Record<QuestionType, IContentRule | null> = {
   [QuestionType.WRITE_SENTENCE_PICTURE]: timing,
   [QuestionType.RESPOND_WRITTEN_REQUEST]: timing,
   [QuestionType.OPINION_ESSAY]: timing,
+  [QuestionType.IELTS_WRITING_TASK_1]: timing,
+  [QuestionType.IELTS_WRITING_TASK_2]: timing,
+  [QuestionType.IELTS_SPEAKING_PART_1]: timing,
+  [QuestionType.IELTS_SPEAKING_PART_2]: timing,
+  [QuestionType.IELTS_SPEAKING_PART_3]: timing,
 };
 
 function assertContent(

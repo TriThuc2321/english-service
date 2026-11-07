@@ -6,6 +6,7 @@ export const storageConfig = registerAs('storage', () => ({
   accessKeyId: process.env.STORAGE_ACCESS_KEY_ID as string,
   secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY as string,
   uploadUrlTtl: Number(process.env.STORAGE_UPLOAD_URL_TTL ?? 600),
+  downloadUrlTtl: Number(process.env.STORAGE_DOWNLOAD_URL_TTL ?? 3600),
   // Trailing slash stripped so keys can be appended with a single '/'
   publicUrl: (process.env.STORAGE_PUBLIC_URL as string).replace(/\/+$/, ''),
 }));

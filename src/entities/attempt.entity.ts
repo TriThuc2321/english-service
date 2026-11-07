@@ -17,8 +17,9 @@ import { numericTransformer } from './numeric.transformer.js';
 import { Test } from './test.entity.js';
 import { User } from './user.entity.js';
 
-// No scheduler: an attempt past its deadline (+ grace) is auto-submitted and
-// graded lazily on the next read/save, ending as EXPIRED with its scores
+// No scheduler: an attempt past its deadline (+ grace) is auto-submitted lazily
+// on the next read/save and ends as EXPIRED; sections awaiting a teacher
+// (grading_status PENDING) are scored once their assessment is saved
 @Entity('attempts', { schema: 'public' })
 @Index('idx_attempts_user_id_started_at', ['userId', 'startedAt'])
 @Index('idx_attempts_user_id_test_id', ['userId', 'testId'])
@@ -63,7 +64,7 @@ export class Attempt {
   @Column({ name: 'submitted_at', type: 'timestamptz', nullable: true })
   submittedAt?: Date | null;
 
-  // TOEIC = L + R; IELTS stays null until all four skills exist (phase 2)
+  // TOEIC = L + R; IELTS is the mean of its section bands once every section is scored
   @Column({
     name: 'overall_score',
     type: 'numeric',

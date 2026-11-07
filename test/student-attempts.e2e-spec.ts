@@ -26,6 +26,7 @@ import {
 } from '../src/types/test.type.js';
 import { createTestApp, type TestApp } from './utils/app.js';
 import { createUser, loginBo, loginWeb } from './utils/fixtures.js';
+import { backdateOpenSections } from './utils/grading.js';
 
 const HIDDEN_KEYS = ['answer', 'explanation', 'evidence', 'transcript'];
 
@@ -243,15 +244,6 @@ describe('Student attempts', () => {
     testApp.dataSource
       .getRepository(AttemptAnswer)
       .find({ where: { attemptId }, order: { questionId: 'ASC' } });
-
-  const backdateOpenSections = (attemptId: string) =>
-    testApp.dataSource.query(
-      `UPDATE attempt_sections
-          SET started_at = now() - interval '3 hours',
-              deadline_at = now() - interval '150 minutes'
-        WHERE attempt_id = $1 AND status = 'IN_PROGRESS'`,
-      [attemptId],
-    );
 
   const storedAttempt = async (id: string) => ({
     attempt: await testApp.dataSource
@@ -501,7 +493,7 @@ describe('Student attempts', () => {
     await save(attempt.id, [
       { questionId: mcq.id, response: { key: 'B' } },
     ]).expect(200);
-    await backdateOpenSections(attempt.id);
+    await backdateOpenSections(testApp, attempt.id);
 
     const res = await get(attempt.id).expect(200);
 
@@ -669,6 +661,7 @@ describe('Student attempts', () => {
         answer: { key: 'B' },
         explanation: 'Said at 0:42',
         evidence: null,
+        audioUrl: null,
       },
       expect.objectContaining({
         questionId: form.id,
@@ -699,7 +692,7 @@ describe('Student attempts', () => {
     await save(attempt.id, [
       { questionId: mcq.id, response: { key: 'B' } },
     ]).expect(200);
-    await backdateOpenSections(attempt.id);
+    await backdateOpenSections(testApp, attempt.id);
 
     const res = await result(attempt.id).expect(200);
 
@@ -786,7 +779,7 @@ describe('Student attempts', () => {
     await save(attempt.id, [
       { questionId: mcq.id, response: { key: 'B' } },
     ]).expect(200);
-    await backdateOpenSections(attempt.id);
+    await backdateOpenSections(testApp, attempt.id);
 
     const closed = await save(attempt.id, [
       { questionId: mcq.id, response: { key: 'A' } },
@@ -821,7 +814,7 @@ describe('Student attempts', () => {
     await save(old.id, [{ questionId: mcq.id, response: { key: 'B' } }]).expect(
       200,
     );
-    await backdateOpenSections(old.id);
+    await backdateOpenSections(testApp, old.id);
 
     const res = track(await start(test.id).expect(201));
 

@@ -8,7 +8,10 @@ import {
   type Relation,
 } from 'typeorm';
 
-import { AttemptSectionStatus } from '../types/attempt.type.js';
+import {
+  AttemptSectionGradingStatus,
+  AttemptSectionStatus,
+} from '../types/attempt.type.js';
 import { Attempt } from './attempt.entity.js';
 import { numericTransformer } from './numeric.transformer.js';
 import { TestSection } from './test-section.entity.js';
@@ -21,6 +24,9 @@ import { TestSection } from './test-section.entity.js';
   ['attemptId', 'sectionId'],
   { unique: true },
 )
+@Index('idx_attempt_sections_pending', ['submittedAt'], {
+  where: `"grading_status" = '${AttemptSectionGradingStatus.PENDING}'`,
+})
 export class AttemptSection {
   @PrimaryGeneratedColumn('uuid', { name: 'attempt_section_id' })
   id: string;
@@ -65,6 +71,15 @@ export class AttemptSection {
     transformer: numericTransformer,
   })
   scaledScore?: number | null;
+
+  @Column({
+    name: 'grading_status',
+    type: 'enum',
+    enum: AttemptSectionGradingStatus,
+    enumName: 'attempt_section_grading_status_enum',
+    nullable: true,
+  })
+  gradingStatus?: AttemptSectionGradingStatus | null;
 
   @ManyToOne(() => Attempt, (attempt) => attempt.attemptSections, {
     onDelete: 'CASCADE',

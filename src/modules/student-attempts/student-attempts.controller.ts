@@ -27,9 +27,12 @@ import { ErrorResponseDto } from '../../shared/dto/index.js';
 import { AuthClient, type IRequestWithUser } from '../../types/auth.type.js';
 import { CheckPermissions } from '../auth/decorators/check-permissions.decorator.js';
 import { Clients } from '../auth/decorators/clients.decorator.js';
+import { UploadUrlResponseDto } from '../media/dto/media.dto.js';
 import { StudentTestDetailDto } from '../student-tests/dto/student-test-response.dto.js';
+import { AttemptAudioService } from './attempt-audio.service.js';
 import { AttemptResultService } from './attempt-result.service.js';
 import {
+  AttemptAnswerStateDto,
   AttemptDto,
   AttemptInProgressErrorDto,
   AttemptListItemDto,
@@ -37,6 +40,8 @@ import {
   SaveAnswersResultDto,
 } from './dto/student-attempt-response.dto.js';
 import {
+  ConfirmAttemptAudioDto,
+  CreateAttemptAudioUploadDto,
   ListAttemptsDto,
   SaveAnswersDto,
   StartAttemptDto,
@@ -53,6 +58,7 @@ export class StudentAttemptsController {
   constructor(
     private readonly studentAttemptsService: StudentAttemptsService,
     private readonly attemptResultService: AttemptResultService,
+    private readonly attemptAudioService: AttemptAudioService,
   ) {}
 
   @Post()
@@ -82,7 +88,7 @@ export class StudentAttemptsController {
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   @ApiConflictResponse({
     type: ErrorResponseDto,
-    description: 'ATTEMPT_NOT_GRADED',
+    description: 'ATTEMPT_NOT_GRADED, only while in progress',
   })
   @CheckPermissions()
   async result(
@@ -131,6 +137,46 @@ export class StudentAttemptsController {
     @Body() dto: SaveAnswersDto,
   ) {
     return this.studentAttemptsService.saveAnswers(req.user.id, id, dto);
+  }
+
+  @Post(':id/audio/upload-url')
+  @ApiOperation({
+    summary:
+      'Presigned PUT URL to record a Speaking answer (audio, up to 20 MB)',
+  })
+  @ApiCreatedResponse({ type: UploadUrlResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: 'SECTION_NOT_OPEN or ATTEMPT_CLOSED',
+  })
+  @CheckPermissions()
+  createAudioUploadUrl(
+    @Req() req: IRequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateAttemptAudioUploadDto,
+  ) {
+    return this.attemptAudioService.createUploadUrl(req.user.id, id, dto);
+  }
+
+  @Post(':id/audio')
+  @ApiOperation({
+    summary:
+      'Confirm an uploaded recording as the answer to a Speaking question; replaces the previous one',
+  })
+  @ApiCreatedResponse({ type: AttemptAnswerStateDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: 'SECTION_NOT_OPEN or ATTEMPT_CLOSED',
+  })
+  @CheckPermissions()
+  confirmAudio(
+    @Req() req: IRequestWithUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConfirmAttemptAudioDto,
+  ) {
+    return this.attemptAudioService.confirm(req.user.id, id, dto);
   }
 
   @Post(':id/sections/:sectionId/submit')

@@ -49,6 +49,7 @@ Mọi secret đặt khác nhau giữa dev và prod.
 | `STORAGE_BUCKET`                                              | `myenglish-dev`                                     | `myenglish`                                     |
 | `STORAGE_PUBLIC_URL`                                          | `https://media-dev.<domain>`                        | `https://media.<domain>`                        |
 | `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID/SECRET_ACCESS_KEY` | R2 API token chỉ có quyền bucket dev                | token chỉ có quyền bucket prod                  |
+| `STORAGE_DOWNLOAD_URL_TTL` (tuỳ chọn)                         | giây sống của URL ký sẵn, mặc định `3600`           | như dev                                         |
 | `HTTPS_KEY_PATH`, `HTTPS_CERT_PATH`                           | để trống (Railway terminate TLS)                    | để trống                                        |
 
 ## Những ràng buộc dễ quên
@@ -56,7 +57,9 @@ Mọi secret đặt khác nhau giữa dev và prod.
 - **HTTPS bắt buộc**: cookie refresh của BO là `secure`, chạy HTTP thì BO không refresh được.
 - **Cùng registrable domain**: cookie `sameSite: 'lax'` cần API, BO và web nằm chung domain gốc (`api-dev.x.com` + `bo-dev.x.com`). Không dùng domain mặc định `*.up.railway.app` / `*.vercel.app` cho luồng đăng nhập.
 - **Google Cloud Console**: thêm cả hai callback URL vào _Authorized redirect URIs_.
-- **R2**: mỗi bucket cần CORS rule cho phép `PUT` từ origin BO của env đó, và gắn custom domain public (`media-dev.` / `media.`).
+- **R2**: mỗi bucket cần CORS rule cho phép `PUT` từ origin BO **và origin web (học sinh)** của env đó (học sinh upload bản ghi âm Speaking trực tiếp lên R2), và gắn custom domain public (`media-dev.` / `media.`).
+- **Chặn `/attempts/*` trên domain public**: bản ghi âm của học sinh nằm dưới prefix `attempts/` trong cùng bucket và chỉ được đọc qua URL ký sẵn (hết hạn sau `STORAGE_DOWNLOAD_URL_TTL`). Thêm một Cloudflare rule (WAF custom rule) chặn mọi request tới `media(-dev).<domain>` có path bắt đầu bằng `/attempts/`; nếu không, ai biết key đều nghe được.
+- **Quyền chấm bài**: role giáo viên cần `READ` và `CREATE` trên subject `assessment` (hàng đợi + chấm Writing/Speaking tại `/grading`). Cấp trong CMS trước khi mở tính năng, vì quyền nằm trong JWT nên áp dụng ở lần refresh/đăng nhập kế tiếp.
 - **Throttler** lưu state trong memory từng instance — chạy 1 replica; nếu scale ngang phải chuyển storage sang Redis.
 - Đổi `STORAGE_PUBLIC_URL` sau khi đã có dữ liệu cần một `UPDATE users SET avatar = ...` (avatar lưu URL đầy đủ).
 

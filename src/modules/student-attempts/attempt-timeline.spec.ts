@@ -1,11 +1,12 @@
 import { AttemptMode, AttemptSectionStatus } from '../../types/attempt.type.js';
-import { ExamType } from '../../types/test.type.js';
+import { ExamType, SkillType } from '../../types/test.type.js';
 import {
   closeAll,
   GRACE_MS,
   isFinished,
   openTimeline,
   reconcile,
+  SPEAKING_GRACE_MS,
   submitSection,
 } from './attempt-timeline.js';
 
@@ -20,8 +21,18 @@ const toeicFull = () =>
       mode: AttemptMode.FULL,
       testDurationMinutes: 120,
       sections: [
-        { sectionId: 1, order: 1, durationMinutes: 45 },
-        { sectionId: 2, order: 2, durationMinutes: 75 },
+        {
+          sectionId: 1,
+          order: 1,
+          durationMinutes: 45,
+          skill: SkillType.LISTENING,
+        },
+        {
+          sectionId: 2,
+          order: 2,
+          durationMinutes: 75,
+          skill: SkillType.LISTENING,
+        },
       ],
     },
     now,
@@ -34,8 +45,18 @@ const ieltsFull = () =>
       mode: AttemptMode.FULL,
       testDurationMinutes: null,
       sections: [
-        { sectionId: 1, order: 1, durationMinutes: 30 },
-        { sectionId: 2, order: 2, durationMinutes: 60 },
+        {
+          sectionId: 1,
+          order: 1,
+          durationMinutes: 30,
+          skill: SkillType.LISTENING,
+        },
+        {
+          sectionId: 2,
+          order: 2,
+          durationMinutes: 60,
+          skill: SkillType.LISTENING,
+        },
       ],
     },
     now,
@@ -58,7 +79,14 @@ describe('openTimeline', () => {
         examType: ExamType.TOEIC_LR,
         mode: AttemptMode.SECTION,
         testDurationMinutes: 120,
-        sections: [{ sectionId: 2, order: 2, durationMinutes: 75 }],
+        sections: [
+          {
+            sectionId: 2,
+            order: 2,
+            durationMinutes: 75,
+            skill: SkillType.LISTENING,
+          },
+        ],
       },
       now,
     );
@@ -71,7 +99,14 @@ describe('openTimeline', () => {
         examType: ExamType.TOEIC_LR,
         mode: AttemptMode.SECTION,
         testDurationMinutes: 120,
-        sections: [{ sectionId: 2, order: 2, durationMinutes: null }],
+        sections: [
+          {
+            sectionId: 2,
+            order: 2,
+            durationMinutes: null,
+            skill: SkillType.LISTENING,
+          },
+        ],
       },
       now,
     );
@@ -101,8 +136,18 @@ describe('openTimeline', () => {
         mode: AttemptMode.FULL,
         testDurationMinutes: null,
         sections: [
-          { sectionId: 2, order: 2, durationMinutes: 60 },
-          { sectionId: 1, order: 1, durationMinutes: 30 },
+          {
+            sectionId: 2,
+            order: 2,
+            durationMinutes: 60,
+            skill: SkillType.LISTENING,
+          },
+          {
+            sectionId: 1,
+            order: 1,
+            durationMinutes: 30,
+            skill: SkillType.LISTENING,
+          },
         ],
       },
       now,
@@ -117,7 +162,14 @@ describe('openTimeline', () => {
         examType: ExamType.IELTS_ACADEMIC,
         mode: AttemptMode.SECTION,
         testDurationMinutes: null,
-        sections: [{ sectionId: 1, order: 1, durationMinutes: null }],
+        sections: [
+          {
+            sectionId: 1,
+            order: 1,
+            durationMinutes: null,
+            skill: SkillType.LISTENING,
+          },
+        ],
       },
       now,
     );
@@ -131,7 +183,40 @@ describe('openTimeline', () => {
   });
 });
 
+const ielts = (skill: SkillType) =>
+  openTimeline(
+    {
+      examType: ExamType.IELTS_ACADEMIC,
+      mode: AttemptMode.FULL,
+      testDurationMinutes: null,
+      sections: [{ sectionId: 1, order: 1, durationMinutes: 10, skill }],
+    },
+    now,
+  );
+
 describe('reconcile', () => {
+  it('gives Speaking two minutes of grace', () => {
+    const t = ielts(SkillType.SPEAKING);
+    expect(
+      reconcile(ExamType.IELTS_ACADEMIC, t, at(min(10) + SPEAKING_GRACE_MS))
+        .expired,
+    ).toBe(false);
+    expect(
+      reconcile(ExamType.IELTS_ACADEMIC, t, at(min(10) + SPEAKING_GRACE_MS + 1))
+        .expired,
+    ).toBe(true);
+  });
+
+  it('keeps GRACE_MS for Writing', () => {
+    expect(
+      reconcile(
+        ExamType.IELTS_ACADEMIC,
+        ielts(SkillType.WRITING),
+        at(min(10) + GRACE_MS + 1),
+      ).expired,
+    ).toBe(true);
+  });
+
   it('keeps a TOEIC timeline inside the grace window', () => {
     const t = toeicFull();
     const r = reconcile(ExamType.TOEIC_LR, t, at(min(120) + 29_000));
