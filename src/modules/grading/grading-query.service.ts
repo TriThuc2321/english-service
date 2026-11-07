@@ -28,7 +28,7 @@ import {
 import { ListGradingQueueDto } from './dto/grading.dto.js';
 import { expectedEntriesOf } from './grading-entries.js';
 
-const toUserDto = (u: User): GradingUserDto => ({
+export const toUserDto = (u: User): GradingUserDto => ({
   id: u.id,
   email: u.email ?? null,
   firstName: u.firstName ?? null,

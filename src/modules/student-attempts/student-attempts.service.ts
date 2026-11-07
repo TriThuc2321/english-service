@@ -26,7 +26,7 @@ import { AttemptAnswer } from '../../entities/attempt-answer.entity.js';
 import { AttemptSection } from '../../entities/attempt-section.entity.js';
 import { Attempt } from '../../entities/attempt.entity.js';
 import { Test } from '../../entities/test.entity.js';
-import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
+import { PaginationDto } from '../../shared/dto/index.js';
 import {
   AttemptErrorCode,
   AttemptMode,
@@ -39,6 +39,7 @@ import {
   isValidWritingSection,
   resolveAttemptStatus,
 } from './attempt-grading-status.js';
+import { attemptListQuery, paginateAttempts } from './attempt-list.query.js';
 import { isSpeakingQuestion, parseResponse } from './attempt-response.js';
 import { AttemptScoringService } from './attempt-scoring.service.js';
 import {
@@ -50,7 +51,7 @@ import {
   submitSection as closeSection,
 } from './attempt-timeline.js';
 import { AttemptTreeService } from './attempt-tree.service.js';
-import { toAttemptDto, toListItemDto } from './attempt.mapper.js';
+import { toAttemptDto } from './attempt.mapper.js';
 import {
   ListAttemptsDto,
   SaveAnswersDto,
@@ -221,45 +222,15 @@ export class StudentAttemptsService {
     userId: string,
     { page, take, testId, status }: ListAttemptsDto,
   ): Promise<PaginationDto<AttemptListItemDto>> {
-    const qb = this.attemptRepository
-      .createQueryBuilder('a')
-      .innerJoin('a.test', 't')
-      .leftJoin('a.attemptSections', 's')
-      .leftJoin('s.testSection', 'ts')
-      .select([
-        'a.id',
-        'a.testId',
-        'a.mode',
-        'a.status',
-        'a.startedAt',
-        'a.deadlineAt',
-        'a.submittedAt',
-        'a.overallScore',
-        't.id',
-        't.slug',
-        't.title',
-        't.examType',
-        's',
-        'ts.id',
-        'ts.skill',
-        'ts.order',
-      ])
-      .where('a.userId = :userId', { userId });
+    const qb = attemptListQuery(this.attemptRepository).where(
+      'a.userId = :userId',
+      { userId },
+    );
 
     if (testId) qb.andWhere('a.testId = :testId', { testId });
     if (status) qb.andWhere('a.status = :status', { status });
 
-    const [attempts, totalCount] = await qb
-      .orderBy('a.startedAt', 'DESC')
-      .addOrderBy('a.id', 'DESC')
-      .skip((page - 1) * take)
-      .take(take)
-      .getManyAndCount();
-
-    return new PaginationDto(
-      attempts.map(toListItemDto),
-      new PageMetaDto({ page, take, totalCount }),
-    );
+    return paginateAttempts(qb, page, take, (item) => item);
   }
 
   findOne(userId: string, id: string): Promise<AttemptDto> {
