@@ -1,99 +1,88 @@
 # Deployment
 
-Hai môi trường, mỗi môi trường có API + Postgres riêng:
+All three apps (API, BO, student web) run on Vercel. There are two environments, each with its own API and Postgres:
 
 | Env  | Branch | API domain         | DB                      |
 | ---- | ------ | ------------------ | ----------------------- |
-| dev  | `dev`  | `api-dev.<domain>` | Postgres riêng của dev  |
-| prod | `main` | `api.<domain>`     | Postgres riêng của prod |
+| dev  | `dev`  | `api-dev.<domain>` | Dedicated dev Postgres  |
+| prod | `main` | `api.<domain>`     | Dedicated prod Postgres |
 
-Luồng code: `feat/*` → PR vào `dev` (deploy dev) → PR `dev` → `main` (deploy prod). CI (`ci.yml`) đã chạy cho cả hai branch.
+Code flow: `feat/*` → PR into `dev` (deploys dev) → PR `dev` → `main` (deploys prod). CI (`ci.yml`) runs on both branches.
 
-## Việc cần làm
+## To do
 
-- [x] TypeORM migrations, bỏ `synchronize` (xem mục _Migrations_ trong `CLAUDE.md`)
-- [ ] Tạo branch `dev` từ `main`, bật branch protection cho `dev` và `main` (bắt buộc CI pass)
-- [ ] `Dockerfile` (multi-stage: `pnpm install --frozen-lockfile` → `pnpm build` → `pnpm prune --prod`; runtime `node dist/main`, cần giữ `node_modules/typeorm` để chạy `migration:run`)
-- [ ] `railway.json`: build bằng Dockerfile, `preDeployCommand: pnpm migration:run`, healthcheck path, restart policy
-- [ ] Endpoint healthcheck (`GET /api/health`, `@Public()`) cho Railway
-- [ ] Tắt hoặc bảo vệ Swagger `/docs` trên prod
-- [ ] Script tạo SUPER_ADMIN đầu tiên (hiện chưa có seed, xem bên dưới)
-- [ ] Backup Postgres prod
+- [x] TypeORM migrations, drop `synchronize` (see _Migrations_ in `CLAUDE.md`)
+- [ ] Create the `dev` branch from `main` and enable branch protection on `dev` and `main` (CI must pass)
+- [ ] Disable or protect Swagger `/docs` in prod
+- [ ] Script to create the first SUPER_ADMIN (there is no seed yet, see below)
+- [ ] Back up the prod Postgres
 
-## Railway
+## Vercel
 
-Một project, hai **Environments** (`production` ← `main`, `dev` ← `dev`). Trong mỗi environment:
+**API** (`english-service`): the project uses the **NestJS** framework preset, install `pnpm install`, build `pnpm build`, Node `24.x`. Attach branch `main` to `api.<domain>` and branch `dev` to `api-dev.<domain>`; set environment variables separately for Production (prod) and for the Preview of branch `dev`.
 
-1. Service **Postgres** (template Postgres của Railway).
-2. Service **API** từ repo GitHub, chọn branch tương ứng, build bằng `Dockerfile`.
-3. Biến môi trường của API (bảng dưới). Biến DB dùng reference: `DATABASE_HOST=${{Postgres.PGHOST}}`, `DATABASE_PORT=${{Postgres.PGPORT}}`, `DATABASE_USERNAME=${{Postgres.PGUSER}}`, `DATABASE_PASSWORD=${{Postgres.PGPASSWORD}}`, `DATABASE_NAME=${{Postgres.PGDATABASE}}`. Kết nối qua private network (`*.railway.internal`) thì `DATABASE_SSL=false`.
-4. **Pre-deploy command**: `pnpm migration:run`. Migration chạy một lần trước khi bản mới nhận traffic; lỗi migration thì deploy dừng, bản cũ vẫn chạy.
-5. Custom domain `api.<domain>` / `api-dev.<domain>` (Hobby cho phép 2 domain — vừa đủ).
-6. Dev có thể bật **App Sleeping** để tiết kiệm.
+- Don't add any CommonJS dependency that `require()`s a Nest package: Vercel's function loader can't `require()` `@nestjs/common` (ESM-only). That is why the throttler is the in-house one in `shared/throttle/`.
+- **Vercel doesn't run migrations.** Before merging into `dev`/`main`, run `pnpm build && pnpm migration:run` with that env's `DATABASE_*` (migrations are additive, so running them before the new code ships is safe).
 
-Chi phí ước tính (Hobby $5 kèm $5 usage): API ~0.2 GB RAM + Postgres ~0.2 GB mỗi env → khoảng **$8–10/tháng** cho cả hai env.
+**BO** (`english-backoffice`) and **student web** (`english-student`): each project attaches branch `main` to the prod domain and branch `dev` to the dev domain (`bo-dev.<domain>`, `dev.<domain>`), with per-branch environment variables pointing at the matching API (`VITE_API_URL`, `NEXT_PUBLIC_API_URL`).
 
-## Biến môi trường mỗi env
+## Environment variables per env
 
-Mọi secret đặt khác nhau giữa dev và prod.
+Every secret differs between dev and prod.
 
-| Biến                                                          | dev                                                 | prod                                            |
-| ------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------- |
-| `DATABASE_*`                                                  | reference Postgres dev                              | reference Postgres prod                         |
-| `JWT_SECRET`, `JWT_SECRET_REFRESH`                            | `openssl rand -base64 48`                           | giá trị khác dev                                |
-| `GOOGLE_CLIENT_ID/SECRET`                                     | cùng OAuth client hoặc client riêng                 | OAuth client prod                               |
-| `GOOGLE_CALLBACK_URL`                                         | `https://api-dev.<domain>/api/auth/google/callback` | `https://api.<domain>/api/auth/google/callback` |
-| `GOOGLE_LOGIN_REDIRECT_URL_WEB` / `_BO`                       | URL callback của FE dev                             | URL callback của FE prod                        |
-| `CORS_ORIGINS`                                                | `https://bo-dev.<domain>,https://dev.<domain>`      | `https://bo.<domain>,https://<domain>`          |
-| `TRUST_PROXY`                                                 | phủ proxy của Railway + IP server BFF dev           | tương tự cho prod                               |
-| `STORAGE_BUCKET`                                              | `myenglish-dev`                                     | `myenglish`                                     |
-| `STORAGE_PUBLIC_URL`                                          | `https://media-dev.<domain>`                        | `https://media.<domain>`                        |
-| `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID/SECRET_ACCESS_KEY` | R2 API token chỉ có quyền bucket dev                | token chỉ có quyền bucket prod                  |
-| `STORAGE_DOWNLOAD_URL_TTL` (tuỳ chọn)                         | giây sống của URL ký sẵn, mặc định `3600`           | như dev                                         |
-| `HTTPS_KEY_PATH`, `HTTPS_CERT_PATH`                           | để trống (Railway terminate TLS)                    | để trống                                        |
+| Variable                                                      | dev                                                    | prod                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------- |
+| `DATABASE_*`                                                  | dev Postgres (`DATABASE_SSL=true` for a managed DB)    | prod Postgres                                   |
+| `JWT_SECRET`, `JWT_SECRET_REFRESH`                            | `openssl rand -base64 48`                              | different values from dev                       |
+| `GOOGLE_CLIENT_ID/SECRET`                                     | same OAuth client or a separate one                    | prod OAuth client                               |
+| `GOOGLE_CALLBACK_URL`                                         | `https://api-dev.<domain>/api/auth/google/callback`    | `https://api.<domain>/api/auth/google/callback` |
+| `GOOGLE_LOGIN_REDIRECT_URL_WEB` / `_BO`                       | dev frontend callback URLs                             | prod frontend callback URLs                     |
+| `CORS_ORIGINS`                                                | `https://bo-dev.<domain>,https://dev.<domain>`         | `https://bo.<domain>,https://<domain>`          |
+| `TRUST_PROXY`                                                 | covers Vercel's proxy + the dev student web BFF server | same for prod                                   |
+| `STORAGE_BUCKET`                                              | `myenglish-dev`                                        | `myenglish`                                     |
+| `STORAGE_PUBLIC_URL`                                          | `https://media-dev.<domain>`                           | `https://media.<domain>`                        |
+| `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID/SECRET_ACCESS_KEY` | R2 API token scoped to the dev bucket only             | token scoped to the prod bucket only            |
+| `STORAGE_DOWNLOAD_URL_TTL` (optional)                         | lifetime of presigned URLs in seconds, default `3600`  | same as dev                                     |
+| `HTTPS_KEY_PATH`, `HTTPS_CERT_PATH`                           | leave empty (Vercel terminates TLS)                    | leave empty                                     |
 
-## Những ràng buộc dễ quên
+## Easy-to-miss constraints
 
-- **HTTPS bắt buộc**: cookie refresh của BO là `secure`, chạy HTTP thì BO không refresh được.
-- **Cùng registrable domain**: cookie `sameSite: 'lax'` cần API, BO và web nằm chung domain gốc (`api-dev.x.com` + `bo-dev.x.com`). Không dùng domain mặc định `*.up.railway.app` / `*.vercel.app` cho luồng đăng nhập.
-- **Google Cloud Console**: thêm cả hai callback URL vào _Authorized redirect URIs_.
-- **R2**: mỗi bucket cần CORS rule cho phép `PUT` từ origin BO **và origin web (học sinh)** của env đó (học sinh upload bản ghi âm Speaking trực tiếp lên R2), và gắn custom domain public (`media-dev.` / `media.`).
-- **Chặn `/attempts/*` trên domain public**: bản ghi âm của học sinh nằm dưới prefix `attempts/` trong cùng bucket và chỉ được đọc qua URL ký sẵn (hết hạn sau `STORAGE_DOWNLOAD_URL_TTL`). Thêm một Cloudflare rule (WAF custom rule) chặn mọi request tới `media(-dev).<domain>` có path bắt đầu bằng `/attempts/`; nếu không, ai biết key đều nghe được.
-- **Quyền chấm bài**: role giáo viên cần `READ` và `CREATE` trên subject `assessment` (hàng đợi + chấm Writing/Speaking tại `/grading`). Cấp trong CMS trước khi mở tính năng, vì quyền nằm trong JWT nên áp dụng ở lần refresh/đăng nhập kế tiếp.
-- **Throttler** lưu state trong memory từng instance — chạy 1 replica; nếu scale ngang phải chuyển storage sang Redis.
-- Đổi `STORAGE_PUBLIC_URL` sau khi đã có dữ liệu cần một `UPDATE users SET avatar = ...` (avatar lưu URL đầy đủ).
+- **HTTPS is required**: the BO refresh cookie is `secure`, so over HTTP the BO can't refresh.
+- **Same registrable domain**: the `sameSite: 'lax'` cookie needs the API, BO and web on the same parent domain (`api-dev.x.com` + `bo-dev.x.com`). Don't use the default `*.vercel.app` domains for the login flow.
+- **Google Cloud Console**: add both callback URLs to _Authorized redirect URIs_.
+- **R2**: each bucket needs a CORS rule allowing `PUT` from that env's BO origin **and student web origin** (students upload Speaking recordings straight to R2), plus a public custom domain (`media-dev.` / `media.`).
+- **Block `/attempts/*` on the public domain**: student recordings live under the `attempts/` prefix in the same bucket and must only be read through presigned URLs (expiring after `STORAGE_DOWNLOAD_URL_TTL`). Add a Cloudflare rule (WAF custom rule) blocking every request to `media(-dev).<domain>` whose path starts with `/attempts/`; otherwise anyone who knows a key can listen to it.
+- **Grading permissions**: the teacher role needs `READ` and `CREATE` on the `assessment` subject (queue + Writing/Speaking grading at `/grading`). Grant them in the CMS before launching the feature; permissions live in the JWT, so they apply from the next refresh/login.
+- **The throttler** keeps its state in each function instance's memory, so on Vercel limits are counted per instance; move its storage to Redis if exact limits matter.
+- Changing `STORAGE_PUBLIC_URL` once there is data requires an `UPDATE users SET avatar = ...` (avatars store the full URL).
 
-## Lần deploy đầu tiên của mỗi env
+## First deploy of each env
 
-1. Pre-deploy chạy `Init` migration lên DB trống.
-2. Khi boot, app tự upsert system roles (`SUPER_ADMIN`, `ADMIN`, `USER`) và score scales.
-3. Tạo admin đầu tiên: đăng nhập Google một lần bằng tài khoản của bạn (tạo user role `USER`), rồi chạy trên DB của env đó:
+1. Run `pnpm build && pnpm migration:run` with that env's `DATABASE_*` to create the schema on the empty DB.
+2. On boot, the app upserts the system roles (`SUPER_ADMIN`, `ADMIN`, `USER`) and the score scales.
+3. Create the first admin: sign in with Google once using your account (this creates a `USER`-role user), then run on that env's DB:
 
    ```sql
    UPDATE users
    SET role_id = (SELECT role_id FROM roles WHERE code = 'SUPER_ADMIN')
-   WHERE email = '<email của bạn>';
+   WHERE email = '<your email>';
    ```
 
-   Đăng nhập lại để token mang quyền mới.
+   Sign in again so the token carries the new permissions.
 
-## Migrations khi phát triển
+## Migrations during development
 
-Quy trình mỗi lần sửa entity:
+For every entity change:
 
-1. Sửa entity.
-2. `pnpm migration:generate src/migrations/<Name>` (so với DB trong `.env`, DB này phải đã migrate tới mới nhất).
-3. Đọc lại SQL sinh ra (rename cột → sửa thành `RENAME COLUMN`; enum dùng chung → bỏ `CREATE/DROP TYPE` lặp).
-4. `pnpm migration:run` lên DB local, chạy `pnpm test:e2e` (spec `migrations.e2e-spec.ts` bắt thiếu migration).
-5. Commit migration cùng PR với thay đổi entity.
+1. Edit the entity.
+2. `pnpm migration:generate src/migrations/<Name>` (diffs against the DB in `.env`, which must already be migrated to the latest).
+3. Review the generated SQL (a column rename → rewrite as `RENAME COLUMN`; shared enums → drop the repeated `CREATE/DROP TYPE`).
+4. `pnpm migration:run` on the local DB, then run `pnpm test:e2e` (`migrations.e2e-spec.ts` catches a missing migration).
+5. Commit the migration in the same PR as the entity change.
 
-**DB local hiện tại** được tạo bằng `synchronize`, nên `Init` sẽ báo bảng đã tồn tại. Chọn một trong hai:
+**An existing local DB** created with `synchronize` will make `Init` fail with "table already exists". Pick one:
 
-- Giữ dữ liệu: schema local đã khớp entity, đánh dấu `Init` là đã chạy mà không thực thi: `pnpm build && node --env-file=.env node_modules/typeorm/cli.js -d dist/data-source.js migration:run --fake`.
-- Làm lại từ đầu: `docker compose down -v && docker compose up -d && pnpm build && pnpm migration:run` (mất dữ liệu local).
+- Keep the data: the local schema already matches the entities, so mark `Init` as run without executing it: `pnpm build && node --env-file=.env node_modules/typeorm/cli.js -d dist/data-source.js migration:run --fake`.
+- Start over: `docker compose down -v && docker compose up -d && pnpm build && pnpm migration:run` (loses local data).
 
-Xoá `DATABASE_SYNC` khỏi `.env` local — biến này không còn được đọc.
-
-## Frontend (gợi ý)
-
-BO và student web đặt trên Vercel: mỗi project gắn branch `main` vào domain prod và branch `dev` vào domain dev (`bo-dev.<domain>`, `dev.<domain>`), biến môi trường riêng cho từng branch trỏ tới API tương ứng.
+Remove `DATABASE_SYNC` from your local `.env`; it is no longer read.
