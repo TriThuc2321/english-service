@@ -1,22 +1,22 @@
-# Luồng xác thực (Auth flow)
+# Auth flow
 
-Tài liệu mô tả luồng xác thực giữa **english-service** (BE), **english-backoffice** (BO, React SPA) và **english-student** (Next.js, server đóng vai trò BFF).
+This document describes authentication between **english-service** (BE), **english-backoffice** (BO, React SPA) and **english-student** (Next.js, whose server acts as a BFF).
 
-|                     | Backoffice (`client = bo`)                                                                    | Student (`client = web`)                                                             |
-| ------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Access token        | Trong **memory** của SPA, gửi qua header `Authorization: Bearer`                              | Cookie httpOnly `st_access_token` trên domain student. BFF gắn Bearer khi gọi BE     |
-| Refresh token       | Cookie httpOnly `refresh_token_bo` do **BE** set (path `/api/auth`, `SameSite=Lax`, `Secure`) | Cookie httpOnly `st_refresh_token` trên domain student. BFF gửi lại trong **body**   |
-| Google login trả về | BE set cookie refresh rồi redirect về `/login`                                                | BE redirect kèm `?code=` (refresh token sống 60s, dùng 1 lần) và `state=clientNonce` |
-| Chống login CSRF    | Cookie `oauth_state` trên domain API                                                          | `oauth_state` (API) + `oauth_nonce` (domain student)                                 |
-| Endpoint CMS        | Được gọi (`@Clients(AuthClient.BO)`)                                                          | Bị 403                                                                               |
+|                     | Backoffice (`client = bo`)                                                                        | Student (`client = web`)                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Access token        | Held in the SPA's **memory**, sent as `Authorization: Bearer`                                     | httpOnly cookie `st_access_token` on the student domain. The BFF attaches the Bearer header   |
+| Refresh token       | httpOnly cookie `refresh_token_bo` set by the **BE** (path `/api/auth`, `SameSite=Lax`, `Secure`) | httpOnly cookie `st_refresh_token` on the student domain. The BFF sends it in the **body**    |
+| Google login result | BE sets the refresh cookie and redirects to `/login`                                              | BE redirects with `?code=` (a single-use refresh token valid for 60s) and `state=clientNonce` |
+| Login CSRF defence  | `oauth_state` cookie on the API domain                                                            | `oauth_state` (API) + `oauth_nonce` (student domain)                                          |
+| CMS endpoints       | Allowed (`@Clients(AuthClient.BO)`)                                                               | 403                                                                                           |
 
-## 1. Tổng quan
+## 1. Overview
 
 ```mermaid
 flowchart LR
   subgraph Browser
     BO["Backoffice SPA<br/>access token in memory"]
-    STB["Student browser<br/>chỉ có cookie httpOnly"]
+    STB["Student browser<br/>httpOnly cookies only"]
   end
 
   subgraph StudentServer["english-student (Next.js)"]
@@ -31,15 +31,15 @@ flowchart LR
   STB -- "cookie st_access_token / st_refresh_token" --> PROXY
   STB --> SESS
   PROXY -- "Bearer + X-Forwarded-For" --> BE
-  SESS -- "refreshToken trong body" --> BE
+  SESS -- "refreshToken in body" --> BE
   BE <--> G
 ```
 
-Guard chain của BE cho mọi request: `ThrottleGuard` → `JwtAuthGuard` (bỏ qua nếu `@Public`) → `PermissionGuard` (`@Clients` + `@CheckPermissions`, mặc định deny).
+The BE guard chain for every request: `ThrottleGuard` → `JwtAuthGuard` (skipped for `@Public`) → `PermissionGuard` (`@Clients` + `@CheckPermissions`, deny by default).
 
 ## 2. Backoffice
 
-### 2.1 Đăng nhập Google
+### 2.1 Google login
 
 ```mermaid
 sequenceDiagram
@@ -49,31 +49,31 @@ sequenceDiagram
   participant BE as english-service
   participant G as Google
 
-  U->>BO: Bấm "Continue with Google"
+  U->>BO: Click "Continue with Google"
   BO->>BE: GET /api/auth/google?client=bo (full-page redirect)
-  BE->>BE: Sinh nonce, Set-Cookie oauth_state (path /api/auth/google)
-  BE-->>U: 302 tới Google, state = "bo.nonce"
-  U->>G: Đăng nhập, đồng ý
+  BE->>BE: Generate nonce, Set-Cookie oauth_state (path /api/auth/google)
+  BE-->>U: 302 to Google, state = "bo.nonce"
+  U->>G: Sign in, consent
   G-->>BE: GET /api/auth/google/callback?code&state
-  BE->>BE: parseOAuthState + so nonce với cookie oauth_state, xoá cookie
-  BE->>G: Đổi code lấy profile (passport)
-  BE->>BE: thirdPartyLogin: user phải tồn tại và role.canAccessCms
-  alt Thành công
-    BE->>BE: issueTokens: tạo 1 row auth_sessions (sid, currentJti, sha256 hash)
-    BE-->>U: Set-Cookie refresh_token_bo, 302 tới BO /login
+  BE->>BE: parseOAuthState + compare nonce with oauth_state cookie, clear cookie
+  BE->>G: Exchange code for profile (passport)
+  BE->>BE: thirdPartyLogin: user must exist and role.canAccessCms
+  alt Success
+    BE->>BE: issueTokens: create one auth_sessions row (sid, currentJti, sha256 hash)
+    BE-->>U: Set-Cookie refresh_token_bo, 302 to BO /login
     U->>BO: GET /login
-    BO->>BE: _auth clientLoader: GET /auth/profile (chưa có token nên 401)
-    BO->>BE: POST /auth/refresh {client:"bo"} kèm cookie
-    BE-->>BO: {access_token} + Set-Cookie refresh mới (rotate)
+    BO->>BE: _auth clientLoader: GET /auth/profile (no token yet, so 401)
+    BO->>BE: POST /auth/refresh {client:"bo"} with cookie
+    BE-->>BO: {access_token} + Set-Cookie new refresh (rotated)
     BO->>BO: setAccessToken (memory), retry /auth/profile
     BO-->>U: redirect "/"
-  else Lỗi (nonce sai, không có quyền CMS...)
-    BE-->>U: 302 tới /login?error=cms_access_denied | google_login_failed
-    BO-->>U: Hiển thị Alert, không gọi refresh
+  else Error (bad nonce, no CMS access...)
+    BE-->>U: 302 to /login?error=cms_access_denied | google_login_failed
+    BO-->>U: Show an Alert, don't call refresh
   end
 ```
 
-### 2.2 Gọi API, access token hết hạn, reload trang
+### 2.2 API calls, access token expiry, page reload
 
 ```mermaid
 sequenceDiagram
@@ -82,24 +82,24 @@ sequenceDiagram
   participant BE as english-service
 
   BO->>BE: GET /api/users, Authorization: Bearer access
-  alt access còn hạn
+  alt access still valid
     BE-->>BO: 200
-  else access hết hạn, hoặc memory trống sau reload
+  else access expired, or memory empty after reload
     BE-->>BO: 401
-    Note over BO: Gộp mọi request 401 vào 1 lần refresh duy nhất
+    Note over BO: All 401 requests share a single refresh
     BO->>BE: POST /auth/refresh {client:"bo"} + cookie refresh_token_bo
-    alt refresh hợp lệ
-      BE-->>BO: {access_token} + Set-Cookie refresh mới
-      BO->>BE: Retry request gốc với Bearer mới
+    alt refresh valid
+      BE-->>BO: {access_token} + Set-Cookie new refresh
+      BO->>BE: Retry the original request with the new Bearer
       BE-->>BO: 200
-    else refresh hỏng / bị revoke
-      BE-->>BO: 401 + xoá cookie
-      BO->>BO: clearAccessToken, queryClient.clear, chuyển về /login
+    else refresh broken / revoked
+      BE-->>BO: 401 + clear cookie
+      BO->>BO: clearAccessToken, queryClient.clear, go to /login
     end
   end
 ```
 
-### 2.3 Đăng xuất
+### 2.3 Logout
 
 ```mermaid
 sequenceDiagram
@@ -107,43 +107,43 @@ sequenceDiagram
   participant BO as Backoffice SPA
   participant BE as english-service
 
-  BO->>BE: POST /auth/logout {client:"bo"} + cookie refresh_token_bo (không cần Bearer)
-  BE->>BE: verify refresh (bỏ qua hết hạn), revoke phiên theo sid
-  BE-->>BO: Xoá cookie refresh_token_bo
-  BO->>BO: clearAccessToken, queryClient.clear, chuyển về /login
+  BO->>BE: POST /auth/logout {client:"bo"} + cookie refresh_token_bo (no Bearer needed)
+  BE->>BE: verify refresh (ignoring expiry), revoke the session by sid
+  BE-->>BO: Clear cookie refresh_token_bo
+  BO->>BO: clearAccessToken, queryClient.clear, go to /login
 ```
 
 ## 3. Student (Next.js BFF)
 
-### 3.1 Đăng nhập Google
+### 3.1 Google login
 
 ```mermaid
 sequenceDiagram
   autonumber
-  actor S as Học sinh
+  actor S as Student
   participant N as english-student server
   participant BE as english-service
   participant G as Google
 
   S->>N: GET /api/session/google
-  N->>N: Sinh clientNonce, Set-Cookie oauth_nonce (domain student)
-  N-->>S: 302 tới BE /api/auth/google?client=web&nonce=clientNonce
+  N->>N: Generate clientNonce, Set-Cookie oauth_nonce (student domain)
+  N-->>S: 302 to BE /api/auth/google?client=web&nonce=clientNonce
   S->>BE: GET /api/auth/google?client=web&nonce=...
-  BE-->>S: Set-Cookie oauth_state, 302 tới Google (state = "web.nonce.clientNonce")
-  S->>G: Đăng nhập
+  BE-->>S: Set-Cookie oauth_state, 302 to Google (state = "web.nonce.clientNonce")
+  S->>G: Sign in
   G-->>BE: GET /api/auth/google/callback?code&state
-  BE->>BE: Kiểm tra nonce với cookie oauth_state
-  BE->>BE: thirdPartyLogin (tự tạo user role USER nếu chưa có)
-  BE->>BE: issueLoginCode: refresh token sống 60s
-  BE-->>S: 302 tới /api/session/google/callback?code=...&state=clientNonce
+  BE->>BE: Check nonce against oauth_state cookie
+  BE->>BE: thirdPartyLogin (creates a USER-role user if missing)
+  BE->>BE: issueLoginCode: refresh token valid for 60s
+  BE-->>S: 302 to /api/session/google/callback?code=...&state=clientNonce
   S->>N: GET callback
-  N->>N: So state với cookie oauth_nonce, xoá cookie
+  N->>N: Compare state with oauth_nonce cookie, clear cookie
   N->>BE: POST /auth/refresh {client:"web", refreshToken: code}
   BE-->>N: {access_token, refresh_token, refresh_token_expires_at}
-  N-->>S: Set-Cookie st_access_token + st_refresh_token (httpOnly, Lax), 302 tới "/"
+  N-->>S: Set-Cookie st_access_token + st_refresh_token (httpOnly, Lax), 302 to "/"
 ```
 
-### 3.2 Gọi API qua BFF và refresh tự động
+### 3.2 API calls through the BFF and automatic refresh
 
 ```mermaid
 sequenceDiagram
@@ -152,29 +152,29 @@ sequenceDiagram
   participant P as proxy.ts (Next server)
   participant BE as english-service
 
-  S->>P: Request trang hoặc /api/bff/* kèm cookie st_*
-  alt Có st_access_token (cookie hết hạn sớm hơn JWT 30s)
-    P->>P: Dùng access token hiện có
-  else Chỉ còn st_refresh_token
+  S->>P: Page request or /api/bff/* with st_* cookies
+  alt Has st_access_token (cookie expires 30s before the JWT)
+    P->>P: Use the current access token
+  else Only st_refresh_token left
     P->>BE: POST /auth/refresh {client:"web", refreshToken} + X-Forwarded-For
     alt ok
-      BE-->>P: Cặp token mới (rotate)
-      P->>P: Ghi token mới vào request và response cookies
-    else REFRESH_TOKEN_ROTATED (request song song đã rotate)
-      P-->>S: Trang: redirect lại cùng URL để lấy cookie mới
+      BE-->>P: New token pair (rotated)
+      P->>P: Write new tokens into request and response cookies
+    else REFRESH_TOKEN_ROTATED (a parallel request already rotated)
+      P-->>S: Page: redirect to the same URL to pick up the new cookies
     else invalid
-      P->>P: clearSession, coi như chưa đăng nhập
+      P->>P: clearSession, treat as signed out
     end
   end
   alt /api/bff/*
-    P->>BE: Rewrite /api/*, xoá header cookie, gắn Bearer + X-Forwarded-For
-    BE-->>S: Response (401 thì axios client chuyển về /login)
-  else Trang
-    P-->>S: Chưa đăng nhập thì /login, đã đăng nhập mà vào /login thì về "/"
+    P->>BE: Rewrite to /api/*, drop the cookie header, attach Bearer + X-Forwarded-For
+    BE-->>S: Response (on 401 the axios client goes to /login)
+  else Page
+    P-->>S: Signed out → /login; signed in and visiting /login → "/"
   end
 ```
 
-### 3.3 Đăng xuất
+### 3.3 Logout
 
 ```mermaid
 sequenceDiagram
@@ -183,28 +183,28 @@ sequenceDiagram
   participant N as Server Action logout()
   participant BE as english-service
 
-  S->>N: Submit form logout
-  N->>BE: POST /auth/logout {client:"web", refreshToken} (không cần Bearer)
-  BE->>BE: Revoke phiên (sid)
-  N->>N: clearSession (xoá st_*)
+  S->>N: Submit logout form
+  N->>BE: POST /auth/logout {client:"web", refreshToken} (no Bearer needed)
+  BE->>BE: Revoke the session (sid)
+  N->>N: clearSession (delete st_*)
   N-->>S: redirect /login
 ```
 
-## 4. Xoay vòng refresh token (`POST /auth/refresh`)
+## 4. Refresh token rotation (`POST /auth/refresh`)
 
 ```mermaid
 flowchart TD
-  A["POST /auth/refresh {client, refreshToken?}"] --> B{"Lấy token:<br/>bo từ cookie, web từ body"}
-  B -->|không có| X401["401 + xoá cookie (bo)"]
-  B --> C{"verify bằng JWT_SECRET_REFRESH<br/>và payload.client == client"}
-  C -->|sai| X401
-  C --> E{"User ACTIVE?<br/>bo thì cần canAccessCms"}
-  E -->|không| X401
-  E -->|có| D["UPDATE auth_sessions SET currentJti=jti mới, tokenHash, previousJti=jti, rotatedAt, expiresAt<br/>WHERE id=sid, userId, client, currentJti=jti, tokenHash, revokedAt IS NULL, chưa hết hạn"]
-  D -->|affected = 1| F["Access mới (có claim client)<br/>+ refresh mới (cùng sid, jti mới)"]
-  D -->|affected = 0| S{"Phiên sid còn sống?"}
-  S -->|không| X401
-  S -->|có| G{"jti == previousJti<br/>và rotate trong 30s?"}
-  G -->|có| R["401 REFRESH_TOKEN_ROTATED<br/>(request song song, không phạt)"]
-  G -->|không| H["Token cũ của phiên bị dùng lại, nghi bị đánh cắp:<br/>revoke TẤT CẢ phiên của user"] --> X401
+  A["POST /auth/refresh {client, refreshToken?}"] --> B{"Read token:<br/>bo from cookie, web from body"}
+  B -->|missing| X401["401 + clear cookie (bo)"]
+  B --> C{"verify with JWT_SECRET_REFRESH<br/>and payload.client == client"}
+  C -->|invalid| X401
+  C --> E{"User ACTIVE?<br/>bo also needs canAccessCms"}
+  E -->|no| X401
+  E -->|yes| D["UPDATE auth_sessions SET currentJti=new jti, tokenHash, previousJti=jti, rotatedAt, expiresAt<br/>WHERE id=sid, userId, client, currentJti=jti, tokenHash, revokedAt IS NULL, not expired"]
+  D -->|affected = 1| F["New access (with client claim)<br/>+ new refresh (same sid, new jti)"]
+  D -->|affected = 0| S{"Session sid still alive?"}
+  S -->|no| X401
+  S -->|yes| G{"jti == previousJti<br/>and rotated within 30s?"}
+  G -->|yes| R["401 REFRESH_TOKEN_ROTATED<br/>(parallel request, not punished)"]
+  G -->|no| H["An old token of the session was reused, likely stolen:<br/>revoke ALL of the user's sessions"] --> X401
 ```

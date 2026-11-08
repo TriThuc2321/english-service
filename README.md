@@ -1,114 +1,128 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# english-service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+The MyEnglish API is a NestJS backend for an IELTS and TOEIC practice platform. It holds the test catalogue, runs timed student attempts, scores them, and gives teachers a workflow to grade IELTS Writing and Speaking.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## The MyEnglish system
 
-## Description
+| Repo                                                  | Role                                                                     | Stack                          |
+| ----------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------ |
+| **english-service** (this repo)                       | REST API, database, scoring, file storage                                | NestJS 12, TypeORM, PostgreSQL |
+| [english-backoffice](../english-backoffice/README.md) | Staff CMS: content, users and roles, grading, student results            | React Router 7 SPA, Vite       |
+| [english-student](../english-student/README.md)       | Student app: test library, exams, results. Also acts as the BFF for auth | Next.js 16                     |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Features
 
-## Project setup
+- **Auth**: Google OAuth and password login for two clients. The backoffice (`bo`) keeps its refresh token in an `httpOnly` cookie. The student BFF (`web`) receives both tokens in the response body. Refresh tokens rotate in place, and replaying a stale one revokes every session for that user. See [docs/auth-flow.md](docs/auth-flow.md).
+- **Permissions**: CASL `(action, subject)` pairs are embedded in the JWT. Access is denied by default: every endpoint must declare `@Public()` or `@CheckPermissions()`.
+- **Test catalogue**: tests → sections → parts → passages → question groups → questions, covering IELTS (Academic/General) and TOEIC formats. See [docs/question-formats.md](docs/question-formats.md).
+- **Test import**: `POST /tests/import` creates a complete draft test from a single JSON document. It reports every validation issue in one pass.
+- **Media**: files are stored in Cloudflare R2 through the S3 API. Uploads use presigned PUTs, and public reads go through a CDN domain. Student Speaking recordings are private and are only served through presigned GET URLs.
+- **Student attempts**: start, autosave, submit, history and results, with lazy expiry (no scheduler). IELTS band and TOEIC scaled scoring are included.
+- **Teacher grading**: an append-only assessment history for IELTS Writing (TA/TR, CC, LR, GRA) and Speaking (FC, LR, GRA, P), with optimistic revision checks.
+- **OpenAPI**: the committed `openapi.json` is the contract the frontends build against.
 
-```bash
-$ pnpm install
-```
+## Prerequisites
 
-## Compile and run the project
+- Node.js 24 and pnpm
+- Docker (for local Postgres and the e2e tests)
+- Optional: [mkcert](https://github.com/FiloSottile/mkcert) for local HTTPS (`certs/`)
+
+## Getting started
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm install
+cp .env.example .env          # fill in the values, see below
+docker compose up -d          # Postgres 16 on :5432 (postgres/postgres, db myenglish)
+pnpm build && pnpm migration:run
+pnpm start:dev
 ```
 
-## Run tests
+The API is served under `/api`, and Swagger UI is at `/docs`. If `HTTPS_KEY_PATH`/`HTTPS_CERT_PATH` are set, the server runs over HTTPS; otherwise it falls back to HTTP.
 
-```bash
-# unit tests
-$ pnpm run test
+> The backoffice refresh cookie is `secure` and `sameSite: 'lax'`. For backoffice login to work locally, run the API and the frontends over HTTPS on a shared domain (for example `api.myenglish.com`, `backoffice.myenglish.com` and `student.myenglish.com` mapped to `127.0.0.1` in `/etc/hosts`).
 
-# e2e tests
-$ pnpm run test:e2e
+## Environment variables
 
-# test coverage
-$ pnpm run test:cov
+Required variables are validated at boot (`src/configs/env.validation.ts`), so a missing value stops the app at startup.
+
+| Variable                                                                 | Purpose                                                                        |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `APP_PORT`                                                               | HTTP port                                                                      |
+| `DATABASE_HOST` / `_PORT` / `_USERNAME` / `_PASSWORD` / `_NAME` / `_SSL` | PostgreSQL connection                                                          |
+| `GOOGLE_CLIENT_ID` / `_SECRET` / `GOOGLE_CALLBACK_URL`                   | Google OAuth                                                                   |
+| `GOOGLE_LOGIN_REDIRECT_URL_WEB` / `_BO`                                  | Where each frontend receives the user after Google login                       |
+| `JWT_SECRET` / `JWT_SECRET_REFRESH`                                      | Access and refresh signing keys (at least 32 characters each)                  |
+| `JWT_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN`                              | Token lifetimes                                                                |
+| `CORS_ORIGINS`                                                           | Comma-separated allowed origins                                                |
+| `TRUST_PROXY`                                                            | Express `trust proxy`. Must cover the student BFF server and any load balancer |
+| `STORAGE_ENDPOINT` / `_BUCKET` / `_ACCESS_KEY_ID` / `_SECRET_ACCESS_KEY` | Cloudflare R2 (S3-compatible)                                                  |
+| `STORAGE_PUBLIC_URL`                                                     | Public CDN domain attached to the bucket                                       |
+| `STORAGE_UPLOAD_URL_TTL` / `STORAGE_DOWNLOAD_URL_TTL`                    | Lifetimes of presigned URLs, in seconds                                        |
+| `HTTPS_KEY_PATH` / `HTTPS_CERT_PATH` / `HTTPS_LOCAL_DOMAIN`              | Optional local HTTPS                                                           |
+
+## Scripts
+
+| Command                                           | Description                                                   |
+| ------------------------------------------------- | ------------------------------------------------------------- |
+| `pnpm start:dev`                                  | Dev server in watch mode                                      |
+| `pnpm build` / `pnpm start:prod`                  | Compile to `dist/` / run the compiled app                     |
+| `pnpm typecheck`                                  | `tsc --noEmit`                                                |
+| `pnpm lint` / `pnpm lint:fix`                     | oxlint                                                        |
+| `pnpm format` / `pnpm format:check`               | oxfmt                                                         |
+| `pnpm test` / `pnpm test:watch` / `pnpm test:cov` | Unit tests (Vitest)                                           |
+| `pnpm test:e2e`                                   | E2E tests against a Postgres Testcontainer (needs Docker)     |
+| `pnpm migration:generate src/migrations/Name`     | Build, then diff entities against the DB into a new migration |
+| `pnpm migration:create src/migrations/Name`       | Empty migration for hand-written SQL                          |
+| `pnpm migration:run` / `:revert` / `:show`        | Apply, undo or list migrations (run `pnpm build` first)       |
+| `pnpm openapi:generate`                           | Regenerate `openapi.json`                                     |
+
+## Project structure
+
+```
+src/
+  configs/      config namespaces (database, jwt, google, cors, swagger, https) + env validation
+  entities/     TypeORM entities (soft delete via a `status` enum)
+  migrations/   schema migrations (synchronize is never enabled)
+  modules/
+    auth, users, roles, permissions
+    tests, test-sections, test-parts, passages, paragraphs, question-groups, questions
+    test-import       POST /tests/import
+    media             generic R2-backed file module with per-owner policies
+    student-tests     published catalogue for students (no answers)
+    student-attempts  attempt lifecycle, scoring, results, Speaking audio
+    grading           teacher grading queue + all-student attempts for staff
+  shared/       CASL, storage, scoring (IELTS bands), throttling, decorators
+  types/        shared enums and interfaces
+test/           e2e specs and fixtures (Testcontainers)
 ```
 
-## Deployment
+## Database migrations
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+TypeORM migrations are the only owner of the schema. Every entity change needs a migration in the same PR. Always review generated SQL: a column rename is generated as drop + add, which loses data, so rewrite it as `RENAME COLUMN`. `test/migrations.e2e-spec.ts` fails if the migrated schema doesn't match the entities.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Testing
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
+- Unit specs live next to the code (`src/**/*.spec.ts`) and need no database.
+- E2E specs in `test/` boot the real `AppModule` against a fresh database per file, with storage faked.
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## CI and deployment
 
-## Observability
+On every PR and push to `dev`/`main`, CI runs format check → lint → typecheck → unit → e2e → build. It then regenerates `openapi.json` and fails if the result differs from the committed file. `api-changelog.yml` posts an `oasdiff` changelog on each PR and blocks breaking changes unless the PR is labelled `api-breaking`.
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+All three apps deploy on Vercel. The API uses the NestJS framework preset (`pnpm build`, Node 24), with `main` → production and `dev` → the dev environment. Vercel doesn't run migrations, so run `pnpm migration:run` against the target database before merging. Environment setup and first-deploy steps are in [docs/deployment.md](docs/deployment.md).
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+## Conventions
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+- ESM with `nodenext` resolution: relative imports use explicit `.js` extensions.
+- Linting and formatting use oxlint and oxfmt (not ESLint/Prettier).
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/), enforced by commitlint. Husky runs lint-staged and `tsc` before each commit.
+- Responses are documented with response DTOs and `@ApiOkResponse`/`@ApiCreatedResponse`. Run `pnpm openapi:generate` and commit `openapi.json` whenever DTOs change.
 
-## Resources
+## Further reading
 
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- [CLAUDE.md](CLAUDE.md): detailed architecture notes
+- [docs/auth-flow.md](docs/auth-flow.md): auth sequence diagrams
+- [docs/question-formats.md](docs/question-formats.md): question types and their payloads
+- [docs/student-tests-api.md](docs/student-tests-api.md): student test API
+- [docs/test-schema.dbml](docs/test-schema.dbml): test content schema
+- [docs/deployment.md](docs/deployment.md): Vercel deployment

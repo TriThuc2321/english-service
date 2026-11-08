@@ -53,9 +53,9 @@ Copy `.env.example` to `.env`; required vars are validated at boot (see below).
 
 The schema is owned by TypeORM migrations in `src/migrations/` — `synchronize` is never on, in any environment. Every entity change needs a migration in the same PR: `pnpm migration:generate src/migrations/<Name>` diffs the entities against the DB in `.env`, so run it against a DB that is migrated up to `main`. Review the generated SQL — a column rename comes out as drop + add (data loss); rewrite it as `RENAME COLUMN`. The generator also emits `CREATE TYPE`/`DROP TYPE` once per column for enum types shared across tables (`status_enum`, `exam_type_enum`, `skill_enum`) — keep only the first create and the last drop. Don't set `enumName` to TypeORM's default `<table>_<column>_enum`: it reports a phantom diff on every check.
 
-The CLI runs on the compiled `dist/data-source.js` (decorators can't run through Node's type stripping) and reads `.env` via `--env-file-if-exists`; real env vars win over it. Deployments run `pnpm migration:run` before starting the app. E2E apps run all migrations on boot (`migrationsRun`), and `test/migrations.e2e-spec.ts` fails if the migrated schema differs from the entities or doesn't revert cleanly — that's what catches a forgotten migration in CI.
+The CLI runs on the compiled `dist/data-source.js` (decorators can't run through Node's type stripping) and reads `.env` via `--env-file-if-exists`; real env vars win over it. Vercel doesn't run migrations: run `pnpm migration:run` against the target env's DB before merging into `dev`/`main`. E2E apps run all migrations on boot (`migrationsRun`), and `test/migrations.e2e-spec.ts` fails if the migrated schema differs from the entities or doesn't revert cleanly — that's what catches a forgotten migration in CI.
 
-Deployment (Railway, `dev`/`main` environments) is described in `docs/deployment.md`.
+Deployment (Vercel, `dev`/`main` environments) is described in `docs/deployment.md`.
 
 ## Architecture
 
