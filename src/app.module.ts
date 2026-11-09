@@ -8,6 +8,7 @@ import { getDbOption, databaseConfig } from './configs/database.config.js';
 import { validateEnv } from './configs/env.validation.js';
 import { googleConfig } from './configs/google.config.js';
 import { jwtConfig } from './configs/jwt.config.js';
+import { mailConfig } from './configs/mail.config.js';
 import { storageConfig } from './configs/storage.config.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { JwtAuthGuard } from './modules/auth/guards/jwt.guard.js';
@@ -39,6 +40,7 @@ import { ThrottleGuard } from './shared/throttle/throttle.guard.js';
         corsConfig,
         jwtConfig,
         storageConfig,
+        mailConfig,
       ],
       validate: validateEnv,
     }),

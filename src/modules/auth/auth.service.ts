@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -8,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { compare, hashSync } from 'bcrypt';
+import { compare, hash, hashSync } from 'bcrypt';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { IsNull, MoreThan, Repository } from 'typeorm';
 
@@ -16,8 +17,15 @@ import { type JWTConfig, jwtConfig } from '../../configs/jwt.config.js';
 import { AuthSession } from '../../entities/auth-session.entity.js';
 import { Role } from '../../entities/role.entity.js';
 import { User } from '../../entities/user.entity.js';
+import { MailService } from '../../shared/mail/mail.service.js';
+import {
+  alreadyRegisteredTemplate,
+  resetPasswordTemplate,
+  verifyEmailTemplate,
+} from '../../shared/mail/mail.templates.js';
 import {
   AuthClient,
+  EmailCodePurpose,
   IGoogleProfile,
   IRefreshTokenPayload,
   ITokenPayload,
@@ -28,8 +36,14 @@ import {
 import { Status } from '../../types/common.type.js';
 import { Provider } from '../../types/user.type.js';
 import { SystemRoleCode } from '../roles/roles.constant.js';
-import { UsersService } from '../users/users.service.js';
-import { LoginDto } from './dto/auth.dto.js';
+import { BCRYPT_ROUNDS, UsersService } from '../users/users.service.js';
+import {
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  VerifyEmailDto,
+} from './dto/auth.dto.js';
+import { EmailCodeService } from './email-code.service.js';
 
 const LOGIN_CODE_EXPIRES_IN = '60s';
 const REFRESH_REUSE_GRACE_MS = 30_000;
@@ -86,6 +100,8 @@ export class AuthService {
     @InjectRepository(AuthSession)
     private authSessionRepository: Repository<AuthSession>,
     @Inject(jwtConfig.KEY) private readonly jwt: JWTConfig,
+    private readonly emailCodeService: EmailCodeService,
+    private readonly mailService: MailService,
   ) {}
 
   private comparePasswords(password: string, hashedPassword: string) {
@@ -246,6 +262,143 @@ export class AuthService {
     return this.issueTokens(user, client);
   }
 
+  private async getDefaultRoleId() {
+    const userRole = await this.roleRepository.findOne({
+      where: { code: SystemRoleCode.USER, status: Status.ACTIVE },
+      select: { id: true },
+    });
+    if (!userRole) {
+      throw new HttpException(
+        'System USER role is missing',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return userRole.id;
+  }
+
+  private findActiveByEmail(email: string) {
+    return this.userRepository.findOne({
+      where: { email, status: Status.ACTIVE },
+      select: { id: true, email: true, emailVerified: true, provider: true },
+    });
+  }
+
+  private async sendCode(
+    userId: string,
+    email: string,
+    purpose: EmailCodePurpose,
+  ) {
+    const code = await this.emailCodeService.issue(userId, purpose);
+    if (!code) {
+      return;
+    }
+    const template =
+      purpose === EmailCodePurpose.VERIFY_EMAIL
+        ? verifyEmailTemplate(code)
+        : resetPasswordTemplate(code);
+    // Not awaited so the response time doesn't reveal whether a mail went out.
+    void this.mailService.send({ to: email, ...template });
+  }
+
+  private async consumeCode(
+    email: string,
+    purpose: EmailCodePurpose,
+    code: string,
+  ) {
+    const user = await this.findActiveByEmail(email);
+    const valid = await this.emailCodeService.consume(user?.id, purpose, code);
+    if (!user || !valid) {
+      throw new BadRequestException({
+        message: 'Invalid or expired code',
+        code: UserErrorEnum.INVALID_CODE,
+      });
+    }
+    return user;
+  }
+
+  async register({ email, password, firstName, lastName }: RegisterDto) {
+    // Hashed before branching so a taken email isn't answered faster.
+    const [existing, passwordHash] = await Promise.all([
+      this.findActiveByEmail(email),
+      hash(password, BCRYPT_ROUNDS),
+    ]);
+
+    if (existing?.emailVerified || existing?.provider === Provider.GOOGLE) {
+      void this.mailService.send({ to: email, ...alreadyRegisteredTemplate() });
+      return;
+    }
+
+    let userId = existing?.id;
+    // An unverified account can't log in yet, so the latest sign-up wins;
+    // only whoever can read the code ever gets to use it.
+    if (userId) {
+      await this.userRepository.update(userId, {
+        password: passwordHash,
+        firstName,
+        lastName: lastName ?? null,
+        auditMetadata: { updatedAt: new Date() },
+      });
+    } else {
+      const created = await this.userRepository.save({
+        email,
+        password: passwordHash,
+        firstName,
+        lastName: lastName ?? null,
+        roleId: await this.getDefaultRoleId(),
+        provider: Provider.LOCAL,
+        emailVerified: false,
+      });
+      userId = created.id;
+    }
+
+    await this.sendCode(userId, email, EmailCodePurpose.VERIFY_EMAIL);
+  }
+
+  async resendVerification(email: string) {
+    const user = await this.findActiveByEmail(email);
+    if (user && !user.emailVerified) {
+      await this.sendCode(user.id, email, EmailCodePurpose.VERIFY_EMAIL);
+    }
+  }
+
+  async verifyEmail({ email, code, client }: VerifyEmailDto) {
+    const { id } = await this.consumeCode(
+      email,
+      EmailCodePurpose.VERIFY_EMAIL,
+      code,
+    );
+    await this.userRepository.update(id, { emailVerified: true });
+
+    const user = await this.userRepository.findOneOrFail({
+      where: { id },
+      select: USER_TOKEN_SELECT,
+      relations: { role: { permissions: true } },
+    });
+    this.assertClientAccess(user, client);
+    return this.issueTokens(user, client);
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.findActiveByEmail(email);
+    if (user) {
+      await this.sendCode(user.id, email, EmailCodePurpose.RESET_PASSWORD);
+    }
+  }
+
+  async resetPassword({ email, code, newPassword }: ResetPasswordDto) {
+    const { id } = await this.consumeCode(
+      email,
+      EmailCodePurpose.RESET_PASSWORD,
+      code,
+    );
+    await this.userRepository.update(id, {
+      password: await hash(newPassword, BCRYPT_ROUNDS),
+      emailVerified: true,
+      auditMetadata: { updatedAt: new Date(), updatedById: id },
+    });
+    await this.revokeAllForUser(id);
+  }
+
   async getProfile(id: string) {
     const user = await this.userRepository
       .createQueryBuilder('u')
@@ -298,28 +451,22 @@ export class AuthService {
     }
 
     if (!newUser) {
-      const userRole = await this.roleRepository.findOne({
-        where: { code: SystemRoleCode.USER, status: Status.ACTIVE },
-        select: { id: true },
-      });
-      if (!userRole) {
-        throw new HttpException(
-          'System USER role is missing',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
-
       newUser = await this.usersService.create({
         email,
         firstName: firstName ?? 'New user',
         lastName,
-        roleId: userRole.id,
+        roleId: await this.getDefaultRoleId(),
         avatar: picture,
         emailVerified: true,
         provider: Provider.GOOGLE,
       });
     } else if (!newUser.emailVerified) {
-      await this.userRepository.update(newUser.id, { emailVerified: true });
+      // The password was set before anyone proved owning this email (e.g. a
+      // squatted sign-up), so it must not survive Google proving ownership.
+      await this.userRepository.update(newUser.id, {
+        emailVerified: true,
+        password: null,
+      });
       newUser.emailVerified = true;
     }
 

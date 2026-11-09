@@ -20,6 +20,11 @@ export class TokenResponseDto {
   refresh_token_expires_at?: string;
 }
 
+export class MessageResponseDto {
+  @ApiProperty()
+  message: string;
+}
+
 export class ProfileRoleDto extends UserRoleDto {
   @ApiProperty({ type: [PermissionDto] })
   permissions: PermissionDto[];

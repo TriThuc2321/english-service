@@ -14,6 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiFoundResponse,
@@ -46,12 +47,28 @@ import {
 import { AuthService, type IssuedTokens } from './auth.service.js';
 import { CheckPermissions } from './decorators/check-permissions.decorator.js';
 import { Public } from './decorators/public.decorator.js';
-import { ProfileDto, TokenResponseDto } from './dto/auth-response.dto.js';
-import { LoginDto, LogoutDto, RefreshDto } from './dto/auth.dto.js';
+import {
+  MessageResponseDto,
+  ProfileDto,
+  TokenResponseDto,
+} from './dto/auth-response.dto.js';
+import {
+  EmailDto,
+  LoginDto,
+  LogoutDto,
+  RefreshDto,
+  RegisterDto,
+  ResetPasswordDto,
+  VerifyEmailDto,
+} from './dto/auth.dto.js';
 import { GoogleAuthGuard } from './guards/google.guard.js';
 import { nonceMatches, parseOAuthState } from './oauth-state.js';
 
 const AUTH_THROTTLE = { limit: 10, ttl: 60_000 };
+
+const CHECK_EMAIL: MessageResponseDto = {
+  message: 'If the email can receive a code, one has been sent',
+};
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -113,6 +130,69 @@ export class AuthController {
       signInDto.client,
       await this.authService.login(signInDto),
     );
+  }
+
+  @Post('register')
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @ApiOperation({
+    summary: 'Create a student account and email a verification code',
+    description:
+      'Answers the same whether or not the email is already registered',
+  })
+  @ApiCreatedResponse({ type: MessageResponseDto })
+  async register(@Body() dto: RegisterDto) {
+    await this.authService.register(dto);
+    return CHECK_EMAIL;
+  }
+
+  @Post('verify-email')
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @ApiOperation({ summary: 'Verify the email with its code and log in' })
+  @ApiCreatedResponse({ type: TokenResponseDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.respondWithTokens(
+      res,
+      dto.client,
+      await this.authService.verifyEmail(dto),
+    );
+  }
+
+  @Post('verify-email/resend')
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @ApiOperation({ summary: 'Email a new verification code' })
+  @ApiCreatedResponse({ type: MessageResponseDto })
+  async resendVerification(@Body() { email }: EmailDto) {
+    await this.authService.resendVerification(email);
+    return CHECK_EMAIL;
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @ApiOperation({ summary: 'Email a password reset code' })
+  @ApiCreatedResponse({ type: MessageResponseDto })
+  async forgotPassword(@Body() { email }: EmailDto) {
+    await this.authService.forgotPassword(email);
+    return CHECK_EMAIL;
+  }
+
+  @Post('reset-password')
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @ApiOperation({
+    summary: 'Set a new password with a reset code and log out every session',
+  })
+  @ApiCreatedResponse({ description: 'No body' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto);
   }
 
   @Get('google')

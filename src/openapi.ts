@@ -21,6 +21,8 @@ Object.assign(process.env, {
   STORAGE_BUCKET: 'openapi',
   STORAGE_ACCESS_KEY_ID: 'openapi',
   STORAGE_SECRET_ACCESS_KEY: 'openapi',
+  RESEND_API_KEY: 'openapi',
+  MAIL_FROM: 'openapi@example.com',
   STORAGE_PUBLIC_URL: 'http://localhost:9000/openapi',
 });
 

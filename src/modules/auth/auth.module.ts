@@ -5,20 +5,24 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { jwtConfig, type JWTConfig } from '../../configs/jwt.config.js';
 import { AuthSession } from '../../entities/auth-session.entity.js';
+import { EmailCode } from '../../entities/email-code.entity.js';
 import { Role } from '../../entities/role.entity.js';
 import { User } from '../../entities/user.entity.js';
+import { MailModule } from '../../shared/mail/mail.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
+import { EmailCodeService } from './email-code.service.js';
 import { GoogleStrategy } from './strategies/google.strategy.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, EmailCodeService, JwtStrategy, GoogleStrategy],
   exports: [AuthService],
   imports: [
     UsersModule,
+    MailModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [jwtConfig.KEY],
@@ -29,7 +33,7 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
         },
       }),
     }),
-    TypeOrmModule.forFeature([User, Role, AuthSession]),
+    TypeOrmModule.forFeature([User, Role, AuthSession, EmailCode]),
   ],
 })
 export class AuthModule {}

@@ -100,6 +100,14 @@ class EnvironmentVariables {
 
   @IsUrl({ require_tld: false, require_protocol: true })
   STORAGE_PUBLIC_URL: string;
+
+  @IsString()
+  @IsNotEmpty()
+  RESEND_API_KEY: string;
+
+  @IsString()
+  @IsNotEmpty()
+  MAIL_FROM: string;
 }
 
 export const validateEnv = (config: Record<string, unknown>) => {
