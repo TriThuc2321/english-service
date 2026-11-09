@@ -21,7 +21,7 @@ import {
   UpdateUserDto,
 } from './dto/users.dto.js';
 
-const BCRYPT_ROUNDS = 10;
+export const BCRYPT_ROUNDS = 10;
 
 const LIST_COLUMNS = [
   'u.id',

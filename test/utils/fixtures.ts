@@ -111,3 +111,16 @@ export const sessionsOf = ({ dataSource }: TestApp, userId: string) =>
   dataSource
     .getRepository(AuthSession)
     .find({ where: { userId }, order: { expiresAt: 'ASC' } });
+
+export const mailsTo = ({ mail }: TestApp, email: string) =>
+  mail.send.mock.calls.map(([sent]) => sent).filter(({ to }) => to === email);
+
+export function lastCode(testApp: TestApp, email: string) {
+  const code = mailsTo(testApp, email)
+    .at(-1)
+    ?.text.match(/\b(\d{6})\b/)?.[1];
+  if (!code) {
+    throw new Error(`No code was mailed to ${email}`);
+  }
+  return code;
+}

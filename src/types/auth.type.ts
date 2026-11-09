@@ -69,6 +69,7 @@ export const UserErrorEnum = {
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
   CMS_ACCESS_DENIED: 'CMS_ACCESS_DENIED',
   REFRESH_TOKEN_ROTATED: 'REFRESH_TOKEN_ROTATED',
+  INVALID_CODE: 'INVALID_CODE',
 } as const;
 export type UserErrorEnum = (typeof UserErrorEnum)[keyof typeof UserErrorEnum];
 
@@ -77,6 +78,11 @@ export interface IRefreshTokenPayload {
   sid: string; // auth session id
   jti: string; // token id, rotated on every refresh
   client: AuthClient;
+}
+
+export enum EmailCodePurpose {
+  VERIFY_EMAIL = 'VERIFY_EMAIL',
+  RESET_PASSWORD = 'RESET_PASSWORD',
 }
 
 export enum AuthClient {

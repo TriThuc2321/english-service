@@ -11,6 +11,7 @@ import { DataSource, getMetadataArgsStorage } from 'typeorm';
 import { AppModule } from '../../src/app.module.js';
 import { configureApp } from '../../src/app.setup.js';
 import { getDbOption } from '../../src/configs/database.config.js';
+import { type IMail, MailService } from '../../src/shared/mail/mail.service.js';
 import { StorageService } from '../../src/shared/storage/storage.service.js';
 
 // Not exported by @nestjs/typeorm; the provider forRootAsync registers its options under
@@ -54,8 +55,13 @@ const createFakeStorage = () => ({
   delete: vi.fn(async () => {}),
 });
 
+const createFakeMail = () => ({
+  send: vi.fn(async (_mail: IMail) => {}),
+});
+
 export async function createTestApp() {
   const storage = createFakeStorage();
+  const mail = createFakeMail();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(TYPEORM_MODULE_OPTIONS)
     .useFactory({
@@ -69,6 +75,8 @@ export async function createTestApp() {
     })
     .overrideProvider(StorageService)
     .useValue(storage)
+    .overrideProvider(MailService)
+    .useValue(mail)
     .compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>({
@@ -80,6 +88,7 @@ export async function createTestApp() {
   return {
     app,
     storage,
+    mail,
     dataSource: app.get(DataSource),
     http: () => request(app.getHttpServer()),
   };

@@ -208,3 +208,52 @@ flowchart TD
   G -->|yes| R["401 REFRESH_TOKEN_ROTATED<br/>(parallel request, not punished)"]
   G -->|no| H["An old token of the session was reused, likely stolen:<br/>revoke ALL of the user's sessions"] --> X401
 ```
+
+## 5. Email and password accounts
+
+Codes live in `email_codes`: one row per (user, purpose), stored as a sha256 hash, valid for 10 minutes and 5 attempts, and a new code replaces the previous one. A code is sent at most once per 60s. Mails go through `MailService` (Resend) without being awaited, and every response is identical whether or not the email exists.
+
+### 5.1 Register and verify email (`web` only)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Student app
+  participant BE as english-service
+  participant M as Resend
+
+  S->>BE: POST /auth/register {client:"web", email, password, firstName}
+  alt New email, or unverified LOCAL account
+    BE->>BE: Create/overwrite user (USER role, emailVerified=false)
+    BE->>BE: Upsert email_codes (VERIFY_EMAIL), skipped within 60s of the last code
+    BE-)M: 6-digit code
+  else Verified or Google account
+    BE-)M: "You already have an account"
+  end
+  BE-->>S: 201 {message} (same in every case)
+  S->>BE: POST /auth/verify-email {client, email, code}
+  BE->>BE: Claim one attempt (max 5, 10 min TTL), compare hash, mark consumed
+  BE->>BE: emailVerified=true, create session
+  BE-->>S: 201 tokens (400 INVALID_CODE on any failure)
+```
+
+### 5.2 Forgot and reset password (any client)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Student app / Backoffice
+  participant BE as english-service
+  participant M as Resend
+
+  C->>BE: POST /auth/forgot-password {email}
+  opt ACTIVE user (any provider)
+    BE->>BE: Upsert email_codes (RESET_PASSWORD)
+    BE-)M: 6-digit code
+  end
+  BE-->>C: 201 {message} (same for unknown emails)
+  C->>BE: POST /auth/reset-password {email, code, newPassword}
+  BE->>BE: Consume code, set password, emailVerified=true
+  BE->>BE: Revoke ALL of the user's sessions
+  BE-->>C: 201, then the user logs in again
+```

@@ -41,5 +41,7 @@ Object.assign(process.env, {
   STORAGE_ACCESS_KEY_ID: 'test-access-key',
   STORAGE_SECRET_ACCESS_KEY: 'test-secret-key',
   STORAGE_PUBLIC_URL: 'http://localhost:9000/test-bucket',
+  RESEND_API_KEY: 're_test',
+  MAIL_FROM: 'MyEnglish <no-reply@example.com>',
   TRUST_PROXY: '',
 });
