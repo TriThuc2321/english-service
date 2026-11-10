@@ -1,4 +1,3 @@
-import { SystemRoleCode } from '../src/modules/roles/roles.constant.js';
 import { PermissionAction, PermissionSubject } from '../src/types/auth.type.js';
 import { createTestApp, type TestApp } from './utils/app.js';
 import { createUser, loginBo, loginWeb } from './utils/fixtures.js';
@@ -57,9 +56,7 @@ describe('guard chain', () => {
   });
 
   it('lets a CMS role with no permissions reach only unrestricted routes', async () => {
-    const user = await createUser(testApp, {
-      roleCode: SystemRoleCode.ADMIN,
-    });
+    const user = await createUser(testApp, { permissions: [] });
     const { accessToken } = await loginBo(testApp, user);
 
     await listTests(accessToken).expect(403);

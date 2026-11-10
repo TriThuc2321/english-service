@@ -4,12 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Permission } from '../../entities/permission.entity.js';
 import { Role } from '../../entities/role.entity.js';
 import { User } from '../../entities/user.entity.js';
+import { DefaultDataSeeder } from './default-data.seeder.js';
 import { RolesController } from './roles.controller.js';
 import { RolesService } from './roles.service.js';
 
 @Module({
   controllers: [RolesController],
-  providers: [RolesService],
+  providers: [RolesService, DefaultDataSeeder],
   exports: [RolesService],
   imports: [TypeOrmModule.forFeature([Role, Permission, User])],
 })

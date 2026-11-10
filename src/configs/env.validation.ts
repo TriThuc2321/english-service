@@ -108,6 +108,11 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   MAIL_FROM: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  SEED_USER_PASSWORD?: string;
 }
 
 export const validateEnv = (config: Record<string, unknown>) => {

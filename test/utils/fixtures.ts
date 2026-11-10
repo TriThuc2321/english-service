@@ -30,12 +30,14 @@ async function createRole(
   { dataSource }: TestApp,
   permissions: Array<[PermissionAction, PermissionSubject]>,
 ) {
-  const found = await dataSource.getRepository(Permission).find({
-    where: {
-      action: In(permissions.map(([action]) => action)),
-      subject: In(permissions.map(([, subject]) => subject)),
-    },
-  });
+  const found = permissions.length
+    ? await dataSource.getRepository(Permission).find({
+        where: {
+          action: In(permissions.map(([action]) => action)),
+          subject: In(permissions.map(([, subject]) => subject)),
+        },
+      })
+    : [];
   const wanted = new Set(permissions.map(([a, s]) => `${a}:${s}`));
 
   return dataSource.getRepository(Role).save({
