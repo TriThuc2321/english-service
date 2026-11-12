@@ -16,5 +16,5 @@
     ]
   },
   "endOfLine": "lf",
-  "ignorePatterns": ["docs/**/*.html"]
+  "ignorePatterns": ["docs/**/*.html", "video-demo"]
 }

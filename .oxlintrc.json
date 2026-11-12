@@ -5,7 +5,13 @@
     "node": true,
     "vitest": true
   },
-  "ignorePatterns": ["dist", "coverage", "node_modules", "docs/**/*.html"],
+  "ignorePatterns": [
+    "dist",
+    "coverage",
+    "node_modules",
+    "docs/**/*.html",
+    "video-demo"
+  ],
   "rules": {
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-floating-promises": "warn"

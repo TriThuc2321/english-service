@@ -3,7 +3,7 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    branches: [main]
+    branches: [dev, main]
 
 concurrency:
   group: claude-code-review-${{ github.event.pull_request.number }}
@@ -13,25 +13,59 @@ jobs:
   claude-review:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Run Claude Code Review
+        id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-plugins-official.git'
-          plugins: 'code-review@claude-plugins-official'
-          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
+          track_progress: true
           show_full_output: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            BASE SHA: ${{ github.event.pull_request.base.sha }}
+            HEAD SHA: ${{ github.event.pull_request.head.sha }}
+
+            Review this pull request. Do not skip it for any reason: the
+            progress comment on the PR was posted by this workflow run, not by
+            an earlier review, so it does not mean the PR was already reviewed.
+
+            Steps:
+            1. Read CLAUDE.md and AGENTS.md at the repo root.
+            2. Get the full diff with `gh pr diff ${{ github.event.pull_request.number }}`
+               and read the changed files for context when the diff alone is
+               not enough to judge a change.
+            3. Look only at code introduced or changed by this PR. Report:
+               - real bugs: incorrect logic, missing edge cases, broken
+                 error handling, data races, security problems
+               - violations of explicit rules in CLAUDE.md (for example:
+                 service functions must take userId first and scope queries
+                 by it, read env only through env(), pass today/now into
+                 services, add every new string to both messages/vi.json and
+                 messages/en.json, use pnpm, no comments that restate code)
+               - tests that do not cover the behavior they claim to cover
+            4. Before reporting an issue, verify it by reading the surrounding
+               code. Drop anything you are not confident is real. Do not
+               report style nits, pre-existing issues, or anything oxlint or
+               tsc would already catch.
+
+            Output:
+            - Post each confirmed issue as an inline comment on the exact
+              changed line with mcp__github_inline_comment__create_inline_comment.
+              Explain what is wrong and how to fix it in one short paragraph.
+            - Then update your progress comment with a short summary: the
+              number of issues found and a one-line list of them. If you
+              found nothing, the summary is the single line: LGTM
+          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment,mcp__github_comment__update_claude_comment,Read,Grep,Glob,Bash(git fetch:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"'
