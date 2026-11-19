@@ -73,7 +73,7 @@ export class UsersController {
   @ApiConflictResponse({ type: ErrorResponseDto })
   @CheckPermissions([PermissionAction.CREATE, PermissionSubject.USER])
   create(@Body() dto: CreateUserDto, @Req() req: IRequestWithUser) {
-    return this.userService.create(dto, req.user.id);
+    return this.userService.create(dto, req.user);
   }
 
   @Patch(':id')
@@ -86,7 +86,7 @@ export class UsersController {
     @Body() dto: UpdateUserDto,
     @Req() req: IRequestWithUser,
   ) {
-    return this.userService.update(id, dto, req.user.id);
+    return this.userService.update(id, dto, req.user);
   }
 
   @Delete()
@@ -94,6 +94,6 @@ export class UsersController {
   @ApiOkResponse({ type: DeleteResultDto })
   @CheckPermissions([PermissionAction.DELETE, PermissionSubject.USER])
   deleteByIds(@Body() dto: DeleteUsersDto, @Req() req: IRequestWithUser) {
-    return this.userService.deleteByIds(dto, req.user.id);
+    return this.userService.deleteByIds(dto, req.user);
   }
 }
