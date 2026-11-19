@@ -67,25 +67,25 @@ export const DEFAULT_USERS: Array<{
   systemUser: boolean;
 }> = [
   {
-    email: 'superadmin@gmail.com',
+    email: 'superadmin@myenglish.com',
     firstName: 'Super Admin',
     roleCode: SystemRoleCode.SUPER_ADMIN,
     systemUser: true,
   },
   {
-    email: 'admin@gmail.com',
+    email: 'admin@myenglish.com',
     firstName: 'Admin',
     roleCode: SystemRoleCode.ADMIN,
     systemUser: true,
   },
   {
-    email: 'teacher@gmail.com',
+    email: 'teacher@myenglish.com',
     firstName: 'Teacher',
     roleCode: SystemRoleCode.TEACHER,
     systemUser: false,
   },
   {
-    email: 'user@gmail.com',
+    email: 'user@myenglish.com',
     firstName: 'User',
     roleCode: SystemRoleCode.USER,
     systemUser: false,
