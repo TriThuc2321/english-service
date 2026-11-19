@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Role } from '../../entities/role.entity.js';
 import { User } from '../../entities/user.entity.js';
+import { CaslModule } from '../../shared/casl/casl.module.js';
 import { MediaModule } from '../media/media.module.js';
 import { AvatarMediaPolicy } from './avatar-media.policy.js';
 import { MeController } from './me.controller.js';
@@ -13,6 +14,6 @@ import { UsersService } from './users.service.js';
   controllers: [UsersController, MeController],
   providers: [UsersService, AvatarMediaPolicy],
   exports: [UsersService],
-  imports: [TypeOrmModule.forFeature([User, Role]), MediaModule],
+  imports: [TypeOrmModule.forFeature([User, Role]), MediaModule, CaslModule],
 })
 export class UsersModule {}

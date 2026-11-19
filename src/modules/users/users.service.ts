@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,7 +11,13 @@ import { Brackets, In, Not, Repository } from 'typeorm';
 
 import { Role } from '../../entities/role.entity.js';
 import { User } from '../../entities/user.entity.js';
+import { CaslAbilityFactory } from '../../shared/casl/casl-ability.factory.js';
 import { PageMetaDto, PaginationDto } from '../../shared/dto/index.js';
+import {
+  type ITokenPayload,
+  PermissionAction,
+  PermissionSubject,
+} from '../../types/auth.type.js';
 import { Status } from '../../types/common.type.js';
 import { MediaKind, MediaScope } from '../../types/media.type.js';
 import { MediaService } from '../media/media.service.js';
@@ -68,6 +75,7 @@ export class UsersService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Role) private roleRepository: Repository<Role>,
     private mediaService: MediaService,
+    private caslAbilityFactory: CaslAbilityFactory,
   ) {}
 
   private baseQuery(columns: string[]) {
@@ -123,7 +131,13 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto & { avatar?: string }, actorId?: string) {
+  async create(
+    dto: CreateUserDto & { avatar?: string },
+    actor?: ITokenPayload,
+  ) {
+    if (actor) {
+      await this.assertCanManage(actor, [{ roleId: dto.roleId }]);
+    }
     const [emailTaken] = await Promise.all([
       this.userRepository.exists({
         where: { email: dto.email, status: Not(Status.DELETED) },
@@ -138,15 +152,19 @@ export class UsersService {
     const user = await this.userRepository.save({
       ...rest,
       password: password ? await hash(password, BCRYPT_ROUNDS) : null,
-      auditMetadata: { createdById: actorId },
+      auditMetadata: { createdById: actor?.id },
     });
 
     return this.findById(user.id);
   }
 
-  async update(id: string, dto: UpdateUserDto, actorId: string) {
+  async update(id: string, dto: UpdateUserDto, actor: ITokenPayload) {
     const { avatarMediaId, ...rest } = dto;
     const user = await this.findExistingUser(id);
+    await this.assertCanManage(actor, [
+      user,
+      ...(rest.roleId === undefined ? [] : [{ roleId: rest.roleId }]),
+    ]);
     if (rest.roleId !== undefined && rest.roleId !== user.roleId) {
       await this.assertRoleActive(rest.roleId);
     }
@@ -159,7 +177,7 @@ export class UsersService {
     await this.userRepository.update(id, {
       ...rest,
       ...avatar,
-      auditMetadata: { updatedAt: new Date(), updatedById: actorId },
+      auditMetadata: { updatedAt: new Date(), updatedById: actor.id },
     });
     await this.cleanupReplacedAvatar(user, avatarMediaId);
 
@@ -182,7 +200,7 @@ export class UsersService {
   private async findExistingUser(id: string) {
     const user = await this.userRepository.findOne({
       where: { id, status: Not(Status.DELETED) },
-      select: { id: true, roleId: true, avatarMediaId: true },
+      select: { id: true, roleId: true, avatarMediaId: true, systemUser: true },
     });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -218,10 +236,18 @@ export class UsersService {
     }
   }
 
-  async deleteByIds({ ids }: DeleteUsersDto, actorId: string) {
+  async deleteByIds({ ids }: DeleteUsersDto, actor: ITokenPayload) {
+    const actorId = actor.id;
     if (ids.includes(actorId)) {
       throw new BadRequestException('You cannot delete your own account');
     }
+    await this.assertCanManage(
+      actor,
+      await this.userRepository.find({
+        where: { id: In(ids), status: Not(Status.DELETED) },
+        select: { id: true, roleId: true, systemUser: true },
+      }),
+    );
 
     const deleted = await this.userRepository.manager.transaction(
       async (manager) => {
@@ -244,6 +270,51 @@ export class UsersService {
     );
 
     return { deleted };
+  }
+
+  private async assertCanManage(
+    actor: ITokenPayload,
+    targets: Array<
+      Partial<Pick<User, 'id' | 'systemUser'>> & { roleId: number }
+    >,
+  ) {
+    const ability = this.caslAbilityFactory.createForUser(actor);
+    const isSuperAdmin = ability.can(
+      PermissionAction.MANAGE,
+      PermissionSubject.ALL,
+    );
+    if (
+      !isSuperAdmin &&
+      targets.some((t) => t.systemUser && t.id !== actor.id)
+    ) {
+      throw new ForbiddenException(
+        'System users can only be managed by a super admin',
+      );
+    }
+
+    const roles = await this.roleRepository.find({
+      where: { id: In([...new Set(targets.map((t) => t.roleId))]) },
+      relations: { permissions: true },
+      select: {
+        id: true,
+        permissions: { id: true, action: true, subject: true, status: true },
+      },
+    });
+    const exceeds = roles.some((role) =>
+      role.permissions.some(
+        ({ action, subject, status }) =>
+          status === Status.ACTIVE &&
+          !ability.can(
+            action as PermissionAction,
+            subject as PermissionSubject,
+          ),
+      ),
+    );
+    if (exceeds) {
+      throw new ForbiddenException(
+        'You cannot manage a user whose role grants permissions you do not hold',
+      );
+    }
   }
 
   private async assertRoleActive(roleId: number) {
